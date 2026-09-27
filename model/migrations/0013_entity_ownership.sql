@@ -62,10 +62,78 @@ CREATE TRIGGER entities_owner_immutable
   BEFORE UPDATE OF owner_id ON entities
   FOR EACH ROW EXECUTE FUNCTION entities_immutable_owner();
 
+-- 5. Entity-write function seam (design item A2, managed-mode access).
+--
+-- These four SECURITY INVOKER functions are verbatim wrappers around today's
+-- entity-write queries (model/queries/entities.sql). The wrapper itself
+-- changes nothing for a standalone deployment: SECURITY INVOKER (the
+-- default, so not stated explicitly below) runs the body as the calling
+-- role against unqualified, and therefore unchanged-resolution, table names.
+--
+-- The reason to introduce the wrapper at all is managed mode: MFManager
+-- generates a SECURITY DEFINER function of the same name in a managed app's
+-- private schema. Because that schema resolves ahead of `public` in the
+-- managed app's search path, an unqualified call to e.g. core_create_entity
+-- resolves to the platform-owned SECURITY DEFINER body instead of this one
+-- -- without the caller (or this function) changing at all. See
+-- app-mfmanager/docs/architecture/managed-app-foundation-access.md.
+--
+-- Not STRICT: core_create_entity_with_owner legitimately receives a NULL
+-- p_owner_id -- entities_owner_self_default (above, this migration) fills
+-- it in for natural_person / service_account types. STRICT would
+-- short-circuit to NULL instead of running the INSERT.
+--
+-- These functions reference entities.owner_id (added by step 1, above), so
+-- they must be defined here -- in the migration that completes entities'
+-- write-relevant schema -- rather than in 0008_entities.sql, which predates
+-- owner_id and would fail CREATE FUNCTION with "column owner_id does not
+-- exist" if these were placed there instead.
+
+-- +goose StatementBegin
+CREATE FUNCTION core_create_entity(p_fundamental_type_id BIGINT) RETURNS entities
+LANGUAGE sql VOLATILE AS $$
+    INSERT INTO entities (fundamental_type_id)
+    VALUES (p_fundamental_type_id)
+    RETURNING id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id;
+$$;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
+CREATE FUNCTION core_create_entity_with_owner(p_fundamental_type_id BIGINT, p_owner_id BIGINT) RETURNS entities
+LANGUAGE sql VOLATILE AS $$
+    INSERT INTO entities (fundamental_type_id, owner_id)
+    VALUES (p_fundamental_type_id, p_owner_id)
+    RETURNING id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id;
+$$;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
+CREATE FUNCTION core_archive_entity(p_uuid UUID) RETURNS void
+LANGUAGE sql VOLATILE AS $$
+    UPDATE entities
+    SET archived_at = now()
+    WHERE uuid = p_uuid AND archived_at IS NULL;
+$$;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
+CREATE FUNCTION core_unarchive_entity(p_uuid UUID) RETURNS void
+LANGUAGE sql VOLATILE AS $$
+    UPDATE entities
+    SET archived_at = NULL
+    WHERE uuid = p_uuid AND archived_at IS NOT NULL;
+$$;
+-- +goose StatementEnd
+
 -- +goose Down
 
--- Reverse order: drop the two triggers, then the two functions, then the
--- index, then the column.
+-- Reverse order overall: drop the four write functions (step 5, added
+-- last), then the two triggers, then the two functions, then the index,
+-- then the column (steps 4 through 1, undone last-to-first).
+DROP FUNCTION IF EXISTS core_unarchive_entity(UUID);
+DROP FUNCTION IF EXISTS core_archive_entity(UUID);
+DROP FUNCTION IF EXISTS core_create_entity_with_owner(BIGINT, BIGINT);
+DROP FUNCTION IF EXISTS core_create_entity(BIGINT);
 DROP TRIGGER IF EXISTS entities_owner_immutable ON entities;
 DROP TRIGGER IF EXISTS entities_owner_self_default ON entities;
 DROP FUNCTION IF EXISTS entities_immutable_owner();

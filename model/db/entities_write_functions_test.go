@@ -1,8 +1,8 @@
 package db_test
 
 // entities_write_functions_test.go is a live-Postgres integration test
-// proving migration 0100_entity_write_functions.sql's SECURITY INVOKER
-// wrapper functions (core_create_entity, core_create_entity_with_owner,
+// proving the entity-write function seam's SECURITY INVOKER wrapper
+// functions (core_create_entity, core_create_entity_with_owner,
 // core_archive_entity, core_unarchive_entity) leave standalone entity-write
 // behavior byte-equivalent to the raw INSERT/UPDATE statements they replace
 // in model/queries/entities.sql: the self-owner default still fires on
