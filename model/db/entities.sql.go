@@ -14,9 +14,7 @@ import (
 )
 
 const archiveEntity = `-- name: ArchiveEntity :exec
-UPDATE entities
-SET archived_at = now()
-WHERE uuid = $1 AND archived_at IS NULL
+SELECT core_archive_entity($1)
 `
 
 func (q *Queries) ArchiveEntity(ctx context.Context, argUuid uuid.UUID) error {
@@ -25,9 +23,8 @@ func (q *Queries) ArchiveEntity(ctx context.Context, argUuid uuid.UUID) error {
 }
 
 const createEntity = `-- name: CreateEntity :one
-INSERT INTO entities (fundamental_type_id)
-VALUES ($1)
-RETURNING id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id
+SELECT id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id
+FROM core_create_entity($1)
 `
 
 func (q *Queries) CreateEntity(ctx context.Context, fundamentalTypeID int64) (Entity, error) {
@@ -46,9 +43,8 @@ func (q *Queries) CreateEntity(ctx context.Context, fundamentalTypeID int64) (En
 }
 
 const createEntityWithOwner = `-- name: CreateEntityWithOwner :one
-INSERT INTO entities (fundamental_type_id, owner_id)
-VALUES ($1, $2)
-RETURNING id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id
+SELECT id, uuid, fundamental_type_id, created_at, updated_at, archived_at, owner_id
+FROM core_create_entity_with_owner($1, $2)
 `
 
 type CreateEntityWithOwnerParams struct {
@@ -142,9 +138,7 @@ func (q *Queries) GetEntityByUUID(ctx context.Context, argUuid uuid.UUID) (GetEn
 }
 
 const unarchiveEntity = `-- name: UnarchiveEntity :exec
-UPDATE entities
-SET archived_at = NULL
-WHERE uuid = $1 AND archived_at IS NOT NULL
+SELECT core_unarchive_entity($1)
 `
 
 func (q *Queries) UnarchiveEntity(ctx context.Context, argUuid uuid.UUID) error {
