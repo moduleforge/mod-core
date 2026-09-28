@@ -20,3 +20,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'Informational: no docs/architecture.md parent index exists; new topic doc is reachable via direct links from README.md/AGENTS.md so this is not a compliance gap, just a note that a future task could add the fuller structure.'
+    - title: ObserverGroup races concurrent tx queries
+      id: 3vJn
+      date: "2026-09-28"
+      tags:
+        - type:bug
+        - cross-repo/origin:mod-billing
+        - priority:unspecified
+        - effort:unspecified
+        - cross-repo/origin:mod-billing
+      text: 'ObserverGroup.dispatch (api/observer/observer.go) fans out every attached MutationObserver.Observe call in parallel on the same pgx.Tx (errgroup under PolicyPropagate, sync.WaitGroup under PolicySwallow), passing the shared tx to every goroutine. pgx''s own connection lock (pgconn.PgConn.lock) refuses a second concurrent use of one connection, returning connLockError{status: "conn busy"}; a pgx.Tx holds exactly one such connection, so two observers issuing queries against the same tx concurrently race for that lock and the loser gets "conn busy". At least one real consumer (mod-billing''s in-transaction seatReleaseOnAccountDeletion observer, policy: propagate) queries its transaction from Observe. If a composer attaches a second query-issuing in-transaction observer to the same ObserverGroup instance, both observers'' queries on that tx can race, and a "conn busy" failure under PolicyPropagate aborts the enclosing transaction. Question: must in-transaction observers attached to one ObserverGroup run serially against a shared pgx.Tx, or must MutationObserver''s own contract instead state that a transaction is never safely shared for concurrent querying, so each observer knows it cannot issue tx-scoped queries concurrently with a sibling? The interface doc (observer.go lines 37-62) currently states neither. Source: mod-billing''s mod-billing-hardening plan, phase-04 task-006.'
