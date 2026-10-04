@@ -13,6 +13,7 @@ phases:
           path: phase-01-observer-group-add/001-add-observer-group-registration.md
           done: false
           tier: sonnet-med
+          digest: Added a concurrency-safe copy-on-write ObserverGroup.Add. WithPolicy and WithLogger views now share one root member set with no lock copying, and NewObserverGroup copies its input. Added 8 tests including a race test, and corrected the AGENTS.md observer row and convention bullet. Dispatch behavior is unchanged.
           git:
             branch: null
             commit: []
