@@ -139,5 +139,6 @@ phases:
             - zxg6
           git:
             branch: plan/shared-home-switcher-06-001
-            commit: []
+            commit:
+                - b3424bd
             merge: null
