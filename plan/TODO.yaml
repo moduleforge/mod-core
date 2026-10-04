@@ -80,7 +80,8 @@ phases:
             - BuSP
           git:
             branch: plan/shared-home-switcher-04-001
-            commit: []
+            commit:
+                - d56c960
             merge: null
         - number: 2
           slug: switcher-open-state-and-link-hardening
