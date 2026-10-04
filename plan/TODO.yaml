@@ -5,6 +5,7 @@ phases:
     - number: 1
       slug: switcher-component
       title: Shared Home-App Switcher and Redirect Config
+      diff_base: 2e6ddd7b5fbd3ec2114b50be58d371f223b2ca98
       tasks:
         - number: 1
           slug: home-app-switcher-component
