@@ -117,6 +117,7 @@ export function isAllowedNavHref(href: string, allowedOrigins: readonly string[]
 
 function normalizeOrigins(allowedOrigins: readonly string[]): ReadonlySet<string> {
   const set = new Set<string>();
+  if (!Array.isArray(allowedOrigins)) return set;
   for (const o of allowedOrigins) {
     try {
       set.add(new URL(o).origin);
@@ -139,7 +140,7 @@ function isAllowedAgainst(href: string, origins: ReadonlySet<string>): boolean {
 }
 
 function isDevelopment(): boolean {
-  if (typeof document === 'undefined' || typeof process === 'undefined') return false;
+  if (typeof document === 'undefined') return false;
   try {
     // Literal `process.env.NODE_ENV` so bundlers can statically replace it.
     return process.env.NODE_ENV !== 'production';
@@ -158,6 +159,7 @@ interface Entry {
   navigable: boolean;
 }
 
+const MAX_WARNED_HREFS = 200;
 const INDENT_BASE_REM = 0.75;
 const INDENT_STEP_REM = 1;
 
@@ -200,7 +202,7 @@ export function HomeAppSwitcher({
   }, []);
 
   // Keyed on contents (not array identity) so in-place mutation is honoured.
-  const originsKey = JSON.stringify(allowedOrigins);
+  const originsKey = Array.isArray(allowedOrigins) ? allowedOrigins.join('\u0000') : '';
   const origins = React.useMemo(
     () => normalizeOrigins(allowedOrigins),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -270,7 +272,14 @@ export function HomeAppSwitcher({
   // Dev-only: warn when a custom renderLink rewrote `href` (origin-guard bypass).
   const warnedHrefs = React.useRef<Set<string>>(new Set());
   React.useEffect(() => {
-    if (!isOpen || !renderLink || !isDevelopment()) return;
+    if (!isOpen) {
+      // Bound the set: a fresh open session starts with no remembered warnings.
+      warnedHrefs.current.clear();
+      return;
+    }
+    if (!renderLink || !isDevelopment()) return;
+    // Hard cap so a renderer emitting a new href every render cannot grow it unboundedly.
+    if (warnedHrefs.current.size >= MAX_WARNED_HREFS) warnedHrefs.current.clear();
     entries.forEach((e, i) => {
       if (!e.navigable) return;
       const el = entryRefs.current[i];

@@ -503,3 +503,91 @@ describe('HomeAppSwitcher renderLink href fidelity warning', () => {
     }
   });
 });
+
+describe('HomeAppSwitcher dev detection without a process global', () => {
+  test('missing process global does not throw; warning still works when process.env.NODE_ENV is available', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    const realProcess = globalThis.process;
+    console.warn = warn as never;
+    try {
+      const a = renderSwitcher({ renderLink: (p) => <a {...p} href="/rewritten" /> });
+      // `process` absent (browser bundle without replacement): ReferenceError is caught, no throw.
+      (globalThis as { process?: unknown }).process = undefined;
+      expect(() => open()).not.toThrow();
+      expect(warn).not.toHaveBeenCalled();
+      (globalThis as { process?: unknown }).process = realProcess;
+      a.unmount();
+      renderSwitcher({ renderLink: (p) => <a {...p} href="/rewritten" /> });
+      open();
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      (globalThis as { process?: unknown }).process = realProcess;
+      console.warn = orig;
+    }
+  });
+});
+
+describe('HomeAppSwitcher allowedOrigins robustness', () => {
+  test('undefined or non-array allowedOrigins does not throw and nothing is navigable', () => {
+    for (const bad of [undefined, null, {}, 'https://apps.example.com']) {
+      const { unmount } = renderSwitcher({ allowedOrigins: bad as never });
+      expect(() => open()).not.toThrow();
+      expect(screen.queryAllByRole('menuitem').length).toBeGreaterThan(0);
+      expect(screen.queryAllByRole('menuitem').some((e) => e.getAttribute('href'))).toBe(false);
+      unmount();
+    }
+  });
+
+  test('a normal array still allows its origin', () => {
+    renderSwitcher();
+    open();
+    expect(entries().some((e) => e.getAttribute('href') === 'https://apps.example.com/todo')).toBe(true);
+  });
+});
+
+describe('HomeAppSwitcher warn set bounds', () => {
+  test('warns once per key+href+attr while open, and again after close and reopen', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    console.warn = warn as never;
+    try {
+      const { rerender } = renderSwitcher({ renderLink: (p) => <a {...p} href="/x" /> });
+      open();
+      const afterOpen = warn.mock.calls.length;
+      expect(afterOpen).toBeGreaterThan(0);
+      rerender(
+        <HomeAppSwitcher
+          home={home()}
+          items={tree()}
+          allowedOrigins={ORIGINS}
+          renderLink={(p) => <a {...p} href="/x" />}
+        />,
+      );
+      expect(warn.mock.calls.length).toBe(afterOpen);
+      fireEvent.click(trigger()); // close
+      open();
+      expect(warn.mock.calls.length).toBe(afterOpen * 2);
+    } finally {
+      console.warn = orig;
+    }
+  });
+
+  test('a renderer emitting a new href every render keeps warning without error', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    console.warn = warn as never;
+    try {
+      let n = 0;
+      const mk = () => (p: HomeAppSwitcherLinkProps) => <a {...p} href={`/n${n++}`} />;
+      const { rerender } = renderSwitcher({ renderLink: mk() });
+      open();
+      for (let i = 0; i < 100; i++) {
+        rerender(<HomeAppSwitcher home={home()} items={tree()} allowedOrigins={ORIGINS} renderLink={mk()} />);
+      }
+      expect(warn.mock.calls.length).toBeGreaterThan(100);
+    } finally {
+      console.warn = orig;
+    }
+  });
+});
