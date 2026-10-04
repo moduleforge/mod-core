@@ -25,7 +25,7 @@ phases:
           tier: sonnet-med
           digest: Added ApiClientRedirectConfig and a module-level unauthenticatedRedirectUrl, validated in configureApiClient before any state changes. The default 401 handler now reads the URL at call time. Added 11 tests covering the specified scenarios.
           git:
-            branch: null
+            branch: plan/shared-home-switcher-01-002
             commit: []
             merge: null
     - number: 2
