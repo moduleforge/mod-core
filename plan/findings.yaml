@@ -9,4 +9,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: api/observer/observer.go (*ObserverGroup).Add is callable at any time by any holder of the group pointer. An added observer receives every mutation's before/after payloads, the live pgx.Tx under in-tx dispatch, and can veto by returning an error. Nothing freezes the group after startup, so in a multi-module process a late registration could attach a data-reading or veto-capable observer. Consider an optional Seal/Freeze the host calls after startup (later Add panics or errors), or confine group access to the startup hook, and document that observers are fully trusted code with transaction access. Reachability depends on how the mfgen-generated root exposes the group to modules.
+    - title: Observer dispatch goroutines lack recover
+      id: mldB
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - plan/phase:observer-group-add
+        - priority:unspecified
+        - effort:unspecified
+      text: api/observer/observer.go parallel dispatch and ObserveAfterCommit run observers in bare goroutines (including the errgroup path) with no recover(). A panic in any observer, now including observers attached later via Add, crashes the whole process; only the serial in-tx path is protected, by net/http's per-request recover. Wrap each goroutine body in a recover that converts the panic to an error (propagate mode) or a log entry (swallow and after-commit).
 closed: []
