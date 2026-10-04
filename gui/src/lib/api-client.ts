@@ -36,8 +36,9 @@ export class ApiRequestError extends Error {
 // injectable seam (`ApiClientAuthHandler`) that a consuming app can override
 // via `configureApiClient()`. The default implementation below is a
 // browser-only convenience (matching mod-users' existing behavior: a
-// `auth_token` key in `localStorage`, hard redirect to `/auth/login`) that is
-// guarded to no-op outside a browser (SSR) so `tsc` and server-side
+// `auth_token` key in `localStorage`, hard redirect to `/auth/login` unless
+// the app supplies `unauthenticatedRedirectUrl` via `configureApiClient()`)
+// that is guarded to no-op outside a browser (SSR) so `tsc` and server-side
 // rendering never break on `window`/`localStorage`.
 
 export interface ApiClientAuthHandler {
@@ -45,6 +46,33 @@ export interface ApiClientAuthHandler {
   getToken: () => string | null | undefined;
   /** Called on a `401 unauthenticated` response (unless `skipAuthRedirect` is set): clear stored auth and route to login. */
   onUnauthenticated: () => void;
+}
+
+const DEFAULT_UNAUTHENTICATED_REDIRECT_URL = '/auth/login';
+
+export interface ApiClientRedirectConfig {
+  /**
+   * Where the default `onUnauthenticated` handler navigates on a 401. Either a
+   * same-origin path (a single leading "/", not "//", with no backslash or
+   * control characters) or an absolute `http:`/`https:` URL. Defaults to
+   * "/auth/login". Ignored when a custom `onUnauthenticated` is supplied.
+   */
+  unauthenticatedRedirectUrl?: string;
+}
+
+let unauthenticatedRedirectUrl = DEFAULT_UNAUTHENTICATED_REDIRECT_URL;
+
+function isValidRedirectUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  // eslint-disable-next-line no-control-regex
+  if (/[\\\u0000-\u001f\u007f]/.test(value)) return false;
+  if (value.startsWith('/')) return !value.startsWith('//');
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 const defaultAuthHandler: ApiClientAuthHandler = {
@@ -55,7 +83,7 @@ const defaultAuthHandler: ApiClientAuthHandler = {
   onUnauthenticated: () => {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem('auth_token');
-    window.location.href = '/auth/login';
+    window.location.href = unauthenticatedRedirectUrl;
   },
 };
 
@@ -96,12 +124,22 @@ let originGuardConfig: ApiClientOriginGuardConfig = {};
  * configuration, not "guard disabled".
  */
 export function configureApiClient(
-  config: Partial<ApiClientAuthHandler> & Partial<ApiClientOriginGuardConfig>
+  config: Partial<ApiClientAuthHandler> &
+    Partial<ApiClientOriginGuardConfig> &
+    Partial<ApiClientRedirectConfig>
 ): void {
-  const { allowedOrigins, ...handlerFields } = config;
+  const { allowedOrigins, unauthenticatedRedirectUrl: redirectUrl, ...handlerFields } = config;
+  if (redirectUrl !== undefined && !isValidRedirectUrl(redirectUrl)) {
+    throw new TypeError(
+      'unauthenticatedRedirectUrl must be a same-origin path ("/...") or an absolute http(s) URL.'
+    );
+  }
   authHandler = { ...authHandler, ...handlerFields };
   if (allowedOrigins !== undefined) {
     originGuardConfig = { allowedOrigins };
+  }
+  if (redirectUrl !== undefined) {
+    unauthenticatedRedirectUrl = redirectUrl;
   }
 }
 
