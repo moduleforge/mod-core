@@ -18,4 +18,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: api/observer/observer.go parallel dispatch and ObserveAfterCommit run observers in bare goroutines (including the errgroup path) with no recover(). A panic in any observer, now including observers attached later via Add, crashes the whole process; only the serial in-tx path is protected, by net/http's per-request recover. Wrap each goroutine body in a recover that converts the panic to an error (propagate mode) or a log entry (swallow and after-commit).
+    - title: Four root docs unreachable from README
+      id: SAUP
+      date: "2026-10-04"
+      tags:
+        - type:documentation
+        - plan/phase:observer-group-add
+        - priority:unspecified
+        - effort:unspecified
+      text: model/README.md, error-banner-refactor.md, next-steps.md and stories-next.md are not reachable from README.md by links (stories-next.md is reachable only through next-steps.md). Pre-existing, not touched by the observer change. Link them from README.md or AGENTS.md, or consolidate them, so the link-chain rule holds.
 closed: []
