@@ -7,7 +7,7 @@ items:
         - type:bug
         - priority:low
         - plan/phase:switcher-component
-        - effort:unspecified
+        - effort:small
       text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx, ~lines 175-200): `open`/`openRef` are not reset when `items` becomes unavailable (e.g. refresh sets items to null). The component renders only `home`, but open stays true, so when items return the menu reappears already open, and an outside pointerdown while unavailable calls setOpen(false) and fires onOpenChange(false) with nothing visible. Fix: reset open when `available` turns false, or derive rendered open as `open && available`. Reviewer confidence: medium.'
     - title: Redirect URL accepts any http(s) origin
       id: BuSP
