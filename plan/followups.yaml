@@ -39,3 +39,53 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: api/observer/observer.go ObserverGroup is fixed at construction (NewObserverGroup) and has no registration call, and mfgen's generated root builds it from the manifest's provided observers only, so an app cannot attach its own MutationObserver to the generated group. flow-accounts' appsetup.RegisterNotices works around it by building a second group that nests the root's group plus the app observer and handing that to each consumer, which must be repeated for every consumer that holds the group. Offer an app-level registration (for example a concurrency-safe ObserverGroup.Add or an mfgen manifest key for app-owned observers) so a startup hook can attach an observer to the one generated group; document the interaction with the in-tx serial and post-commit parallel dispatch.
+    - title: mf-standards observer docs stale
+      id: pwLD
+      date: "2026-10-04"
+      tags:
+        - type:documentation
+        - plan/slug:observer-group-registration
+        - priority:unspecified
+        - effort:unspecified
+      text: 'docs-mf-standards manifest-spec.md section 7 (line ~545, "dispatches all in-tx observers in parallel via errgroup") and architecture/state-management-design.md ("All three call every wrapped observer in parallel via errgroup", and "Observers run in parallel without ordering guarantees") are stale: mod-core api/observer/observer.go dispatches in-tx observers serially in attach order on a non-nil tx (parallel only with a nil tx and for ObserveAfterCommit). Once mod-core ships ObserverGroup.Add (app-level registration from a startup hook, membership shared across WithPolicy/WithLogger views), these docs should also describe that registration path and its dispatch interaction (added observers run last in serial in-tx dispatch; parallel post-commit). Update in the docs-mf-standards repo, then bump the docs/mf-standards submodule in consumers.'
+      scope_rationale: The fix belongs in the separate docs-mf-standards repo (mounted here as the docs/mf-standards submodule), outlives this plan, and cannot be edited from a mod-core plan branch.
+    - title: Observer dispatch goroutines lack recover
+      id: mldB
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - priority:medium
+        - effort:small
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: api/observer/observer.go parallel dispatch and ObserveAfterCommit run observers in bare goroutines (including the errgroup path) with no recover(). A panic in any observer, now including observers attached later via Add, crashes the whole process; only the serial in-tx path is protected, by net/http's per-request recover. Wrap each goroutine body in a recover that converts the panic to an error (propagate mode) or a log entry (swallow and after-commit).
+    - title: Four root docs unreachable from README
+      id: SAUP
+      date: "2026-10-04"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:small
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: model/README.md, error-banner-refactor.md, next-steps.md and stories-next.md are not reachable from README.md by links (stories-next.md is reachable only through next-steps.md). Pre-existing, not touched by the observer change. Link them from README.md or AGENTS.md, or consolidate them, so the link-chain rule holds.
+    - title: ObserverGroup.Add accepts typed-nil, cycles
+      id: MoCc
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - priority:medium
+        - effort:small
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
+    - title: ObserverGroup.Add has no post-startup seal
+      id: 5cqV
+      date: "2026-10-04"
+      tags:
+        - type:security
+        - priority:low
+        - effort:medium
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: 'api/observer/observer.go (*ObserverGroup).Add is callable at any time by any holder of the group pointer. An added observer receives every mutation''s before/after payloads, the live pgx.Tx under in-tx dispatch, and can veto by returning an error. Nothing freezes the group after startup, so in a multi-module process a late registration could attach a data-reading or veto-capable observer. Consider an optional Seal/Freeze the host calls after startup (later Add panics or errors), or confine group access to the startup hook, and document that observers are fully trusted code with transaction access. Reachability depends on how the mfgen-generated root exposes the group to modules. Open question (evaluator, quoted data): seal API vs. document-only (observers are fully trusted in-process code, register in startup hooks) vs. defer alongside an mfgen change. Evaluator recommended: document only, which the planned doc update can partly cover.'
