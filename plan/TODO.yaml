@@ -11,21 +11,25 @@ phases:
           slug: home-app-switcher-component
           title: Build HomeAppSwitcher Component With Tests and Stories
           path: phase-01-switcher-component/001-home-app-switcher-component.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Implemented the router-agnostic HomeAppSwitcher exactly per the overview interface, with exports, 99-test suite coverage and four Ladle stories. The one judgment call was applying the indent to renderLink output via cloneElement, since the contract's link props carry no style.
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-01-001
+            commit:
+                - deeb427
             merge: null
         - number: 2
           slug: unauthenticated-redirect-config
           title: Add Configurable Unauthenticated Redirect URL to api-client
           path: phase-01-switcher-component/002-unauthenticated-redirect-config.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added ApiClientRedirectConfig and a module-level unauthenticatedRedirectUrl, validated in configureApiClient before any state changes. The default 401 handler now reads the URL at call time. Added 11 tests covering the specified scenarios.
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-01-002
+            commit:
+                - 5b1bc8d
             merge: null
     - number: 2
       slug: consumption-handoff
