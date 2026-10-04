@@ -16,7 +16,8 @@ phases:
           digest: Added a concurrency-safe copy-on-write ObserverGroup.Add. WithPolicy and WithLogger views now share one root member set with no lock copying, and NewObserverGroup copies its input. Added 8 tests including a race test, and corrected the AGENTS.md observer row and convention bullet. Dispatch behavior is unchanged.
           git:
             branch: plan/observer-group-registration-01-001
-            commit: []
+            commit:
+                - 6ab446d
             merge: null
     - number: 2
       slug: doc-updates
