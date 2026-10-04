@@ -32,8 +32,15 @@ export interface HomeAppSwitcherItem {
  * Props handed to `renderLink`; the renderer MUST spread them onto an
  * anchor-like element (including `ref`, a regular prop in React 19) and render
  * `children` inside it.
+ *
+ * SECURITY CONTRACT: the renderer MUST pass `href` through unchanged — no
+ * rewriting, prefixing, or relative resolution. The origin guard is applied to
+ * this exact `href` before `renderLink` is called; a renderer that alters it
+ * can navigate to an origin the guard never checked. In development a
+ * `console.warn` fires when a rendered anchor's `href` attribute differs.
  */
 export interface HomeAppSwitcherLinkProps {
+  /** Already origin-checked; render it verbatim (see the contract above). */
   href: string;
   children: React.ReactNode;
   className: string;
@@ -63,9 +70,16 @@ export interface HomeAppSwitcherProps {
   home: React.ReactNode;
   /** `null`/`undefined` = not available. */
   items: readonly HomeAppSwitcherItem[] | null | undefined;
-  /** Origins navigation is permitted to. */
+  /**
+   * Origins navigation is permitted to. Pass a stable (memoized or module
+   * level) array: it is normalized once per identity change.
+   */
   allowedOrigins: readonly string[];
-  /** Default: `<a {...props} />`. */
+  /**
+   * Default: `<a {...props} />`. The returned element MUST carry
+   * `props.href` unchanged (no rewriting or relative resolution): the origin
+   * guard validated exactly that value and cannot see what the renderer emits.
+   */
   renderLink?: (props: HomeAppSwitcherLinkProps) => React.ReactNode;
   /** Receives the NORMALIZED status; never called for `running`. */
   formatStatus?: (status: HomeAppSwitcherStatus) => React.ReactNode;
@@ -94,8 +108,25 @@ export function normalizeHomeAppStatus(status: string | undefined | null): HomeA
  * Origin policy: `href` must parse as an absolute `http:`/`https:` URL and its
  * origin must equal the origin of one of `allowedOrigins` (each normalized
  * through `new URL(...).origin`; invalid entries are skipped, never thrown).
+ * Callers checking many hrefs should pass a stable `allowedOrigins` array.
  */
 export function isAllowedNavHref(href: string, allowedOrigins: readonly string[]): boolean {
+  return isAllowedAgainst(href, normalizeOrigins(allowedOrigins));
+}
+
+function normalizeOrigins(allowedOrigins: readonly string[]): ReadonlySet<string> {
+  const set = new Set<string>();
+  for (const o of allowedOrigins) {
+    try {
+      set.add(new URL(o).origin);
+    } catch {
+      // invalid allowed-origin entry: skip
+    }
+  }
+  return set;
+}
+
+function isAllowedAgainst(href: string, origins: ReadonlySet<string>): boolean {
   let url: URL;
   try {
     url = new URL(href);
@@ -103,14 +134,15 @@ export function isAllowedNavHref(href: string, allowedOrigins: readonly string[]
     return false;
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-  for (const o of allowedOrigins) {
-    try {
-      if (new URL(o).origin === url.origin) return true;
-    } catch {
-      // invalid allowed-origin entry: skip
-    }
-  }
-  return false;
+  return origins.has(url.origin);
+}
+
+function isDevelopment(): boolean {
+  return (
+    typeof document !== 'undefined' &&
+    typeof process !== 'undefined' &&
+    process.env?.NODE_ENV !== 'production'
+  );
 }
 
 interface Entry {
@@ -164,7 +196,9 @@ export function HomeAppSwitcher({
     onOpenChangeRef.current?.(next);
   }, []);
 
-  const entries = React.useMemo<Entry[]>(() => {
+  const origins = React.useMemo(() => normalizeOrigins(allowedOrigins), [allowedOrigins]);
+
+  const { entries, childCount, navigable } = React.useMemo(() => {
     const out: Entry[] = [];
     for (const root of items ?? []) {
       out.push({
@@ -173,7 +207,7 @@ export function HomeAppSwitcher({
         label: root.label,
         href: root.href,
         current: false,
-        navigable: isAllowedNavHref(root.href, allowedOrigins),
+        navigable: isAllowedAgainst(root.href, origins),
       });
       for (const child of root.children ?? []) {
         const current = child.current === true;
@@ -184,18 +218,31 @@ export function HomeAppSwitcher({
           href: child.href,
           status: child.status,
           current,
-          navigable: !current && isAllowedNavHref(child.href, allowedOrigins),
+          navigable: !current && isAllowedAgainst(child.href, origins),
         });
       }
     }
-    return out;
-  }, [items, allowedOrigins]);
+    return {
+      entries: out,
+      childCount: out.reduce((n, e) => n + (e.level === 1 ? 1 : 0), 0),
+      navigable: out.flatMap((e, i) => (e.navigable ? [i] : [])),
+    };
+  }, [items, origins]);
 
-  const childCount = entries.reduce((n, e) => n + (e.level === 1 ? 1 : 0), 0);
   const available = childCount > 0;
+  // Rendered/listener state is derived so a stale `open` never shows or listens
+  // while unavailable; the effect below also resets the real state.
+  const isOpen = open && available;
 
-  const navigableIndexes = (): number[] =>
-    entries.flatMap((e, i) => (e.navigable ? [i] : []));
+  const navigableIndexes = (): number[] => navigable;
+
+  // Close when the switcher becomes unavailable while open.
+  React.useEffect(() => {
+    if (!available) {
+      pendingFocus.current = null;
+      if (openRef.current) setOpen(false);
+    }
+  }, [available, setOpen]);
 
   const focusIndex = (i: number | undefined) => {
     if (i === undefined) return;
@@ -204,16 +251,33 @@ export function HomeAppSwitcher({
 
   // Keyboard-open focus: runs after the menu has rendered.
   React.useEffect(() => {
-    if (!open || !pendingFocus.current) return;
-    const nav = entries.flatMap((e, i) => (e.navigable ? [i] : []));
+    if (!isOpen || !pendingFocus.current) return;
+    const nav = navigable;
     focusIndex(pendingFocus.current === 'first' ? nav[0] : nav[nav.length - 1]);
     pendingFocus.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [isOpen]);
 
-  // Outside dismissal, registered only while open.
+  // Dev-only: warn when a custom renderLink rewrote `href` (origin-guard bypass).
+  const warnedHrefs = React.useRef<Set<string>>(new Set());
   React.useEffect(() => {
-    if (!open) return;
+    if (!isOpen || !renderLink || !isDevelopment()) return;
+    entries.forEach((e, i) => {
+      if (!e.navigable) return;
+      const el = entryRefs.current[i];
+      const attr = el?.getAttribute('href');
+      if (attr == null || attr === e.href || warnedHrefs.current.has(e.key)) return;
+      warnedHrefs.current.add(e.key);
+      console.warn(
+        `HomeAppSwitcher: renderLink changed href for "${e.key}" (expected "${e.href}", rendered "${attr}"). ` +
+          'renderLink must pass href through unchanged; the origin guard depends on it.',
+      );
+    });
+  });
+
+  // Outside dismissal, registered only while open and available.
+  React.useEffect(() => {
+    if (!isOpen) return;
     const onOutside = (event: Event) => {
       const root = rootRef.current;
       if (root && event.target instanceof Node && root.contains(event.target)) return;
@@ -225,7 +289,7 @@ export function HomeAppSwitcher({
       document.removeEventListener('pointerdown', onOutside);
       document.removeEventListener('mousedown', onOutside);
     };
-  }, [open, setOpen]);
+  }, [isOpen, setOpen]);
 
   if (!available) {
     return <>{home}</>;
@@ -393,7 +457,7 @@ export function HomeAppSwitcher({
         type="button"
         data-slot="trigger"
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-controls={menuId}
         aria-label={switchLabel ?? 'Switch application'}
         className={cn(
@@ -406,7 +470,7 @@ export function HomeAppSwitcher({
       >
         <ArrowLeftRight aria-hidden="true" className={cn('size-4', classNames?.icon)} />
       </button>
-      {open && (
+      {isOpen && (
         <div
           id={menuId}
           role="menu"

@@ -23,3 +23,7 @@ Remediates findings pAdi, WRkI and SH6J in `HomeAppSwitcher`: the open state is 
 - Finding pAdi in this plan's `plan/findings.yaml` ("Switcher open state survives unavailability").
 - Finding WRkI in this plan's `plan/findings.yaml` ("renderLink href fidelity unenforced").
 - Finding SH6J in this plan's `plan/findings.yaml` ("Switcher re-parses origins per entry").
+
+## Status
+
+succeeded, 2026-10-04. Open state is derived as `open && available` with a reset effect; origins are normalized once into a memoized Set; entries memo now also yields `childCount` and navigable indexes; dev-only `console.warn` on renderLink href rewrite; doc comments updated. Validation: `cd gui && bun run typecheck && bun run test && bun run build` pass; diff touches only `gui/src/HomeAppSwitcher.tsx` and `gui/src/HomeAppSwitcher.test.tsx` (plus this doc).

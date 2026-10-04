@@ -416,3 +416,55 @@ describe('HomeAppSwitcher classNames', () => {
     expect(trigger()).not.toHaveClass('text-muted-foreground');
   });
 });
+
+describe('HomeAppSwitcher open state across unavailability', () => {
+  test('closes when items become unavailable and stays closed when they return', () => {
+    const onOpenChange = mock((_o: boolean) => {});
+    const { rerender } = renderSwitcher({ onOpenChange });
+    open();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    rerender(<HomeAppSwitcher home={home()} items={null} allowedOrigins={ORIGINS} onOpenChange={onOpenChange} />);
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    fireEvent.pointerDown(document.body);
+    fireEvent.mouseDown(document.body);
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+    rerender(<HomeAppSwitcher home={home()} items={tree()} allowedOrigins={ORIGINS} onOpenChange={onOpenChange} />);
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('HomeAppSwitcher renderLink href fidelity warning', () => {
+  const rewrite = (p: HomeAppSwitcherLinkProps) => <a {...p} href="/rewritten" />;
+
+  test('warns when renderLink rewrites href', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    console.warn = warn as never;
+    try {
+      renderSwitcher({ renderLink: rewrite });
+      open();
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      console.warn = orig;
+    }
+  });
+
+  test('does not warn for the default renderer or a faithful renderLink', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    console.warn = warn as never;
+    try {
+      const a = renderSwitcher();
+      open();
+      a.unmount();
+      renderSwitcher({ renderLink: (p) => <a {...p} /> });
+      open();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      console.warn = orig;
+    }
+  });
+});
