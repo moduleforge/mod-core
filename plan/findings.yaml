@@ -27,4 +27,13 @@ items:
         - plan/phase:switcher-component
         - effort:unspecified
       text: 'HomeAppSwitcher passes `href` to a custom `renderLink` only for allowed-origin entries (gui/src/HomeAppSwitcher.tsx, ~lines 225-243), but cannot enforce that the renderer spreads it unchanged; a router-based renderer could rewrite or resolve it relative to the current URL, weakening the origin guard. Keep the renderLink contract prominent in docs; optionally add a test or dev-mode warning that the rendered element''s href equals linkProps.href. Reviewer confidence: low.'
+    - title: Switcher re-parses origins per entry
+      id: SH6J
+      date: "2026-10-04"
+      tags:
+        - type:optimization
+        - priority:low
+        - plan/phase:switcher-component
+        - effort:unspecified
+      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): `isAllowedNavHref` runs `new URL(o).origin` for every allowed origin for every entry (O(entries x origins)), and the `entries` memo depends on `allowedOrigins` by identity so an inline array literal re-runs it each parent render. `navigableIndexes()` re-runs flatMap per keydown and `childCount` is a reduce per render. All negligible at typical sizes (~10 entries, 1-3 origins). Optional: normalize allowedOrigins to a Set once in a memo, compute navigable indexes and childCount inside the entries memo, document passing a stable array.'
 closed: []
