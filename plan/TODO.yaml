@@ -124,18 +124,21 @@ phases:
     - number: 6
       slug: remediation-03
       title: Remediation Round 3
+      diff_base: c51202325ac36afa4b13accbffd8bb995af50524
       kind: remediation
       tasks:
         - number: 1
           slug: fix-dev-warning-detection-and-harden-memo
           title: Fix Browser Dev Warning Detection and Harden Origins Memo and Warn Set
           path: phase-06-remediation-03/001-fix-dev-warning-detection-and-harden-memo.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Removed the typeof process pre-check so bundler-replaced NODE_ENV enables the dev warning in browser bundles. The origins memo key and normalizeOrigins now tolerate non-array input. The warn set is cleared on close and capped at 200 entries. Tests cover each change, and typecheck, test and build pass.
           findings:
             - 8YrZ
             - zxg6
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-06-001
+            commit:
+                - b3424bd
             merge: null
