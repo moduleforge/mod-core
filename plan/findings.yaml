@@ -1,14 +1,5 @@
 version: 2
-items:
-    - title: allowedOrigins memo keyed on array identity
-      id: sc9b
-      date: "2026-10-04"
-      tags:
-        - type:security
-        - priority:low
-        - plan/phase:remediation-01
-        - effort:unspecified
-      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx ~line 199): the normalized origins Set is memoized on the `allowedOrigins` array identity, so a caller mutating the same array in place (e.g. removing an origin) leaves a stale, more permissive Set until the identity changes. allowedOrigins is trusted configuration and the prop doc asks for a stable array, so this is hardening only: document that the array must be treated as immutable, or key the memo on a joined string of its entries. Reviewer confidence: low.'
+items: []
 closed:
     - id: 0pxR
       title: mf-standards doc links dangle; orphan docs
@@ -37,6 +28,11 @@ closed:
       date: "2026-10-04"
     - id: 5VrO
       title: Dev-only href warning gated unreliably
+      disposition: fixed
+      ref: phase-05-remediation-02/001-harden-switcher-dev-warning-and-origins-memo.md
+      date: "2026-10-04"
+    - id: sc9b
+      title: allowedOrigins memo keyed on array identity
       disposition: fixed
       ref: phase-05-remediation-02/001-harden-switcher-dev-warning-and-origins-memo.md
       date: "2026-10-04"
