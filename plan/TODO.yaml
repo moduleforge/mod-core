@@ -5,6 +5,7 @@ phases:
     - number: 1
       slug: observer-group-add
       title: ObserverGroup App-Level Registration
+      diff_base: 8c27efb083787667c985b545437cb6f5ba383020
       tasks:
         - number: 1
           slug: add-observer-group-registration
