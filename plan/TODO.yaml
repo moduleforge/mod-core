@@ -35,4 +35,4 @@ phases:
             branch: plan/observer-group-registration-02-001
             commit:
                 - 56f8f7c
-            merge: null
+            merge: 47fc6079b61aef1bf61eaae901f93ab91e2dc71f
