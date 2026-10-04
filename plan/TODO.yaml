@@ -82,7 +82,7 @@ phases:
             branch: plan/shared-home-switcher-04-001
             commit:
                 - d56c960
-            merge: null
+            merge: f12f549c8687eecadb7e0661c3868993207d5bbc
         - number: 2
           slug: switcher-open-state-and-link-hardening
           title: Reset Switcher Open State, Document renderLink Href Contract, and Precompute Origins
