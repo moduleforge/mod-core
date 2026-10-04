@@ -27,3 +27,10 @@ architectural_impact: false
 
 - [`overview.md`](../overview.md), [`notes/consumption-and-handoff.md`](../notes/consumption-and-handoff.md), [`notes/unauthenticated-redirect-evaluation.md`](../notes/unauthenticated-redirect-evaluation.md)
 - `gui/README.md`, `gui/package.json`, `gui/tsup.config.ts`
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- Validation: build artifacts and all declared exports present; scratch smoke type-check 0 errors; SSR renders succeed and the unavailable render has no `<button`; README examples were the type-checked files.
+- Changed: `gui/README.md` (Home-app switcher section, Unauthenticated redirect subsection, consumption paragraph), `plan/notes/consumption-and-handoff.md` (verified results, merge-SHA placeholder).
+- Stale "npm run build" line left as is (adjacent text not edited).
