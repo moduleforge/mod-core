@@ -31,10 +31,20 @@ Records how the two wave-2 apps (`app-mftodo`, `app-mfmanager`) actually consume
 
 1. The wave-1 plan branch `plan/shared-home-switcher` is merged to `mod-core` `main` (this plan's finalization does that); report the **merge commit SHA** on `main`.
 2. The aggregate checkout `/Users/zane/playground/moduleforge/mod-core` is on `main` at or after that SHA while wave 2 runs `make gui.deps` (app-mftodo) or equivalent. For wave-2 *plan worktrees* testing before merge, the alternative is to check out `plan/shared-home-switcher` in a mod-core worktree and point the app at it; the app scripts resolve only the aggregate path, so the practical path is merge first.
-3. `bun run build` in `mod-core/gui` succeeds and `dist/index.d.ts` exports `HomeAppSwitcher` and the types in the interface (verified by this plan's phase-02 task).
+3. `bun run build` in `mod-core/gui` succeeds and `dist/index.d.ts` exports `HomeAppSwitcher` and the types in the interface (verified, see "Verified results" below).
 4. `app-mftodo` and `app-mfmanager` each run `make pins.update REPOS="mod-core"` to move their `versions.lock.yaml` mod-core pin to that SHA.
 5. App-side prerequisites that are not mod-core work: MFManager core-gui adoption (above); each app supplies `allowedOrigins` (MFTodo from the managed runtime-config `guiUrl`; MFManager from its own GUI base URL/`window.location.origin`).
 6. No npm publish, no `yalc`, no version bump.
+7. merge SHA on mod-core main: to be filled by the manager at finalization
+
+## Verified results (phase 02)
+
+- **Build**: `cd gui && bun run build` exits 0; `dist/index.mjs`, `index.js`, `index.d.ts`, `index.css` and `tokens.css` all exist. `dist/index.css` contains the component's default classes (spot-checked `px-3`, `py-1.5`, `bg-popover`, `text-muted-foreground`, `border-border`, `shadow-md`, `rounded-md`, `hover:bg-muted`, `size-4`, `focus-visible:ring-2`).
+- **Final HomeAppSwitcher exports** (from `dist/index.d.ts`): `HomeAppSwitcher` (component), types `HomeAppSwitcherProps`, `HomeAppSwitcherItem`, `HomeAppSwitcherChild`, `HomeAppSwitcherLinkProps`, `HomeAppSwitcherSlot`, `HomeAppSwitcherStatus`, and helpers `isAllowedNavHref`, `normalizeHomeAppStatus`. `configureApiClient` accepts `unauthenticatedRedirectUrl`.
+- **Deviations from the overview interface**: none in the props or item shape. Additions the consumer should know: the exported `HomeAppSwitcherStatus` type and `normalizeHomeAppStatus`/`isAllowedNavHref` helpers; `renderLink` must pass `href` through unchanged (security contract, dev-only warning when violated); `allowedOrigins` should be a stable array (re-normalized by content); `unauthenticatedRedirectUrl` rejects absolute URLs with userinfo and must come from trusted config, and `configureApiClient` throws `TypeError` on an invalid value.
+- **Consumer smoke check** (scratch dir under `gui/node_modules/.scratch-smoke`, not committed, removed afterwards): `tsc -p` (repo TypeScript, `strict`, `skipLibCheck: false`, `paths` mapping `@moduleforge/core-gui` to `dist/index.d.ts`, local stubs for `react-router-dom` and `next/link`) over a React Router-style and a Next-style usage (`home` element, `items: null` or a tree, `allowedOrigins`, no `renderLink`) plus a `configureApiClient({ unauthenticatedRedirectUrl })` call: 0 errors. The README's two usage examples and redirect snippet were the files checked.
+- **SSR**: bundled the same files against `dist/index.mjs` with `bun build` and ran with `bun`, with no `window`/`document` defined, calling `react-dom/server` `renderToString`: the unavailable render (`items: null` and `items: []`) is just the `home` markup with no `<button`; the available render includes `home` and a `<button` for both examples. No render-time `window`/`document` access (it would have thrown).
+- Logs: `.flow/validation-logs/01-build.log` in the task worktree.
 
 ## Open points (for the manager)
 
