@@ -30,7 +30,7 @@ phases:
             branch: plan/shared-home-switcher-01-002
             commit:
                 - 5b1bc8d
-            merge: null
+            merge: e08901a40955b3ae635e4a744ce4aab3714d19b0
     - number: 2
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
