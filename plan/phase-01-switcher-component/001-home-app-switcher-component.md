@@ -60,3 +60,9 @@ architectural_impact: true
 - After the types, `isAllowedNavHref`, and the unavailable/available rendering
 - After keyboard and dismissal behavior
 - After tests and the Ladle story
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- Validation: `bun run typecheck`, `bun run test` (99 pass), `bun run build` pass; `gui/package.json` unchanged; `dist/index.d.ts` exports `HomeAppSwitcher*`, `normalizeHomeAppStatus`; `dist/index.css` contains `bg-popover`, `hover:bg-muted`, `border-border`, `shadow-md`; no router imports.
+- Files: `gui/src/HomeAppSwitcher.tsx`, `gui/src/HomeAppSwitcher.test.tsx`, `gui/src/HomeAppSwitcher.stories.tsx`, `gui/src/index.ts`.
