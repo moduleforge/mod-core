@@ -34,7 +34,7 @@ items:
         - type:optimization
         - priority:low
         - plan/phase:switcher-component
-        - effort:unspecified
+        - effort:small
       text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): `isAllowedNavHref` runs `new URL(o).origin` for every allowed origin for every entry (O(entries x origins)), and the `entries` memo depends on `allowedOrigins` by identity so an inline array literal re-runs it each parent render. `navigableIndexes()` re-runs flatMap per keydown and `childCount` is a reduce per render. All negligible at typical sizes (~10 entries, 1-3 origins). Optional: normalize allowedOrigins to a Set once in a memo, compute navigable indexes and childCount inside the entries memo, document passing a stable array.'
     - title: mf-standards doc links dangle; orphan docs
       id: 0pxR
