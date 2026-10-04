@@ -34,3 +34,12 @@ Follow the `update-architecture-docs` task-procedure, at `plugins/flow/task-proc
 - `README.md` contains no statement contradicting the new registration capability or the dispatch model.
 - `git diff --name-only` for this task shows no path under `docs/mf-standards/`.
 - The report lists each reviewed file and whether it changed.
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- `AGENTS.md`: `observer/` row and observer-policy convention already matched `api/observer/observer.go`; added one sentence to the convention noting observers are trusted in-process code (payloads, live tx) registered at startup. Changed.
+- `README.md`: "observer/fan-out pattern" mention is accurate; unchanged.
+- `docs/architecture/display-name-http.md`: no observer-composition content; unchanged. No new observer architecture doc added (AGENTS.md and the package doc cover it).
+- No `docs/architecture.md` or `docs/*-spec.md` exists; not created.
+- `docs/mf-standards/` untouched (empty submodule checkout); the docs-mf-standards followup for stale parallel-in-tx text and missing `Add` guidance is still filed in `plan/followups.yaml`.
