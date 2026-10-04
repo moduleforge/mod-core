@@ -10,3 +10,7 @@ phases:
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
       tasks: []
+    - number: 3
+      slug: doc-updates
+      title: Documentation Updates
+      tasks: []
