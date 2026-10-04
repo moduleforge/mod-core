@@ -6,17 +6,13 @@ npm_modules/
 CLAUDE.md
 !.claude/CLAUDE.md
 
-# Runtime working dirs flow writes into the project under management.
-# .flow/* (not .flow/) so that !.flow/plans negation can take effect.
 # Shared parent directory for git worktrees created by both create-worktree.sh
 # (manager-provisioned plan/task worktrees, e.g. plan/<slug>, phase-NN-task-NN-<slug>,
 # or YYYY-MM-DD-<slug>) and fsessions' `prep` subcommand (session-level worktrees,
 # YYYY-MM-DD-<session-slug>). The two are distinguished only by branch-naming
 # pattern, not by directory name.
 worktrees/
-.flow/*
-!.flow/plans
-!.flow/project-analysis.json
-!.flow/what-next-cache.json
+# Flow per-machine runtime state; durable state lives in plan/ and flow/.
+.flow/
 
 /.mcp.json
