@@ -43,7 +43,7 @@ phases:
           slug: verify-consumption-and-handoff
           title: Verify Built Package Consumption and Write Wave-2 Hand-off
           path: phase-02-consumption-handoff/001-verify-consumption-and-handoff.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Verified the built package (artifacts, exports, type-check, SSR). Added the Home-app switcher and Unauthenticated redirect sections plus a no-publish/pin-refresh paragraph to gui/README.md. Recorded the verified results and a merge-SHA placeholder in the hand-off note. There were no deviations from the overview interface.
           git:
