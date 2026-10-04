@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 3
-    tasks_added: 3
+    tasks_added: 4
 phases:
     - number: 1
       slug: switcher-component
@@ -125,4 +125,17 @@ phases:
       slug: remediation-03
       title: Remediation Round 3
       kind: remediation
-      tasks: []
+      tasks:
+        - number: 1
+          slug: fix-dev-warning-detection-and-harden-memo
+          title: Fix Browser Dev Warning Detection and Harden Origins Memo and Warn Set
+          path: phase-06-remediation-03/001-fix-dev-warning-detection-and-harden-memo.md
+          done: false
+          tier: sonnet-med
+          findings:
+            - 8YrZ
+            - zxg6
+          git:
+            branch: null
+            commit: []
+            merge: null
