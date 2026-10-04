@@ -5,16 +5,19 @@ phases:
     - number: 1
       slug: observer-group-add
       title: ObserverGroup App-Level Registration
+      diff_base: 8c27efb083787667c985b545437cb6f5ba383020
       tasks:
         - number: 1
           slug: add-observer-group-registration
           title: Add Concurrency-Safe ObserverGroup.Add
           path: phase-01-observer-group-add/001-add-observer-group-registration.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added a concurrency-safe copy-on-write ObserverGroup.Add. WithPolicy and WithLogger views now share one root member set with no lock copying, and NewObserverGroup copies its input. Added 8 tests including a race test, and corrected the AGENTS.md observer row and convention bullet. Dispatch behavior is unchanged.
           git:
-            branch: null
-            commit: []
+            branch: plan/observer-group-registration-01-001
+            commit:
+                - 6ab446d
             merge: null
     - number: 2
       slug: doc-updates
