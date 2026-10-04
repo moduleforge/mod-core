@@ -1,0 +1,8 @@
+slug: observer-group-registration
+version: 1
+title: ""
+phases:
+    - number: 1
+      slug: observer-group-add
+      title: ObserverGroup App-Level Registration
+      tasks: []
