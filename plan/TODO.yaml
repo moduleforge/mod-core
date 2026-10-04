@@ -26,7 +26,8 @@ phases:
           digest: Added ApiClientRedirectConfig and a module-level unauthenticatedRedirectUrl, validated in configureApiClient before any state changes. The default 401 handler now reads the URL at call time. Added 11 tests covering the specified scenarios.
           git:
             branch: plan/shared-home-switcher-01-002
-            commit: []
+            commit:
+                - 5b1bc8d
             merge: null
     - number: 2
       slug: consumption-handoff
