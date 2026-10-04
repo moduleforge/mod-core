@@ -27,7 +27,7 @@ make build
 make test
 ```
 
-See [AGENTS.md](./AGENTS.md) for full environment setup, build commands, sqlc codegen workflow, and package descriptions. See [docs/mf-standards/manifest-spec.md](./docs/mf-standards/manifest-spec.md) for the module manifest specification. See [docs/architecture/display-name-http.md](./docs/architecture/display-name-http.md) for the `GET /v1/entities/{uuid}/display-name` HTTP surface and how a downstream module registers its own renderer.
+See [AGENTS.md](./AGENTS.md) for full environment setup, build commands, sqlc codegen workflow, and package descriptions. See [docs/mf-standards/manifest-spec.md](./docs/mf-standards/manifest-spec.md) for the module manifest specification. See [docs/architecture/display-name-http.md](./docs/architecture/display-name-http.md) for the `GET /v1/entities/{uuid}/display-name` HTTP surface and how a downstream module registers its own renderer. See [docs/architecture/observer-registration.md](./docs/architecture/observer-registration.md) for how observers are registered on an `ObserverGroup` and the trust model. See [docs/project-roadmap.md](./docs/project-roadmap.md) for possible future goals.
 
 ## Further documents
 
