@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: Dev-only href warning gated unreliably
-      id: 5VrO
-      date: "2026-10-04"
-      tags:
-        - type:bug
-        - priority:low
-        - plan/phase:remediation-01
-        - effort:unspecified
-      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx ~lines 135-146, 249-290): `isDevelopment()` requires `typeof process !== ''undefined''` and an optional-chained `process.env?.NODE_ENV`, so in browser bundles without a process shim (e.g. some Vite configs) the renderLink href-fidelity warning never fires, and it is the only guard against a renderer rewriting href. Gate on the literal `process.env.NODE_ENV !== ''production''` form bundlers replace, or `import.meta.env?.DEV`, or document it as best-effort. Related: the warning effect has no dependency array (re-runs every render while open) and `warnedHrefs` is keyed by entry key only and never cleared, so a later rewrite of the same key is not re-warned; key the dedupe on key|href|attr or clear it when renderLink/entries change, and add deps [isOpen, renderLink, entries]. Reviewer confidence: medium.'
     - title: allowedOrigins memo keyed on array identity
       id: sc9b
       date: "2026-10-04"
@@ -43,4 +34,9 @@ closed:
       title: Switcher re-parses origins per entry
       disposition: fixed
       ref: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
+      date: "2026-10-04"
+    - id: 5VrO
+      title: Dev-only href warning gated unreliably
+      disposition: fixed
+      ref: phase-05-remediation-02/001-harden-switcher-dev-warning-and-origins-memo.md
       date: "2026-10-04"
