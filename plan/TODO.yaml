@@ -15,5 +15,6 @@ phases:
           digest: Replaced .flow/* and negations with single .flow/ entry and untracked 3 .flow files.
           git:
             branch: plan/migrate-moduleforge-12-001
-            commit: []
+            commit:
+                - fdaac55
             merge: null
