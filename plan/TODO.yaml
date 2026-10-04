@@ -133,6 +133,7 @@ phases:
           path: phase-06-remediation-03/001-fix-dev-warning-detection-and-harden-memo.md
           done: false
           tier: sonnet-med
+          digest: Removed the typeof process pre-check so bundler-replaced NODE_ENV enables the dev warning in browser bundles. The origins memo key and normalizeOrigins now tolerate non-array input. The warn set is cleared on close and capped at 200 entries. Tests cover each change, and typecheck, test and build pass.
           findings:
             - 8YrZ
             - zxg6
