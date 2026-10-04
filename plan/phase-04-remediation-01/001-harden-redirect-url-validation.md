@@ -18,3 +18,9 @@ Remediates finding BuSP: the api-client's unauthenticated redirect URL validatio
 ## References
 
 - Finding BuSP in this plan's `plan/findings.yaml` ("Redirect URL accepts any http(s) origin").
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- Validation: new userinfo rejection cases pass; existing cross-origin case passes; `cd gui && bun run typecheck && bun run test` pass (114 pass, 0 fail).
+- Files: `gui/src/lib/api-client.ts`, `gui/src/lib/api-client.test.ts`.
