@@ -79,7 +79,7 @@ phases:
           findings:
             - BuSP
           git:
-            branch: null
+            branch: plan/shared-home-switcher-04-001
             commit: []
             merge: null
         - number: 2
