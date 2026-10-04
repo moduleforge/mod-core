@@ -6,3 +6,7 @@ phases:
       slug: switcher-component
       title: Shared Home-App Switcher and Redirect Config
       tasks: []
+    - number: 2
+      slug: consumption-handoff
+      title: Consumption Verification and Wave-2 Hand-off
+      tasks: []
