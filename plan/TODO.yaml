@@ -118,5 +118,6 @@ phases:
             - sc9b
           git:
             branch: plan/shared-home-switcher-05-001
-            commit: []
+            commit:
+                - 21bda41
             merge: null
