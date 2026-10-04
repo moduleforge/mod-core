@@ -5,7 +5,7 @@ React component library for entity editing UIs. Provides `<ProfileEditor>` and r
 ## Build
 
 ```bash
-npm run build
+bun run build
 ```
 
 Outputs `dist/index.js` (CJS), `dist/index.mjs` (ESM), and `dist/index.d.ts` (types) via tsup, plus `dist/index.css` (compiled Tailwind theme + utilities via the Tailwind v4 CLI) for consumers importing `@moduleforge/core-gui/styles.css`. `@tailwindcss/cli`'s pinned version must be bumped in lockstep whenever `tailwindcss` or `@tailwindcss/vite` is upgraded, or the publish-build CSS compiler and the Ladle dev-preview compiler can drift to different Tailwind engine versions.
@@ -29,8 +29,8 @@ There is no version bump and no publish: `gui/package.json` stays at `0.0.0` and
 resolves `workspace:*`. A consumer picks up a change by having the merged `mod-core` `main` commit
 checked out where its workspace resolves this package, and by rebuilding `dist/` (`bun run build`
 here, or the app's `make gui.deps`). Apps that pin sibling repos refresh the pin with
-`make pins.update REPOS="mod-core"` in the app. See the plan's
-`plan/notes/consumption-and-handoff.md` hand-off note for the per-app facts.
+`make pins.update REPOS="mod-core"` in the app; the exact pin and rebuild commands are the
+consuming app's own, so check that app's README or Makefile.
 
 ### Two CSS exports, and when to use which
 
@@ -188,9 +188,11 @@ default text for the others is the status word, and "Status unknown" for `unknow
 
 ### Placement boundary
 
-Core-gui knows nothing about the signed-in identity. A header that is identity-bound (user menu,
-account actions) belongs in `users-gui`, which composes `HomeAppSwitcher` rather than this package
-growing identity logic.
+`HomeAppSwitcher` lives in core-gui because it is props-only and auth-agnostic: it receives its
+items, allowed origins and `home` node from the app and knows nothing about the signed-in identity.
+A future identity-bound header (a user menu, or a combined user menu plus switcher) belongs in
+`users-gui`, and should compose core-gui's `HomeAppSwitcher` rather than own it, so this package
+never grows identity logic.
 
 ### Unauthenticated redirect
 
