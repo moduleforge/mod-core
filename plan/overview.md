@@ -28,8 +28,9 @@ Requirements, from the user and the wave-2 contract (`system-apps-contract.md`, 
 3. **Styling: layout-critical structure is inline style; cosmetics are token classes overridable per slot through `classNames`.** The two apps use different class vocabularies and only MFTodo imports core-gui CSS. So (a) positioning (`position: relative/absolute`, `z-index`, menu min-width) and the per-level indent (`padding-inline-start`) are inline styles and work with zero CSS; (b) colors, borders, radius, shadow, spacing, hover/focus use core-gui token utilities (`bg-popover`, `text-popover-foreground`, `border-border`, `hover:bg-muted`, ...), which are compiled into `dist/index.css` because the Ladle/`build:css` pass already `@source`s `../src`; (c) each slot accepts a `classNames` override merged with `cn()` (tailwind-merge), so MFManager can pass its literal gray utilities instead of importing core-gui CSS. No new CSS file, CSS variables, or tokens are added. Slot names are a public contract (below).
 4. **Availability is computed inside the component** from `items`: `items` is non-null/non-empty and the total number of children across roots is at least 1. Wave-2 hooks pass `null` while loading, on error, non-200, signed out, or non-managed.
 5. **Origin policy lives in the component**: an entry is navigable only if `new URL(href)` parses (absolute only; relative `href` is rejected) with an `http:`/`https:` protocol and its `origin` equals the `origin` of one of `allowedOrigins` (entries normalized through `new URL(...).origin`, so a base URL with a path or trailing slash is accepted). Non-navigable entries render as non-link text (`aria-disabled`). Exported as a pure function `isAllowedNavHref` for apps that need the same check.
-6. **`status` display**: a child whose `status` is not `running` shows it as muted trailing text, passed through an optional `formatStatus` prop (default: identity), so MFManager can reuse its `status-badge` plain-language mapping.
+6. **`status` display**: the child `status` is normalized (see the interface and behavior contract): `pending|running|stopped|failed`, or `unknown` for a missing, empty or unrecognized value. A child whose normalized status is not `running` shows muted trailing text, produced by an optional `formatStatus` prop (default: the status word, or `Status unknown` for `unknown`), so MFManager can reuse its `status-badge` plain-language mapping.
 7. **`onOpenChange(open)`** is exposed so an app can refetch the list when the menu opens (MFManager's task asks for refetch on open).
+8. **Placement (decided): `HomeAppSwitcher` stays in `@moduleforge/core-gui`**, following an architectural review of core-gui vs users-gui (`app-mfmanager/.flow/switcher-placement-analysis.md`). Rationale: the component is props-only and auth-agnostic (no user, session or fetch), which matches the mf-standards GUI rules (components stand alone; auth and routing are application concerns); MFManager does not use users-gui's `AuthProvider` (it has its own auth context), so a users-gui placement gives it nothing identity-aware; and moving it would double MFManager's dependency cost (users-gui imports core-gui at top level, so MFManager would need both workspace members, Docker contexts and builds). **Boundary rule:** a future identity-bound header (a user menu, or a combined user menu plus switcher) belongs in `users-gui` and should compose core-gui's `HomeAppSwitcher` rather than own it. This rule is also recorded in the docs task (`phase-03-doc-updates/001`) for core-gui's `AGENTS.md` and `gui/README.md`.
 
 ### Interface wave 2 consumes (authoritative)
 
@@ -40,9 +41,13 @@ export interface HomeAppSwitcherChild {
   key: string;
   label: string;        // rendered strictly as text
   href: string;         // absolute URL; navigable only if its origin is allowed
-  status: string;       // e.g. pending | running | stopped | failed (verbatim, not validated)
+  status?: HomeAppSwitcherStatus | (string & {});  // system-apps contract: pending|running|stopped|failed;
+                                                  // missing/empty/unrecognized => normalized to 'unknown'
   current?: boolean;    // true => non-navigating entry with aria-current="true"
 }
+/** Normalized status the component works with and passes to formatStatus. */
+export type HomeAppSwitcherStatus = 'pending' | 'running' | 'stopped' | 'failed' | 'unknown';
+
 export interface HomeAppSwitcherItem {
   key: string;
   label: string;
@@ -73,13 +78,14 @@ export interface HomeAppSwitcherProps {
   items: readonly HomeAppSwitcherItem[] | null | undefined;   // null/undefined = not available
   allowedOrigins: readonly string[];                  // origins navigation is permitted to
   renderLink?: (props: HomeAppSwitcherLinkProps) => React.ReactNode;   // default: <a {...props} />
-  formatStatus?: (status: string) => React.ReactNode; // default: identity
+  formatStatus?: (status: HomeAppSwitcherStatus) => React.ReactNode; // receives the NORMALIZED status; default text below
   switchLabel?: string;                               // trigger aria-label; default "Switch application"
   classNames?: Partial<Record<HomeAppSwitcherSlot, string>>;
   onOpenChange?: (open: boolean) => void;
 }
 
 export function HomeAppSwitcher(props: HomeAppSwitcherProps): React.ReactElement;
+export function normalizeHomeAppStatus(status: string | undefined | null): HomeAppSwitcherStatus;
 export function isAllowedNavHref(href: string, allowedOrigins: readonly string[]): boolean;
 ```
 
@@ -87,14 +93,25 @@ Behavior contract:
 
 - Unavailable: renders `<>{home}</>` only. Available: renders `<div data-slot="home-app-switcher" data-mf-component="home-app-switcher">` (inline-flex, items-center, small gap) containing `home`, then the trigger, then (when open) the menu.
 - Trigger: `<button type="button" aria-haspopup="menu" aria-expanded aria-controls aria-label={switchLabel}>` with an `aria-hidden` swap icon (lucide `ArrowLeftRight`, already a dependency, or an inline SVG if unavailable). It is the only thing that opens the menu; the `home` node receives no handlers.
-- Menu: `role="menu"`, flat list of `role="menuitem"` entries in order: each root, then its children; roots at `data-level="0"` with no extra indent, children at `data-level="1"` with exactly one indent step (`padding-inline-start`, inline). Navigable entries render through `renderLink`; the `current` child and any entry failing the origin check render as `<span role="menuitem" aria-disabled="true">` (the `current` one also `aria-current="true"`), not focusable by arrow keys. Non-`running` children show `formatStatus(status)` as trailing muted text.
+- Menu: `role="menu"`, flat list of `role="menuitem"` entries in order: each root, then its children; roots at `data-level="0"` with no extra indent, children at `data-level="1"` with exactly one indent step (`padding-inline-start`, inline). Navigable entries render through `renderLink`; the `current` child and any entry failing the origin check render as `<span role="menuitem" aria-disabled="true">` (the `current` one also `aria-current="true"`), not focusable by arrow keys. Non-`running` children show trailing muted status text in a `<span data-slot="status" data-status="<normalized>">`.
+- Status normalization (exported pure `normalizeHomeAppStatus`): `status` that is `undefined`, `null`, empty or whitespace-only, or not exactly one of `pending|running|stopped|failed` (case-sensitive), becomes `'unknown'`; the raw unrecognized string is never rendered. `HomeAppSwitcherChild.status` is typed `HomeAppSwitcherStatus | (string & {})`, so literals autocomplete while a plain `string` from a JSON response is assignable without a cast.
+- Default status text (when `formatStatus` is not given): `running` renders nothing (no span); `pending`, `stopped` and `failed` render the status word verbatim (`pending`, `stopped`, `failed`); `unknown` renders the neutral text `Status unknown`. The visible text is the accessible text (no extra `aria-label`, so screen readers announce e.g. "MFTodo, stopped" or "Name, Status unknown" within the menuitem). `unknown` is styled exactly like every other status (muted); no status, including `failed`, gets destructive or error styling by default, and `unknown` is never rendered as `failed`. `formatStatus(normalizedStatus)` still applies to every non-`running` status including `unknown` and replaces the default text; its return value renders in the same `status` slot (a `null`/`false` return suppresses the span). `formatStatus` is not called for `running`.
 - Keyboard: Enter/Space (native) toggle; ArrowDown opens and focuses the first navigable entry; ArrowUp opens and focuses the last; within the menu ArrowDown/ArrowUp move (wrapping), Home/End jump; Escape closes and returns focus to the trigger; Tab closes. Dismiss on outside `pointerdown`/`mousedown`, on Escape, and on selecting an entry (the click is not prevented, so navigation proceeds).
 - Dependency/peer surface unchanged: React `^19` peer, `lucide-react` and `tailwind-merge`/`clsx` already dependencies. No router import.
-- Also in this plan: `configureApiClient({ unauthenticatedRedirectUrl })` (default `'/auth/login'`; used only by the default `onUnauthenticated`; relative same-origin path or absolute http/https URL, else throws `TypeError`). Not the hook wave-2 apps need for the switcher; available for them if they choose.
+- Also in this plan: `configureApiClient({ unauthenticatedRedirectUrl })` (default `'/auth/login'`; used only by the default `onUnauthenticated`; relative same-origin path or absolute http/https URL, else throws `TypeError`). Not the hook wave-2 apps need for the switcher; available for them if they choose. **Optional / deferrable:** task `phase-01/002` has no wave-2 consumer today (MFTodo's 401s go through users-gui; MFManager has its own api-client); it stays in the plan but may be dropped or deferred without affecting the switcher.
 
-Wave-2 per-app task, after this plan: obtain the tree (`null` until loaded), pass `home={<existing label element, unchanged>}`, `items`, `allowedOrigins`, optionally `classNames`/`formatStatus`/`onOpenChange`, and omit `renderLink`. Switcher tests in the apps reduce to wiring tests (label className unchanged, null items renders no icon); behavior tests live here.
+Wave-2 per-app task, after this plan: obtain the tree (`null` until loaded), pass `home={<existing label element, unchanged>}`, `items`, `allowedOrigins`, optionally `classNames`/`formatStatus`/`onOpenChange`, and omit `renderLink`. Wave-2 apps pass the contract's `status` straight through (no pre-validation needed) and, if they supply `formatStatus`, handle the five normalized values including `unknown`. Switcher tests in the apps reduce to wiring tests (label className unchanged, null items renders no icon); behavior tests live here.
 
 Styling-token strategy for the two apps: MFTodo already imports `@moduleforge/core-gui/styles.css` and scans core-gui `dist/`, so the defaults need no override. MFManager imports no core-gui CSS today; it either adds the same two lines or passes `classNames` with its own gray utilities (merge precedence guarantees overrides win) while the inline layout styles keep the menu usable either way.
+
+### Interface changes since first commit
+
+For wave-2 plans that read the first-committed interface:
+
+- `HomeAppSwitcherChild.status` is now optional and typed `HomeAppSwitcherStatus | (string & {})` (was required `string`, verbatim). New exported type `HomeAppSwitcherStatus` (`'pending'|'running'|'stopped'|'failed'|'unknown'`) and new exported function `normalizeHomeAppStatus`.
+- A missing, empty or unrecognized status is now normalized to `'unknown'` (was rendered verbatim); default text for `unknown` is `Status unknown`.
+- `formatStatus` now receives the normalized `HomeAppSwitcherStatus` (was `string`); it is never called for `running`. An app mapping statuses (e.g. MFManager's `status-badge`) must handle `unknown`.
+- Placement is confirmed as core-gui (decision 8); no import-path change.
 
 ### Hand-off to wave 2
 
