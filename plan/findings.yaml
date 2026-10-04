@@ -24,8 +24,8 @@ items:
       tags:
         - type:documentation
         - plan/phase:observer-group-add
-        - priority:unspecified
-        - effort:unspecified
+        - priority:low
+        - effort:small
       text: model/README.md, error-banner-refactor.md, next-steps.md and stories-next.md are not reachable from README.md by links (stories-next.md is reachable only through next-steps.md). Pre-existing, not touched by the observer change. Link them from README.md or AGENTS.md, or consolidate them, so the link-chain rule holds.
     - title: ObserverGroup.Add accepts typed-nil, cycles
       id: MoCc
