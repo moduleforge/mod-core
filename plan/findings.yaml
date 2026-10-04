@@ -6,9 +6,9 @@ items:
       tags:
         - type:security
         - plan/phase:observer-group-add
-        - priority:unspecified
-        - effort:unspecified
-      text: api/observer/observer.go (*ObserverGroup).Add is callable at any time by any holder of the group pointer. An added observer receives every mutation's before/after payloads, the live pgx.Tx under in-tx dispatch, and can veto by returning an error. Nothing freezes the group after startup, so in a multi-module process a late registration could attach a data-reading or veto-capable observer. Consider an optional Seal/Freeze the host calls after startup (later Add panics or errors), or confine group access to the startup hook, and document that observers are fully trusted code with transaction access. Reachability depends on how the mfgen-generated root exposes the group to modules.
+        - priority:low
+        - effort:medium
+      text: 'api/observer/observer.go (*ObserverGroup).Add is callable at any time by any holder of the group pointer. An added observer receives every mutation''s before/after payloads, the live pgx.Tx under in-tx dispatch, and can veto by returning an error. Nothing freezes the group after startup, so in a multi-module process a late registration could attach a data-reading or veto-capable observer. Consider an optional Seal/Freeze the host calls after startup (later Add panics or errors), or confine group access to the startup hook, and document that observers are fully trusted code with transaction access. Reachability depends on how the mfgen-generated root exposes the group to modules. Open question (evaluator, quoted data): seal API vs. document-only (observers are fully trusted in-process code, register in startup hooks) vs. defer alongside an mfgen change. Evaluator recommended: document only, which the planned doc update can partly cover.'
     - title: Observer dispatch goroutines lack recover
       id: mldB
       date: "2026-10-04"
