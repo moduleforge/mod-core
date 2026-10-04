@@ -37,6 +37,7 @@ phases:
     - number: 2
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
+      diff_base: d4c4a481bcc7ecd288c2653f4dbaf04269401f45
       tasks:
         - number: 1
           slug: verify-consumption-and-handoff
