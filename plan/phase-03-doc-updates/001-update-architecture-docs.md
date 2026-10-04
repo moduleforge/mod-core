@@ -18,3 +18,9 @@ Reconcile mod-core's architecture and standards documentation with the changes t
 - `AGENTS.md` and `gui/README.md` both state the placement boundary rule.
 - The documented prop and export names match `gui/dist/index.d.ts` exactly (grep each).
 - `git diff --stat` shows changes only to `AGENTS.md`, optionally `README.md` and one new `docs/architecture/` file.
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- Updated `AGENTS.md` (overview bullet, `gui/` toolkit section: `HomeAppSwitcher` rules, placement boundary, `unauthenticatedRedirectUrl`, consumption facts) and `gui/README.md` (placement-boundary rule, `bun run build`, durable consumption wording replacing the plan-path reference).
+- Validation: names checked against `gui/src/HomeAppSwitcher.tsx` and `gui/src/lib/api-client.ts` because `gui/dist/index.d.ts` is not built in this worktree. No new `docs/architecture/` doc (the directory holds per-cross-repo-contract docs; the switcher is covered by `gui/README.md`). `README.md` does not list the switcher, left unchanged.
