@@ -36,13 +36,9 @@ items:
         - plan/phase:switcher-component
         - effort:small
       text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): `isAllowedNavHref` runs `new URL(o).origin` for every allowed origin for every entry (O(entries x origins)), and the `entries` memo depends on `allowedOrigins` by identity so an inline array literal re-runs it each parent render. `navigableIndexes()` re-runs flatMap per keydown and `childCount` is a reduce per render. All negligible at typical sizes (~10 entries, 1-3 origins). Optional: normalize allowedOrigins to a Set once in a memo, compute navigable indexes and childCount inside the entries memo, document passing a stable array.'
-    - title: mf-standards doc links dangle; orphan docs
-      id: 0pxR
+closed:
+    - id: 0pxR
+      title: mf-standards doc links dangle; orphan docs
+      disposition: promoted
+      ref: 0pxR
       date: "2026-10-04"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:switcher-component
-        - effort:small
-      text: 'Pre-existing doc link-chain gaps in this repo (not introduced by the reviewed diff). docs/mf-standards/ is empty, so README.md (lines 10, 30), AGENTS.md (lines 13, 15, 72, 185), docs/architecture/display-name-http.md (14, 117), gui/README.md (22, 24), model/README.md (10) and gui/tokens/STYLE-PACKAGE-CONTRACT.md (293, 561, 562) link to missing mf-standards targets (building-applications.md, building-modules.md, manifest-spec.md, architecture.md, architecture/db-considerations.md); AGENTS.md line 3 links a nonexistent .claude/settings.local.json. Orphans unreachable from README.md: error-banner-refactor.md, next-steps.md, stories-next.md, model/README.md, gui/README.md (AGENTS.md:137 mentions it as inline code only) and, through it, gui/tokens/README.md, gui/tokens/CONTRACT.md, gui/tokens/STYLE-PACKAGE-CONTRACT.md. Likely cause of the empty directory: an unsynced docs/mf-standards copy in the checked-out worktree; verify before editing links.'
-closed: []
