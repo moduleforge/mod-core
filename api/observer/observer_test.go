@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/moduleforge/core-api/observer"
 )
@@ -217,4 +218,56 @@ func TestNoopObserver(t *testing.T) {
 	}
 	// Must not panic.
 	obs.ObserveAfterCommit(ctx, "create", "foo", nil, nil)
+}
+
+// fakeTx detects overlapping use: embedded nil pgx.Tx, only Exec is implemented.
+type fakeTx struct {
+	pgx.Tx
+	inUse atomic.Bool
+}
+
+func (f *fakeTx) Exec(_ context.Context, _ string, _ ...any) (pgconn.CommandTag, error) {
+	if !f.inUse.CompareAndSwap(false, true) {
+		return pgconn.CommandTag{}, errors.New("conn busy")
+	}
+	time.Sleep(20 * time.Millisecond)
+	f.inUse.Store(false)
+	return pgconn.CommandTag{}, nil
+}
+
+type queryObserver struct{ calls atomic.Int32 }
+
+func (o *queryObserver) Observe(ctx context.Context, tx pgx.Tx, _, _ string, _ *int64, _, _ any) error {
+	o.calls.Add(1)
+	_, err := tx.Exec(ctx, "select 1")
+	return err
+}
+
+func (o *queryObserver) ObserveAfterCommit(_ context.Context, _, _ string, _ *int64, _ any) {}
+
+func TestObserve_SharedTx_SerializedNoConnBusy(t *testing.T) {
+	for _, policy := range []observer.Policy{observer.PolicyPropagate, observer.PolicySwallow} {
+		logger, buf := newLogBuf()
+		a, b := &queryObserver{}, &queryObserver{}
+		g := observer.NewObserverGroup(a, b).WithPolicy(policy).WithLogger(logger)
+		if err := g.Observe(context.Background(), &fakeTx{}, "delete", "foo", nil, nil, nil); err != nil {
+			t.Fatalf("policy %d: Observe: %v", policy, err)
+		}
+		if a.calls.Load() != 1 || b.calls.Load() != 1 {
+			t.Errorf("policy %d: expected both observers called once", policy)
+		}
+		if bytes.Contains(buf.Bytes(), []byte("conn busy")) {
+			t.Errorf("policy %d: concurrent tx use detected: %s", policy, buf.String())
+		}
+	}
+}
+
+func TestObserve_SharedTx_PropagateStopsAtFirstError(t *testing.T) {
+	sentinel := errors.New("boom")
+	after := &countObserver{}
+	g := observer.NewObserverGroup(&errObserver{observeErr: sentinel}, after)
+	err := g.Observe(context.Background(), &fakeTx{}, "update", "foo", nil, nil, nil)
+	if !errors.Is(err, sentinel) || after.observeCount.Load() != 0 {
+		t.Fatalf("expected sentinel and later observer skipped; err=%v", err)
+	}
 }
