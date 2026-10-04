@@ -20,13 +20,22 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'Informational: no docs/architecture.md parent index exists; new topic doc is reachable via direct links from README.md/AGENTS.md so this is not a compliance gap, just a note that a future task could add the fuller structure.'
-    - title: ObserverGroup races concurrent tx queries
-      id: 3vJn
-      date: "2026-09-28"
+    - title: mf-standards doc links dangle; orphan docs
+      id: 0pxR
+      date: "2026-10-04"
       tags:
-        - type:bug
-        - cross-repo/origin:mod-billing
+        - type:documentation
+        - priority:low
+        - effort:small
+        - plan/phase:switcher-component
+        - plan/slug:shared-home-switcher
+      text: 'Pre-existing doc link-chain gaps in this repo (not introduced by the reviewed diff). docs/mf-standards/ is empty, so README.md (lines 10, 30), AGENTS.md (lines 13, 15, 72, 185), docs/architecture/display-name-http.md (14, 117), gui/README.md (22, 24), model/README.md (10) and gui/tokens/STYLE-PACKAGE-CONTRACT.md (293, 561, 562) link to missing mf-standards targets (building-applications.md, building-modules.md, manifest-spec.md, architecture.md, architecture/db-considerations.md); AGENTS.md line 3 links a nonexistent .claude/settings.local.json. Orphans unreachable from README.md: error-banner-refactor.md, next-steps.md, stories-next.md, model/README.md, gui/README.md (AGENTS.md:137 mentions it as inline code only) and, through it, gui/tokens/README.md, gui/tokens/CONTRACT.md, gui/tokens/STYLE-PACKAGE-CONTRACT.md. Likely cause of the empty directory: an unsynced docs/mf-standards copy in the checked-out worktree; verify before editing links.'
+    - title: App-level ObserverGroup registration
+      id: cuNY
+      date: "2026-10-04"
+      tags:
+        - type:enhancement
+        - cross-repo/origin:flow-accounts
         - priority:unspecified
         - effort:unspecified
-        - cross-repo/origin:mod-billing
-      text: 'ObserverGroup.dispatch (api/observer/observer.go) fans out every attached MutationObserver.Observe call in parallel on the same pgx.Tx (errgroup under PolicyPropagate, sync.WaitGroup under PolicySwallow), passing the shared tx to every goroutine. pgx''s own connection lock (pgconn.PgConn.lock) refuses a second concurrent use of one connection, returning connLockError{status: "conn busy"}; a pgx.Tx holds exactly one such connection, so two observers issuing queries against the same tx concurrently race for that lock and the loser gets "conn busy". At least one real consumer (mod-billing''s in-transaction seatReleaseOnAccountDeletion observer, policy: propagate) queries its transaction from Observe. If a composer attaches a second query-issuing in-transaction observer to the same ObserverGroup instance, both observers'' queries on that tx can race, and a "conn busy" failure under PolicyPropagate aborts the enclosing transaction. Question: must in-transaction observers attached to one ObserverGroup run serially against a shared pgx.Tx, or must MutationObserver''s own contract instead state that a transaction is never safely shared for concurrent querying, so each observer knows it cannot issue tx-scoped queries concurrently with a sibling? The interface doc (observer.go lines 37-62) currently states neither. Source: mod-billing''s mod-billing-hardening plan, phase-04 task-006.'
+      text: api/observer/observer.go ObserverGroup is fixed at construction (NewObserverGroup) and has no registration call, and mfgen's generated root builds it from the manifest's provided observers only, so an app cannot attach its own MutationObserver to the generated group. flow-accounts' appsetup.RegisterNotices works around it by building a second group that nests the root's group plus the app observer and handing that to each consumer, which must be repeated for every consumer that holds the group. Offer an app-level registration (for example a concurrency-safe ObserverGroup.Add or an mfgen manifest key for app-owned observers) so a startup hook can attach an observer to the one generated group; document the interaction with the in-tx serial and post-commit parallel dispatch.

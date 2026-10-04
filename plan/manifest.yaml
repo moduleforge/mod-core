@@ -1,2 +1,7 @@
 version: 1
-plans: []
+plans:
+    - slug: shared-home-switcher
+      status: working
+      wave:
+        slug: home-app-switcher
+        leadProject: app-mfmanager

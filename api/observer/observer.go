@@ -35,7 +35,11 @@ import (
 // An implementation may implement only one of the two methods (the other
 // becoming a no-op) if it only cares about one phase.
 type MutationObserver interface {
-	// Observe runs inside the operation's transaction. The error return is
+	// Observe runs inside the operation's transaction. All in-tx observers on
+	// one ObserverGroup are invoked serially, in attach order, on the shared
+	// tx, so an implementation may issue queries on it freely but must not
+	// spawn concurrent use of the tx itself (pgx rejects it with "conn busy").
+	// The error return is
 	// passed to the calling ObserverGroup, which decides whether to
 	// propagate or log-and-swallow based on its configured Policy and the
 	// call variant in use.
@@ -103,7 +107,9 @@ const (
 // interface) so they can choose between Observe / MustObserve / MayObserve
 // per call.
 //
-// All call variants dispatch to wrapped observers in parallel via errgroup.
+// In-tx call variants dispatch to wrapped observers serially, in attach order,
+// when given a tx (one pgx.Tx cannot be used concurrently); with a nil tx and
+// for ObserveAfterCommit they dispatch in parallel.
 // No inter-observer dependencies are supported (deliberate simplification).
 // No per-observer policy split within a single group; if you need that,
 // decompose into multiple groups.
@@ -149,7 +155,7 @@ func (g *ObserverGroup) log() *slog.Logger {
 	return slog.Default()
 }
 
-// Observe runs all wrapped observers in parallel using the group's configured
+// Observe runs all wrapped observers using the group's configured
 // default policy.
 func (g *ObserverGroup) Observe(
 	ctx context.Context, tx pgx.Tx,
@@ -159,7 +165,7 @@ func (g *ObserverGroup) Observe(
 	return g.dispatch(ctx, tx, op, resource, targetEntityID, before, after, g.policy)
 }
 
-// MustObserve runs all wrapped observers in parallel and always propagates
+// MustObserve runs all wrapped observers and always propagates
 // the first error, regardless of the group's configured policy.
 func (g *ObserverGroup) MustObserve(
 	ctx context.Context, tx pgx.Tx,
@@ -169,7 +175,7 @@ func (g *ObserverGroup) MustObserve(
 	return g.dispatch(ctx, tx, op, resource, targetEntityID, before, after, PolicyPropagate)
 }
 
-// MayObserve runs all wrapped observers in parallel and always logs and
+// MayObserve runs all wrapped observers and always logs and
 // swallows errors, regardless of the group's configured policy.
 // Always returns nil.
 func (g *ObserverGroup) MayObserve(
@@ -180,8 +186,9 @@ func (g *ObserverGroup) MayObserve(
 	return g.dispatch(ctx, tx, op, resource, targetEntityID, before, after, PolicySwallow)
 }
 
-// dispatch is the shared implementation for in-tx fan-out. It runs all
-// observers in parallel; error handling is governed by policy.
+// dispatch is the shared implementation for in-tx fan-out. With a non-nil tx
+// observers run serially in attach order; with a nil tx they run in parallel.
+// Error handling is governed by policy.
 func (g *ObserverGroup) dispatch(
 	ctx context.Context, tx pgx.Tx,
 	op, resource string, targetEntityID *int64,
@@ -189,6 +196,24 @@ func (g *ObserverGroup) dispatch(
 	policy Policy,
 ) error {
 	if len(g.observers) == 0 {
+		return nil
+	}
+
+	// A pgx.Tx wraps a single connection and refuses concurrent use ("conn
+	// busy"), so observers sharing a real tx run serially in attach order.
+	// With a nil tx there is nothing to share and the parallel path is kept.
+	if tx != nil {
+		for _, obs := range g.observers {
+			err := obs.Observe(ctx, tx, op, resource, targetEntityID, before, after)
+			if err == nil {
+				continue
+			}
+			if policy == PolicyPropagate {
+				return err
+			}
+			g.log().ErrorContext(ctx, "observer: in-tx observe error (swallowed)",
+				"op", op, "resource", resource, "error", err)
+		}
 		return nil
 	}
 
@@ -220,7 +245,7 @@ func (g *ObserverGroup) dispatch(
 	return nil
 }
 
-// ObserveAfterCommit runs all wrapped observers in parallel after a successful
+// ObserveAfterCommit runs all wrapped observers after a successful
 // commit. There are no Must/May variants because the transaction has already
 // committed. Post-commit observers re-fetch from the DB if they need
 // before-state.
