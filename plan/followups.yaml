@@ -39,3 +39,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: api/observer/observer.go ObserverGroup is fixed at construction (NewObserverGroup) and has no registration call, and mfgen's generated root builds it from the manifest's provided observers only, so an app cannot attach its own MutationObserver to the generated group. flow-accounts' appsetup.RegisterNotices works around it by building a second group that nests the root's group plus the app observer and handing that to each consumer, which must be repeated for every consumer that holds the group. Offer an app-level registration (for example a concurrency-safe ObserverGroup.Add or an mfgen manifest key for app-owned observers) so a startup hook can attach an observer to the one generated group; document the interaction with the in-tx serial and post-commit parallel dispatch.
+    - title: mf-standards observer docs stale
+      id: pwLD
+      date: "2026-10-04"
+      tags:
+        - type:documentation
+        - plan/slug:observer-group-registration
+        - priority:unspecified
+        - effort:unspecified
+      text: 'docs-mf-standards manifest-spec.md section 7 (line ~545, "dispatches all in-tx observers in parallel via errgroup") and architecture/state-management-design.md ("All three call every wrapped observer in parallel via errgroup", and "Observers run in parallel without ordering guarantees") are stale: mod-core api/observer/observer.go dispatches in-tx observers serially in attach order on a non-nil tx (parallel only with a nil tx and for ObserveAfterCommit). Once mod-core ships ObserverGroup.Add (app-level registration from a startup hook, membership shared across WithPolicy/WithLogger views), these docs should also describe that registration path and its dispatch interaction (added observers run last in serial in-tx dispatch; parallel post-commit). Update in the docs-mf-standards repo, then bump the docs/mf-standards submodule in consumers.'
+      scope_rationale: The fix belongs in the separate docs-mf-standards repo (mounted here as the docs/mf-standards submodule), outlives this plan, and cannot be edited from a mod-core plan branch.
