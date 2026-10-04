@@ -75,6 +75,7 @@ phases:
           path: phase-04-remediation-01/001-harden-redirect-url-validation.md
           done: false
           tier: sonnet-med
+          digest: Added a userinfo rejection to the redirect URL validator, with two tests, and documented the trusted-config and no-reset semantics. No surprises.
           findings:
             - BuSP
           git:
