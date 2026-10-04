@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: Switcher re-parses origins per entry
-      id: SH6J
-      date: "2026-10-04"
-      tags:
-        - type:optimization
-        - priority:low
-        - plan/phase:switcher-component
-        - effort:small
-      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): `isAllowedNavHref` runs `new URL(o).origin` for every allowed origin for every entry (O(entries x origins)), and the `entries` memo depends on `allowedOrigins` by identity so an inline array literal re-runs it each parent render. `navigableIndexes()` re-runs flatMap per keydown and `childCount` is a reduce per render. All negligible at typical sizes (~10 entries, 1-3 origins). Optional: normalize allowedOrigins to a Set once in a memo, compute navigable indexes and childCount inside the entries memo, document passing a stable array.'
     - title: Dev-only href warning gated unreliably
       id: 5VrO
       date: "2026-10-04"
@@ -45,6 +36,11 @@ closed:
       date: "2026-10-04"
     - id: WRkI
       title: renderLink href fidelity unenforced
+      disposition: fixed
+      ref: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
+      date: "2026-10-04"
+    - id: SH6J
+      title: Switcher re-parses origins per entry
       disposition: fixed
       ref: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
       date: "2026-10-04"
