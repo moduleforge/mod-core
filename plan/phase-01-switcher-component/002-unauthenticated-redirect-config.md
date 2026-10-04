@@ -27,3 +27,10 @@ architectural_impact: false
 - [`notes/unauthenticated-redirect-evaluation.md`](../notes/unauthenticated-redirect-evaluation.md)
 - `gui/src/lib/api-client.ts`, `gui/src/lib/api-client.test.ts`
 - followup ZyTU (`app-mftodo/plan/followups.yaml`, read-only)
+
+## Status
+
+- Outcome: succeeded (2026-10-04).
+- Validation: `cd gui && bun run typecheck && bun run test` pass (68 pass, 0 fail), including pre-existing api-client tests unchanged.
+- Files: `gui/src/lib/api-client.ts`, `gui/src/lib/api-client.test.ts`.
+- Note: the custom-`onUnauthenticated` test is last in its describe because the default handler is not exported and the restore mirror pins `/auth/login`; the origin guard has no reset API.
