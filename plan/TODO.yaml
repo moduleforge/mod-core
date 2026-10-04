@@ -30,6 +30,7 @@ phases:
           path: phase-02-doc-updates/001-update-architecture-docs.md
           done: false
           tier: sonnet-high
+          digest: Architecture docs were already accurate after phase 1. Added one small AGENTS.md sentence on observer trust and startup registration and recorded the review in the task doc Status.
           git:
             branch: null
             commit: []
