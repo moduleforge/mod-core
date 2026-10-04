@@ -138,6 +138,6 @@ phases:
             - 8YrZ
             - zxg6
           git:
-            branch: null
+            branch: plan/shared-home-switcher-06-001
             commit: []
             merge: null
