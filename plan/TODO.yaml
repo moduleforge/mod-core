@@ -16,6 +16,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: unauthenticated-redirect-config
+          title: Add Configurable Unauthenticated Redirect URL to api-client
+          path: phase-01-switcher-component/002-unauthenticated-redirect-config.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
