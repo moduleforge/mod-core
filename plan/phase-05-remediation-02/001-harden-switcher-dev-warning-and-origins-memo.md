@@ -23,3 +23,7 @@ Remediates findings 5VrO and sc9b in `HomeAppSwitcher`: the dev-only renderLink 
 
 - Finding 5VrO in this plan's `plan/findings.yaml` ("Dev-only href warning gated unreliably").
 - Finding sc9b in this plan's `plan/findings.yaml` ("allowedOrigins memo keyed on array identity").
+
+## Status
+
+Succeeded, 2026-10-04. Dev gate uses literal `process.env.NODE_ENV` inside try/typeof guard; warning effect has explicit deps; dedupe keyed on key+href+rendered attr; origins memo keyed on `JSON.stringify(allowedOrigins)`. Two new tests added. typecheck/test/build pass. Files: `gui/src/HomeAppSwitcher.tsx`, `gui/src/HomeAppSwitcher.test.tsx`.
