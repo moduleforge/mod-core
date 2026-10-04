@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -269,5 +270,245 @@ func TestObserve_SharedTx_PropagateStopsAtFirstError(t *testing.T) {
 	err := g.Observe(context.Background(), &fakeTx{}, "update", "foo", nil, nil, nil)
 	if !errors.Is(err, sentinel) || after.observeCount.Load() != 0 {
 		t.Fatalf("expected sentinel and later observer skipped; err=%v", err)
+	}
+}
+
+// -- ObserverGroup.Add --
+
+// orderObserver appends its name to a shared, mutex-protected order log.
+type orderObserver struct {
+	name string
+	log  *orderLog
+}
+
+type orderLog struct {
+	mu    sync.Mutex
+	names []string
+}
+
+func (l *orderLog) snapshot() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return append([]string(nil), l.names...)
+}
+
+func (o *orderObserver) Observe(_ context.Context, _ pgx.Tx, _, _ string, _ *int64, _, _ any) error {
+	o.log.mu.Lock()
+	o.log.names = append(o.log.names, o.name)
+	o.log.mu.Unlock()
+	return nil
+}
+
+func (o *orderObserver) ObserveAfterCommit(_ context.Context, _, _ string, _ *int64, _ any) {}
+
+func mustPanicNaming(t *testing.T, what string, fn func()) {
+	t.Helper()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatalf("%s: expected panic", what)
+		}
+		msg, _ := r.(string)
+		if !strings.Contains(msg, "observer.ObserverGroup.Add") {
+			t.Fatalf("%s: panic message %q does not name observer.ObserverGroup.Add", what, msg)
+		}
+	}()
+	fn()
+}
+
+func TestAdd_ConstructedGroup_ReceivesBothPhases(t *testing.T) {
+	ctx := context.Background()
+	orig, added := &countObserver{}, &countObserver{}
+	g := observer.NewObserverGroup(orig)
+	g.Add(added)
+	if err := g.Observe(ctx, nil, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+	g.ObserveAfterCommit(ctx, "create", "foo", nil, nil)
+	if added.observeCount.Load() != 1 || added.afterCommitCount.Load() != 1 {
+		t.Errorf("added observer: observe=%d afterCommit=%d, want 1/1",
+			added.observeCount.Load(), added.afterCommitCount.Load())
+	}
+	if orig.observeCount.Load() != 1 || orig.afterCommitCount.Load() != 1 {
+		t.Errorf("original observer lost: observe=%d afterCommit=%d",
+			orig.observeCount.Load(), orig.afterCommitCount.Load())
+	}
+}
+
+func TestAdd_ZeroValue(t *testing.T) {
+	ctx := context.Background()
+	added := &countObserver{}
+	g := &observer.ObserverGroup{}
+	g.Add() // no-op
+	g.Add(added)
+	if err := g.Observe(ctx, nil, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+	g.ObserveAfterCommit(ctx, "create", "foo", nil, nil)
+	if added.observeCount.Load() != 1 || added.afterCommitCount.Load() != 1 {
+		t.Errorf("zero-value group: observe=%d afterCommit=%d, want 1/1",
+			added.observeCount.Load(), added.afterCommitCount.Load())
+	}
+}
+
+func TestAdd_AttachOrder(t *testing.T) {
+	log := &orderLog{}
+	mk := func(n string) *orderObserver { return &orderObserver{name: n, log: log} }
+	g := observer.NewObserverGroup(mk("c1"), mk("c2"))
+	g.Add(mk("a1"), mk("a2"))
+	g.Add(mk("b1"))
+	if err := g.Observe(context.Background(), &fakeTx{}, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+	want := []string{"c1", "c2", "a1", "a2", "b1"}
+	got := log.snapshot()
+	if len(got) != len(want) {
+		t.Fatalf("order = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("order = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestAdd_PropagateShortCircuitSkipsAdded(t *testing.T) {
+	sentinel := errors.New("boom")
+	added := &countObserver{}
+	g := observer.NewObserverGroup(&errObserver{observeErr: sentinel})
+	g.Add(added)
+	err := g.Observe(context.Background(), &fakeTx{}, "update", "foo", nil, nil, nil)
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("err = %v, want sentinel", err)
+	}
+	if added.observeCount.Load() != 0 {
+		t.Errorf("added observer ran after earlier error under propagate")
+	}
+}
+
+func TestAdd_ViewsShareMembership(t *testing.T) {
+	ctx := context.Background()
+	root := observer.NewObserverGroup()
+	logger, _ := newLogBuf()
+	view := root.WithPolicy(observer.PolicySwallow).WithLogger(logger)
+
+	onRoot, onView := &countObserver{}, &countObserver{}
+	root.Add(onRoot) // visible to a previously derived view
+	view.Add(onView) // visible to the root
+
+	for name, g := range map[string]*observer.ObserverGroup{"root": root, "view": view} {
+		if err := g.Observe(ctx, nil, "create", "foo", nil, nil, nil); err != nil {
+			t.Fatalf("%s Observe: %v", name, err)
+		}
+	}
+	if onRoot.observeCount.Load() != 2 || onView.observeCount.Load() != 2 {
+		t.Errorf("shared membership: onRoot=%d onView=%d, want 2/2",
+			onRoot.observeCount.Load(), onView.observeCount.Load())
+	}
+}
+
+func TestAdd_ViewKeepsOwnPolicyAndLogger(t *testing.T) {
+	ctx := context.Background()
+	sentinel := errors.New("boom")
+	root := observer.NewObserverGroup() // propagate
+	logger, buf := newLogBuf()
+	view := root.WithPolicy(observer.PolicySwallow).WithLogger(logger)
+	root.Add(&errObserver{observeErr: sentinel})
+
+	if err := root.Observe(ctx, nil, "update", "foo", nil, nil, nil); !errors.Is(err, sentinel) {
+		t.Errorf("root should keep propagate policy; err = %v", err)
+	}
+	if err := view.Observe(ctx, nil, "update", "foo", nil, nil, nil); err != nil {
+		t.Errorf("view should keep swallow policy; err = %v", err)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("boom")) {
+		t.Errorf("view logger did not capture swallowed error: %q", buf.String())
+	}
+}
+
+func TestAdd_Panics_LeaveMembershipUnchanged(t *testing.T) {
+	ctx := context.Background()
+	orig, added := &countObserver{}, &countObserver{}
+	g := observer.NewObserverGroup(orig)
+	view := g.WithPolicy(observer.PolicySwallow)
+
+	mustPanicNaming(t, "nil argument", func() { g.Add(added, nil) })
+	mustPanicNaming(t, "self", func() { g.Add(added, g) })
+	mustPanicNaming(t, "view of self", func() { g.Add(added, view) })
+	mustPanicNaming(t, "self via view", func() { view.Add(added, g) })
+
+	if err := g.Observe(ctx, nil, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+	if orig.observeCount.Load() != 1 {
+		t.Errorf("original observer count = %d, want 1", orig.observeCount.Load())
+	}
+	if added.observeCount.Load() != 0 {
+		t.Errorf("panicking Add leaked an observer into the group")
+	}
+}
+
+func TestNewObserverGroup_DoesNotAliasInput(t *testing.T) {
+	a, b := &countObserver{}, &countObserver{}
+	in := []observer.MutationObserver{a}
+	g := observer.NewObserverGroup(in...)
+	in[0] = b
+	if err := g.Observe(context.Background(), nil, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+	if a.observeCount.Load() != 1 || b.observeCount.Load() != 0 {
+		t.Errorf("group aliased caller slice: a=%d b=%d", a.observeCount.Load(), b.observeCount.Load())
+	}
+}
+
+func TestAdd_ConcurrentWithDispatch(t *testing.T) {
+	ctx := context.Background()
+	logger, _ := newLogBuf()
+	g := observer.NewObserverGroup(&countObserver{})
+	view := g.WithPolicy(observer.PolicySwallow).WithLogger(logger)
+
+	const adders, perAdder, dispatchers = 8, 10, 8
+	added := make([]*countObserver, 0, adders*perAdder)
+	for i := 0; i < adders*perAdder; i++ {
+		added = append(added, &countObserver{})
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < adders; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < perAdder; j++ {
+				target := g
+				if i%2 == 1 {
+					target = view
+				}
+				target.Add(added[i*perAdder+j])
+			}
+		}(i)
+	}
+	for i := 0; i < dispatchers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				_ = g.Observe(ctx, nil, "create", "foo", nil, nil, nil)
+				_ = view.MayObserve(ctx, nil, "create", "foo", nil, nil, nil)
+				g.ObserveAfterCommit(ctx, "create", "foo", nil, nil)
+			}
+		}()
+	}
+	wg.Wait()
+
+	for _, o := range added {
+		o.observeCount.Store(0)
+	}
+	if err := g.Observe(ctx, nil, "create", "foo", nil, nil, nil); err != nil {
+		t.Fatalf("final Observe: %v", err)
+	}
+	for i, o := range added {
+		if o.observeCount.Load() != 1 {
+			t.Fatalf("added observer %d not reached by final dispatch", i)
+		}
 	}
 }
