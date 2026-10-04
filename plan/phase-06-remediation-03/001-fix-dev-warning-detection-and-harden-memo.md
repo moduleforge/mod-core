@@ -22,3 +22,7 @@ Remediates findings 8YrZ and zxg6 in `HomeAppSwitcher`: the dev-only renderLink 
 
 - Finding 8YrZ in this plan's `plan/findings.yaml` ("Dev warning still off in browser bundles").
 - Finding zxg6 in this plan's `plan/findings.yaml` ("Origins memo key and warn-set robustness").
+
+## Status
+
+succeeded (2026-10-04). Removed the `typeof process` pre-check, switched the origins memo key to `Array.isArray ? join('\u0000') : ''` (with an `Array.isArray` guard in `normalizeOrigins`), cleared `warnedHrefs` on close plus a 200-entry cap. Tests added in `gui/src/HomeAppSwitcher.test.tsx`. `bun run typecheck && test && build` pass. Files: `gui/src/HomeAppSwitcher.tsx`, `gui/src/HomeAppSwitcher.test.tsx`.
