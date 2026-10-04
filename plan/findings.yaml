@@ -36,6 +36,15 @@ items:
         - plan/phase:switcher-component
         - effort:small
       text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): `isAllowedNavHref` runs `new URL(o).origin` for every allowed origin for every entry (O(entries x origins)), and the `entries` memo depends on `allowedOrigins` by identity so an inline array literal re-runs it each parent render. `navigableIndexes()` re-runs flatMap per keydown and `childCount` is a reduce per render. All negligible at typical sizes (~10 entries, 1-3 origins). Optional: normalize allowedOrigins to a Set once in a memo, compute navigable indexes and childCount inside the entries memo, document passing a stable array.'
+    - title: Dev-only href warning gated unreliably
+      id: 5VrO
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - priority:low
+        - plan/phase:remediation-01
+        - effort:unspecified
+      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx ~lines 135-146, 249-290): `isDevelopment()` requires `typeof process !== ''undefined''` and an optional-chained `process.env?.NODE_ENV`, so in browser bundles without a process shim (e.g. some Vite configs) the renderLink href-fidelity warning never fires, and it is the only guard against a renderer rewriting href. Gate on the literal `process.env.NODE_ENV !== ''production''` form bundlers replace, or `import.meta.env?.DEV`, or document it as best-effort. Related: the warning effect has no dependency array (re-runs every render while open) and `warnedHrefs` is keyed by entry key only and never cleared, so a later rewrite of the same key is not re-warned; key the dedupe on key|href|attr or clear it when renderLink/entries change, and add deps [isOpen, renderLink, entries]. Reviewer confidence: medium.'
 closed:
     - id: 0pxR
       title: mf-standards doc links dangle; orphan docs
