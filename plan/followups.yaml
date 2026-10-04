@@ -40,16 +40,6 @@ items:
         - effort:unspecified
       text: 'docs-mf-standards manifest-spec.md section 7 (line ~545, "dispatches all in-tx observers in parallel via errgroup") and architecture/state-management-design.md ("All three call every wrapped observer in parallel via errgroup", and "Observers run in parallel without ordering guarantees") are stale: mod-core api/observer/observer.go dispatches in-tx observers serially in attach order on a non-nil tx (parallel only with a nil tx and for ObserveAfterCommit). Once mod-core ships ObserverGroup.Add (app-level registration from a startup hook, membership shared across WithPolicy/WithLogger views), these docs should also describe that registration path and its dispatch interaction (added observers run last in serial in-tx dispatch; parallel post-commit). Update in the docs-mf-standards repo, then bump the docs/mf-standards submodule in consumers.'
       scope_rationale: The fix belongs in the separate docs-mf-standards repo (mounted here as the docs/mf-standards submodule), outlives this plan, and cannot be edited from a mod-core plan branch.
-    - title: Four root docs unreachable from README
-      id: SAUP
-      date: "2026-10-04"
-      tags:
-        - type:documentation
-        - priority:low
-        - effort:small
-        - plan/phase:observer-group-add
-        - plan/slug:observer-group-registration
-      text: model/README.md, error-banner-refactor.md, next-steps.md and stories-next.md are not reachable from README.md by links (stories-next.md is reachable only through next-steps.md). Pre-existing, not touched by the observer change. Link them from README.md or AGENTS.md, or consolidate them, so the link-chain rule holds.
     - title: ObserverGroup.Add accepts typed-nil, cycles
       id: MoCc
       date: "2026-10-04"
