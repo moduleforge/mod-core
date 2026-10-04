@@ -18,7 +18,7 @@ phases:
             branch: plan/shared-home-switcher-01-001
             commit:
                 - deeb427
-            merge: null
+            merge: 0664e9a1f0edaba829fe2bbdba28393efc764c21
         - number: 2
           slug: unauthenticated-redirect-config
           title: Add Configurable Unauthenticated Redirect URL to api-client
