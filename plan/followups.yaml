@@ -79,3 +79,13 @@ items:
         - plan/phase:observer-group-add
         - plan/slug:observer-group-registration
       text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
+    - title: ObserverGroup.Add has no post-startup seal
+      id: 5cqV
+      date: "2026-10-04"
+      tags:
+        - type:security
+        - priority:low
+        - effort:medium
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: 'api/observer/observer.go (*ObserverGroup).Add is callable at any time by any holder of the group pointer. An added observer receives every mutation''s before/after payloads, the live pgx.Tx under in-tx dispatch, and can veto by returning an error. Nothing freezes the group after startup, so in a multi-module process a late registration could attach a data-reading or veto-capable observer. Consider an optional Seal/Freeze the host calls after startup (later Add panics or errors), or confine group access to the startup hook, and document that observers are fully trusted code with transaction access. Reachability depends on how the mfgen-generated root exposes the group to modules. Open question (evaluator, quoted data): seal API vs. document-only (observers are fully trusted in-process code, register in startup hooks) vs. defer alongside an mfgen change. Evaluator recommended: document only, which the planned doc update can partly cover.'
