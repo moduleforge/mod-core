@@ -50,7 +50,7 @@ phases:
             branch: plan/shared-home-switcher-02-001
             commit:
                 - f0154e3
-            merge: null
+            merge: f0cb9d71f2644d3f342b54b22a278d54af60b334
     - number: 3
       slug: doc-updates
       title: Documentation Updates
