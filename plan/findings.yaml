@@ -33,7 +33,7 @@ items:
       tags:
         - type:bug
         - plan/phase:observer-group-add
-        - priority:unspecified
-        - effort:unspecified
+        - priority:medium
+        - effort:small
       text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
 closed: []
