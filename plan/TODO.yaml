@@ -18,7 +18,7 @@ phases:
             branch: plan/observer-group-registration-01-001
             commit:
                 - 6ab446d
-            merge: null
+            merge: 8970c62b9d37765c0171961433878682ec6df9d4
     - number: 2
       slug: doc-updates
       title: Documentation Updates
