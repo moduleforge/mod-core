@@ -37,7 +37,8 @@ export interface HomeAppSwitcherItem {
  * rewriting, prefixing, or relative resolution. The origin guard is applied to
  * this exact `href` before `renderLink` is called; a renderer that alters it
  * can navigate to an origin the guard never checked. In development a
- * `console.warn` fires when a rendered anchor's `href` attribute differs.
+ * `console.warn` fires when a rendered anchor's `href` attribute differs
+ * (best-effort: inert outside a browser or in production builds).
  */
 export interface HomeAppSwitcherLinkProps {
   /** Already origin-checked; render it verbatim (see the contract above). */
@@ -72,7 +73,7 @@ export interface HomeAppSwitcherProps {
   items: readonly HomeAppSwitcherItem[] | null | undefined;
   /**
    * Origins navigation is permitted to. Pass a stable (memoized or module
-   * level) array: it is normalized once per identity change.
+   * level) array: it is re-normalized only when its contents change.
    */
   allowedOrigins: readonly string[];
   /**
@@ -138,11 +139,13 @@ function isAllowedAgainst(href: string, origins: ReadonlySet<string>): boolean {
 }
 
 function isDevelopment(): boolean {
-  return (
-    typeof document !== 'undefined' &&
-    typeof process !== 'undefined' &&
-    process.env?.NODE_ENV !== 'production'
-  );
+  if (typeof document === 'undefined' || typeof process === 'undefined') return false;
+  try {
+    // Literal `process.env.NODE_ENV` so bundlers can statically replace it.
+    return process.env.NODE_ENV !== 'production';
+  } catch {
+    return false;
+  }
 }
 
 interface Entry {
@@ -196,7 +199,13 @@ export function HomeAppSwitcher({
     onOpenChangeRef.current?.(next);
   }, []);
 
-  const origins = React.useMemo(() => normalizeOrigins(allowedOrigins), [allowedOrigins]);
+  // Keyed on contents (not array identity) so in-place mutation is honoured.
+  const originsKey = JSON.stringify(allowedOrigins);
+  const origins = React.useMemo(
+    () => normalizeOrigins(allowedOrigins),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [originsKey],
+  );
 
   const { entries, childCount, navigable } = React.useMemo(() => {
     const out: Entry[] = [];
@@ -266,14 +275,15 @@ export function HomeAppSwitcher({
       if (!e.navigable) return;
       const el = entryRefs.current[i];
       const attr = el?.getAttribute('href');
-      if (attr == null || attr === e.href || warnedHrefs.current.has(e.key)) return;
-      warnedHrefs.current.add(e.key);
+      const dedupeKey = `${e.key}\u0000${e.href}\u0000${attr}`;
+      if (attr == null || attr === e.href || warnedHrefs.current.has(dedupeKey)) return;
+      warnedHrefs.current.add(dedupeKey);
       console.warn(
         `HomeAppSwitcher: renderLink changed href for "${e.key}" (expected "${e.href}", rendered "${attr}"). ` +
           'renderLink must pass href through unchanged; the origin guard depends on it.',
       );
     });
-  });
+  }, [isOpen, renderLink, entries]);
 
   // Outside dismissal, registered only while open and available.
   React.useEffect(() => {

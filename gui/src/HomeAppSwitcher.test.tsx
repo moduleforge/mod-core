@@ -182,6 +182,16 @@ describe('HomeAppSwitcher origin policy', () => {
     for (const e of entries()) expect(e).toHaveAttribute('aria-disabled', 'true');
   });
 
+  test('in-place mutation of allowedOrigins is honoured on re-render', () => {
+    const origins = ['https://apps.example.com'];
+    const { rerender } = renderSwitcher({ allowedOrigins: origins });
+    open();
+    expect(screen.getByRole('menu').querySelectorAll('a').length).toBeGreaterThan(0);
+    origins.pop();
+    rerender(<HomeAppSwitcher home={home()} items={tree()} allowedOrigins={origins} />);
+    expect(screen.getByRole('menu').querySelectorAll('a').length).toBe(0);
+  });
+
   test('isAllowedNavHref unit cases, invalid origins skipped', () => {
     expect(isAllowedNavHref('https://a.test/x', ['not a url', 'https://a.test'])).toBe(true);
     expect(isAllowedNavHref('https://a.test/x', ['not a url'])).toBe(false);
@@ -447,6 +457,31 @@ describe('HomeAppSwitcher renderLink href fidelity warning', () => {
       renderSwitcher({ renderLink: rewrite });
       open();
       expect(warn).toHaveBeenCalled();
+    } finally {
+      console.warn = orig;
+    }
+  });
+
+  test('warns again when the same entry is later rewritten to a different href', () => {
+    const warn = mock((..._a: unknown[]) => {});
+    const orig = console.warn;
+    console.warn = warn as never;
+    try {
+      const { rerender } = renderSwitcher({
+        renderLink: (p) => <a {...p} href="/one" />,
+      });
+      open();
+      const first = warn.mock.calls.length;
+      expect(first).toBeGreaterThan(0);
+      rerender(
+        <HomeAppSwitcher
+          home={home()}
+          items={tree()}
+          allowedOrigins={ORIGINS}
+          renderLink={(p) => <a {...p} href="/two" />}
+        />,
+      );
+      expect(warn.mock.calls.length).toBeGreaterThan(first);
     } finally {
       console.warn = orig;
     }
