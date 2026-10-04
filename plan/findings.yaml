@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: renderLink href fidelity unenforced
-      id: WRkI
-      date: "2026-10-04"
-      tags:
-        - type:security
-        - priority:low
-        - plan/phase:switcher-component
-        - effort:small
-      text: 'HomeAppSwitcher passes `href` to a custom `renderLink` only for allowed-origin entries (gui/src/HomeAppSwitcher.tsx, ~lines 225-243), but cannot enforce that the renderer spreads it unchanged; a router-based renderer could rewrite or resolve it relative to the current URL, weakening the origin guard. Keep the renderLink contract prominent in docs; optionally add a test or dev-mode warning that the rendered element''s href equals linkProps.href. Reviewer confidence: low.'
     - title: Switcher re-parses origins per entry
       id: SH6J
       date: "2026-10-04"
@@ -49,6 +40,11 @@ closed:
       date: "2026-10-04"
     - id: pAdi
       title: Switcher open state survives unavailability
+      disposition: fixed
+      ref: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
+      date: "2026-10-04"
+    - id: WRkI
+      title: renderLink href fidelity unenforced
       disposition: fixed
       ref: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
       date: "2026-10-04"
