@@ -20,6 +20,7 @@ package observer
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -274,6 +275,14 @@ func (g *ObserverGroup) MayObserve(
 	return g.dispatch(ctx, tx, op, resource, targetEntityID, before, after, PolicySwallow)
 }
 
+// recoverToError converts a panic in the calling goroutine into *err. It must
+// be deferred directly.
+func recoverToError(err *error, what string) {
+	if r := recover(); r != nil {
+		*err = fmt.Errorf("observer: panic in %s: %v", what, r)
+	}
+}
+
 // dispatch is the shared implementation for in-tx fan-out. With a non-nil tx
 // observers run serially in attach order; with a nil tx they run in parallel.
 // Error handling is governed by policy.
@@ -310,7 +319,8 @@ func (g *ObserverGroup) dispatch(
 		eg, egCtx := errgroup.WithContext(ctx)
 		for _, obs := range observers {
 			obs := obs
-			eg.Go(func() error {
+			eg.Go(func() (err error) {
+				defer recoverToError(&err, "in-tx observe")
 				return obs.Observe(egCtx, tx, op, resource, targetEntityID, before, after)
 			})
 		}
@@ -324,7 +334,10 @@ func (g *ObserverGroup) dispatch(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := obs.Observe(ctx, tx, op, resource, targetEntityID, before, after); err != nil {
+			if err := func() (err error) {
+				defer recoverToError(&err, "in-tx observe")
+				return obs.Observe(ctx, tx, op, resource, targetEntityID, before, after)
+			}(); err != nil {
 				g.log().ErrorContext(ctx, "observer: in-tx observe error (swallowed)",
 					"op", op, "resource", resource, "error", err)
 			}
@@ -354,6 +367,12 @@ func (g *ObserverGroup) ObserveAfterCommit(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					g.log().ErrorContext(ctx, "observer: post-commit observe panic (recovered)",
+						"op", op, "resource", resource, "panic", fmt.Sprint(r))
+				}
+			}()
 			obs.ObserveAfterCommit(ctx, op, resource, targetEntityID, after)
 		}()
 	}

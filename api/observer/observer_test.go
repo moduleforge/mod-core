@@ -512,3 +512,52 @@ func TestAdd_ConcurrentWithDispatch(t *testing.T) {
 		}
 	}
 }
+
+// -- panic recovery --
+
+type panicObserver struct{}
+
+func (panicObserver) Observe(_ context.Context, _ pgx.Tx, _, _ string, _ *int64, _, _ any) error {
+	panic("boom-observe")
+}
+
+func (panicObserver) ObserveAfterCommit(_ context.Context, _, _ string, _ *int64, _ any) {
+	panic("boom-commit")
+}
+
+func TestObserve_PanicPropagate_ReturnsError(t *testing.T) {
+	c := &countObserver{}
+	g := observer.NewObserverGroup(panicObserver{}, c)
+	err := g.MustObserve(context.Background(), nil, "op", "res", nil, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "boom-observe") {
+		t.Fatalf("want error containing panic value, got %v", err)
+	}
+}
+
+func TestObserve_PanicSwallow_OthersStillRun(t *testing.T) {
+	c := &countObserver{}
+	logger, buf := newLogBuf()
+	g := observer.NewObserverGroup(panicObserver{}, c).WithLogger(logger)
+	if err := g.MayObserve(context.Background(), nil, "op", "res", nil, nil, nil); err != nil {
+		t.Fatalf("want nil, got %v", err)
+	}
+	if c.observeCount.Load() != 1 {
+		t.Fatalf("other observer not run")
+	}
+	if !strings.Contains(buf.String(), "boom-observe") {
+		t.Fatalf("panic not logged: %s", buf.String())
+	}
+}
+
+func TestObserveAfterCommit_Panic_OthersStillRun(t *testing.T) {
+	c := &countObserver{}
+	logger, buf := newLogBuf()
+	g := observer.NewObserverGroup(panicObserver{}, c).WithLogger(logger)
+	g.ObserveAfterCommit(context.Background(), "op", "res", nil, nil)
+	if c.afterCommitCount.Load() != 1 {
+		t.Fatalf("other observer not run")
+	}
+	if !strings.Contains(buf.String(), "boom-commit") {
+		t.Fatalf("panic not logged: %s", buf.String())
+	}
+}
