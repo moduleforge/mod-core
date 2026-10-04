@@ -102,6 +102,7 @@ phases:
     - number: 5
       slug: remediation-02
       title: Remediation Round 2
+      diff_base: 3192f582373e31b6455f63d6b607788341ac8bfc
       kind: remediation
       security_review: required
       tasks:
@@ -109,12 +110,14 @@ phases:
           slug: harden-switcher-dev-warning-and-origins-memo
           title: Fix Dev Href Warning Gating and Key Origins Memo on Contents
           path: phase-05-remediation-02/001-harden-switcher-dev-warning-and-origins-memo.md
-          done: false
+          done: true
           tier: sonnet-low
+          digest: Hardened the dev href warning gate and dedupe, and keyed the origins memo on contents. Added two tests. No public API change.
           findings:
             - 5VrO
             - sc9b
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-05-001
+            commit:
+                - 21bda41
             merge: null
