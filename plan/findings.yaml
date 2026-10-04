@@ -1,5 +1,14 @@
 version: 2
-items: []
+items:
+    - title: Dev warning still off in browser bundles
+      id: 8YrZ
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - priority:medium
+        - plan/phase:remediation-02
+        - effort:unspecified
+      text: 'HomeAppSwitcher `isDevelopment()` (gui/src/HomeAppSwitcher.tsx ~lines 141-149) still returns false early when `typeof process === ''undefined''`. Bundlers (Vite, esbuild, webpack 5) statically replace only the literal `process.env.NODE_ENV` and do not define a global `process` in the browser, so the dev-only renderLink href-fidelity warning still never fires in a browser dev build, the case it targets. Unit tests run under bun/jsdom where `process` exists, so they cannot catch it. Fix: drop the `typeof process` pre-check and rely on the existing try/catch (a ReferenceError from an unreplaced `process` is caught), keeping the `typeof document` check: `if (typeof document === ''undefined'') return false; try { return process.env.NODE_ENV !== ''production''; } catch { return false; }`. Reviewer confidence: medium; severity major.'
 closed:
     - id: 0pxR
       title: mf-standards doc links dangle; orphan docs
