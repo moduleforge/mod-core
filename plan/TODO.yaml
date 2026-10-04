@@ -65,6 +65,7 @@ phases:
     - number: 4
       slug: remediation-01
       title: Remediation Round 1
+      diff_base: ad3e78117e5d6c98fa16f1ed2fba7b5554394247
       kind: remediation
       security_review: required
       tasks:
@@ -72,13 +73,15 @@ phases:
           slug: harden-redirect-url-validation
           title: Harden Unauthenticated Redirect URL Validation
           path: phase-04-remediation-01/001-harden-redirect-url-validation.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added a userinfo rejection to the redirect URL validator, with two tests, and documented the trusted-config and no-reset semantics. No surprises.
           findings:
             - BuSP
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-04-001
+            commit:
+                - d56c960
             merge: null
         - number: 2
           slug: switcher-open-state-and-link-hardening
