@@ -56,6 +56,12 @@ export interface ApiClientRedirectConfig {
    * same-origin path (a single leading "/", not "//", with no backslash or
    * control characters) or an absolute `http:`/`https:` URL. Defaults to
    * "/auth/login". Ignored when a custom `onUnauthenticated` is supplied.
+   *
+   * Absolute URLs carrying userinfo (`user@` / `user:pw@`) are rejected. The
+   * value must come from trusted application configuration, never user input
+   * (an absolute URL may point at any origin). Passing `undefined` keeps the
+   * current value rather than resetting it, so the default is restored only
+   * by passing "/auth/login" explicitly.
    */
   unauthenticatedRedirectUrl?: string;
 }
@@ -68,7 +74,8 @@ function isValidRedirectUrl(value: unknown): value is string {
   if (/[\\\u0000-\u001f\u007f]/.test(value)) return false;
   if (value.startsWith('/')) return !value.startsWith('//');
   try {
-    const { protocol } = new URL(value);
+    const { protocol, username, password } = new URL(value);
+    if (username !== '' || password !== '') return false;
     return protocol === 'http:' || protocol === 'https:';
   } catch {
     return false;
@@ -121,7 +128,10 @@ let originGuardConfig: ApiClientOriginGuardConfig = {};
  * call never resets a previously configured guard, and vice versa. Omitting
  * `allowedOrigins` entirely (the default) never changes `request()`'s
  * behavior; passing `allowedOrigins: []` is a deliberate "block everything"
- * configuration, not "guard disabled".
+ * configuration, not "guard disabled". `unauthenticatedRedirectUrl` must come
+ * from trusted application configuration, never user input; passing
+ * `undefined` keeps the current value, so the default is restored only by
+ * passing "/auth/login" explicitly. A value with userinfo is rejected.
  */
 export function configureApiClient(
   config: Partial<ApiClientAuthHandler> &
@@ -131,7 +141,7 @@ export function configureApiClient(
   const { allowedOrigins, unauthenticatedRedirectUrl: redirectUrl, ...handlerFields } = config;
   if (redirectUrl !== undefined && !isValidRedirectUrl(redirectUrl)) {
     throw new TypeError(
-      'unauthenticatedRedirectUrl must be a same-origin path ("/...") or an absolute http(s) URL.'
+      'unauthenticatedRedirectUrl must be a same-origin path ("/...") or an absolute http(s) URL without userinfo.'
     );
   }
   authHandler = { ...authHandler, ...handlerFields };
