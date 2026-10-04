@@ -15,7 +15,7 @@ phases:
           tier: sonnet-med
           digest: Implemented the router-agnostic HomeAppSwitcher exactly per the overview interface, with exports, 99-test suite coverage and four Ladle stories. The one judgment call was applying the indent to renderLink output via cloneElement, since the contract's link props carry no style.
           git:
-            branch: null
+            branch: plan/shared-home-switcher-01-001
             commit: []
             merge: null
         - number: 2
