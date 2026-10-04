@@ -5,7 +5,17 @@ phases:
     - number: 1
       slug: switcher-component
       title: Shared Home-App Switcher and Redirect Config
-      tasks: []
+      tasks:
+        - number: 1
+          slug: home-app-switcher-component
+          title: Build HomeAppSwitcher Component With Tests and Stories
+          path: phase-01-switcher-component/001-home-app-switcher-component.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
