@@ -65,6 +65,7 @@ phases:
     - number: 4
       slug: remediation-01
       title: Remediation Round 1
+      diff_base: ad3e78117e5d6c98fa16f1ed2fba7b5554394247
       kind: remediation
       security_review: required
       tasks:
@@ -72,25 +73,29 @@ phases:
           slug: harden-redirect-url-validation
           title: Harden Unauthenticated Redirect URL Validation
           path: phase-04-remediation-01/001-harden-redirect-url-validation.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added a userinfo rejection to the redirect URL validator, with two tests, and documented the trusted-config and no-reset semantics. No surprises.
           findings:
             - BuSP
           git:
-            branch: null
-            commit: []
-            merge: null
+            branch: plan/shared-home-switcher-04-001
+            commit:
+                - d56c960
+            merge: f12f549c8687eecadb7e0661c3868993207d5bbc
         - number: 2
           slug: switcher-open-state-and-link-hardening
           title: Reset Switcher Open State, Document renderLink Href Contract, and Precompute Origins
           path: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Switcher now closes and stays closed across unavailability, with no stale listeners. Origins are precomputed once per allowedOrigins change. The renderLink href contract is documented and backed by a dev-only warning. No public API changes. Security lens applied inline; no new findings.
           findings:
             - pAdi
             - WRkI
             - SH6J
           git:
-            branch: null
-            commit: []
+            branch: plan/shared-home-switcher-04-002
+            commit:
+                - 931ae47
             merge: null

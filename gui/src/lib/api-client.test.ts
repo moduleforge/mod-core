@@ -166,6 +166,8 @@ describe('unauthenticatedRedirectUrl', () => {
     ['/a\\b'],
     ['ftp://x'],
     ['/login\nfoo'],
+    ['https://user:pw@host.test/login'],
+    ['https://user@host.test/'],
   ])('rejects invalid value %p with TypeError and leaves config intact', async (value) => {
     configureApiClient({ unauthenticatedRedirectUrl: '/login' });
 
