@@ -30,15 +30,6 @@ items:
         - plan/phase:switcher-component
         - plan/slug:shared-home-switcher
       text: 'Pre-existing doc link-chain gaps in this repo (not introduced by the reviewed diff). docs/mf-standards/ is empty, so README.md (lines 10, 30), AGENTS.md (lines 13, 15, 72, 185), docs/architecture/display-name-http.md (14, 117), gui/README.md (22, 24), model/README.md (10) and gui/tokens/STYLE-PACKAGE-CONTRACT.md (293, 561, 562) link to missing mf-standards targets (building-applications.md, building-modules.md, manifest-spec.md, architecture.md, architecture/db-considerations.md); AGENTS.md line 3 links a nonexistent .claude/settings.local.json. Orphans unreachable from README.md: error-banner-refactor.md, next-steps.md, stories-next.md, model/README.md, gui/README.md (AGENTS.md:137 mentions it as inline code only) and, through it, gui/tokens/README.md, gui/tokens/CONTRACT.md, gui/tokens/STYLE-PACKAGE-CONTRACT.md. Likely cause of the empty directory: an unsynced docs/mf-standards copy in the checked-out worktree; verify before editing links.'
-    - title: App-level ObserverGroup registration
-      id: cuNY
-      date: "2026-10-04"
-      tags:
-        - type:enhancement
-        - cross-repo/origin:flow-accounts
-        - priority:unspecified
-        - effort:unspecified
-      text: api/observer/observer.go ObserverGroup is fixed at construction (NewObserverGroup) and has no registration call, and mfgen's generated root builds it from the manifest's provided observers only, so an app cannot attach its own MutationObserver to the generated group. flow-accounts' appsetup.RegisterNotices works around it by building a second group that nests the root's group plus the app observer and handing that to each consumer, which must be repeated for every consumer that holds the group. Offer an app-level registration (for example a concurrency-safe ObserverGroup.Add or an mfgen manifest key for app-owned observers) so a startup hook can attach an observer to the one generated group; document the interaction with the in-tx serial and post-commit parallel dispatch.
     - title: mf-standards observer docs stale
       id: pwLD
       date: "2026-10-04"
