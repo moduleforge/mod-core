@@ -87,7 +87,7 @@ phases:
           slug: switcher-open-state-and-link-hardening
           title: Reset Switcher Open State, Document renderLink Href Contract, and Precompute Origins
           path: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Switcher now closes and stays closed across unavailability, with no stale listeners. Origins are precomputed once per allowedOrigins change. The renderLink href contract is documented and backed by a dev-only warning. No public API changes. Security lens applied inline; no new findings.
           findings:
