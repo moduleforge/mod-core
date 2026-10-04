@@ -69,3 +69,13 @@ items:
         - plan/phase:observer-group-add
         - plan/slug:observer-group-registration
       text: model/README.md, error-banner-refactor.md, next-steps.md and stories-next.md are not reachable from README.md by links (stories-next.md is reachable only through next-steps.md). Pre-existing, not touched by the observer change. Link them from README.md or AGENTS.md, or consolidate them, so the link-chain rule holds.
+    - title: ObserverGroup.Add accepts typed-nil, cycles
+      id: MoCc
+      date: "2026-10-04"
+      tags:
+        - type:bug
+        - priority:medium
+        - effort:small
+        - plan/phase:observer-group-add
+        - plan/slug:observer-group-registration
+      text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
