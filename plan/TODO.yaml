@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 1
-    tasks_added: 1
+    tasks_added: 2
 phases:
     - number: 1
       slug: switcher-component
@@ -76,6 +76,20 @@ phases:
           tier: sonnet-med
           findings:
             - BuSP
+          git:
+            branch: null
+            commit: []
+            merge: null
+        - number: 2
+          slug: switcher-open-state-and-link-hardening
+          title: Reset Switcher Open State, Document renderLink Href Contract, and Precompute Origins
+          path: phase-04-remediation-01/002-switcher-open-state-and-link-hardening.md
+          done: false
+          tier: sonnet-med
+          findings:
+            - pAdi
+            - WRkI
+            - SH6J
           git:
             branch: null
             commit: []
