@@ -10,3 +10,4 @@ export * from './ProfileEditor';
 export * from './NaturalPersonForm';
 export * from './CorporationForm';
 export * from './ServiceAccountForm';
+export * from './HomeAppSwitcher';
