@@ -64,7 +64,7 @@ phases:
           tier: sonnet-high
           digest: Updated AGENTS.md and gui/README.md for the switcher placement boundary, the redirect option, switcher rules and consumption facts; fixed the stale npm build line and replaced the plan-internal path reference. No new architecture doc created.
           git:
-            branch: null
+            branch: plan/shared-home-switcher-03-001
             commit: []
             merge: null
     - number: 4
