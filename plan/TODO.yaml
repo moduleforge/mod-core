@@ -96,5 +96,6 @@ phases:
             - SH6J
           git:
             branch: plan/shared-home-switcher-04-002
-            commit: []
+            commit:
+                - 931ae47
             merge: null
