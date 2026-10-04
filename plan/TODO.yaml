@@ -1,0 +1,8 @@
+slug: shared-home-switcher
+version: 1
+title: ""
+phases:
+    - number: 1
+      slug: switcher-component
+      title: Shared Home-App Switcher and Redirect Config
+      tasks: []
