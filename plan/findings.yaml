@@ -1,14 +1,5 @@
 version: 2
-items:
-    - title: Origins memo key and warn-set robustness
-      id: zxg6
-      date: "2026-10-04"
-      tags:
-        - type:optimization
-        - priority:low
-        - plan/phase:remediation-02
-        - effort:small
-      text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx): (1) the origins memo key `JSON.stringify(allowedOrigins)` (~lines 201-208) returns undefined for undefined input and could throw on exotic non-serializable input before normalizeOrigins runs; `Array.isArray(allowedOrigins) ? allowedOrigins.join(''\u0000'') : ''''` is safer, cheaper, and avoids the eslint-disable coupling. (2) `warnedHrefs` (~lines 275-286) holds one string per distinct key+href+attr for the component lifetime; a renderer emitting a different href every render would grow it without bound and warn every render (dev-only). Optionally cap the set or clear it when the menu closes. Both are defensive nits, no functional defect today.'
+items: []
 closed:
     - id: 0pxR
       title: mf-standards doc links dangle; orphan docs
@@ -47,6 +38,11 @@ closed:
       date: "2026-10-04"
     - id: 8YrZ
       title: Dev warning still off in browser bundles
+      disposition: fixed
+      ref: phase-06-remediation-03/001-fix-dev-warning-detection-and-harden-memo.md
+      date: "2026-10-04"
+    - id: zxg6
+      title: Origins memo key and warn-set robustness
       disposition: fixed
       ref: phase-06-remediation-03/001-fix-dev-warning-detection-and-harden-memo.md
       date: "2026-10-04"
