@@ -2,7 +2,7 @@ slug: shared-home-switcher
 version: 1
 title: ""
 remediation:
-    rounds: 1
+    rounds: 2
     tasks_added: 2
 phases:
     - number: 1
@@ -99,3 +99,8 @@ phases:
             commit:
                 - 931ae47
             merge: 53c7f211c89983b7d2c1743071ce13a608bbf588
+    - number: 5
+      slug: remediation-02
+      title: Remediation Round 2
+      kind: remediation
+      tasks: []
