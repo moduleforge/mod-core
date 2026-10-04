@@ -9,15 +9,6 @@ items:
         - plan/phase:switcher-component
         - effort:small
       text: 'HomeAppSwitcher (gui/src/HomeAppSwitcher.tsx, ~lines 175-200): `open`/`openRef` are not reset when `items` becomes unavailable (e.g. refresh sets items to null). The component renders only `home`, but open stays true, so when items return the menu reappears already open, and an outside pointerdown while unavailable calls setOpen(false) and fires onOpenChange(false) with nothing visible. Fix: reset open when `available` turns false, or derive rendered open as `open && available`. Reviewer confidence: medium.'
-    - title: Redirect URL accepts any http(s) origin
-      id: BuSP
-      date: "2026-10-04"
-      tags:
-        - type:security
-        - priority:low
-        - plan/phase:switcher-component
-        - effort:small
-      text: 'api-client `isValidRedirectUrl` (gui/src/lib/api-client.ts, ~lines 62-75) accepts any absolute http(s) URL: external origins, http on an https app, and URLs carrying userinfo. The value is app configuration, so not directly exploitable, but a misconfigured value makes the 401 handler an open redirect after the token is cleared, and it is looser than HomeAppSwitcher''s allowed-origins guard. Also `unauthenticatedRedirectUrl` has no reset path: passing undefined is ignored, so ''/auth/login'' can only be restored by re-passing it. Hardening options: reuse an allowed-origins guard for absolute URLs, reject url.username/url.password, document trusted-config requirement and the no-reset behaviour.'
     - title: renderLink href fidelity unenforced
       id: WRkI
       date: "2026-10-04"
@@ -59,4 +50,9 @@ closed:
       title: mf-standards doc links dangle; orphan docs
       disposition: promoted
       ref: 0pxR
+      date: "2026-10-04"
+    - id: BuSP
+      title: Redirect URL accepts any http(s) origin
+      disposition: fixed
+      ref: phase-04-remediation-01/001-harden-redirect-url-validation.md
       date: "2026-10-04"
