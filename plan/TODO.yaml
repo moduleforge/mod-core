@@ -110,7 +110,7 @@ phases:
           slug: harden-switcher-dev-warning-and-origins-memo
           title: Fix Dev Href Warning Gating and Key Origins Memo on Contents
           path: phase-05-remediation-02/001-harden-switcher-dev-warning-and-origins-memo.md
-          done: false
+          done: true
           tier: sonnet-low
           digest: Hardened the dev href warning gate and dedupe, and keyed the origins memo on contents. Added two tests. No public API change.
           findings:
