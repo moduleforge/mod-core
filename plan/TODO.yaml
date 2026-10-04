@@ -29,7 +29,17 @@ phases:
     - number: 2
       slug: consumption-handoff
       title: Consumption Verification and Wave-2 Hand-off
-      tasks: []
+      tasks:
+        - number: 1
+          slug: verify-consumption-and-handoff
+          title: Verify Built Package Consumption and Write Wave-2 Hand-off
+          path: phase-02-consumption-handoff/001-verify-consumption-and-handoff.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: doc-updates
       title: Documentation Updates
