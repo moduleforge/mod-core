@@ -28,3 +28,10 @@ make test
 ```
 
 See [AGENTS.md](./AGENTS.md) for full environment setup, build commands, sqlc codegen workflow, and package descriptions. See [docs/mf-standards/manifest-spec.md](./docs/mf-standards/manifest-spec.md) for the module manifest specification. See [docs/architecture/display-name-http.md](./docs/architecture/display-name-http.md) for the `GET /v1/entities/{uuid}/display-name` HTTP surface and how a downstream module registers its own renderer.
+
+## Further documents
+
+- [model/README.md](./model/README.md) — Core-model: migrations and sqlc-generated queries for the entity schema
+- [error-banner-refactor.md](./error-banner-refactor.md) — Design for refactoring shared error-banner handling across GUI components
+- [next-steps.md](./next-steps.md) — Pending manual verification and deferred work for mod-core
+- [stories-next.md](./stories-next.md) — Deferred component story coverage and Storybook migration path
