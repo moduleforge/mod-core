@@ -23,6 +23,7 @@ phases:
           path: phase-01-switcher-component/002-unauthenticated-redirect-config.md
           done: false
           tier: sonnet-med
+          digest: Added ApiClientRedirectConfig and a module-level unauthenticatedRedirectUrl, validated in configureApiClient before any state changes. The default 401 handler now reads the URL at call time. Added 11 tests covering the specified scenarios.
           git:
             branch: null
             commit: []
