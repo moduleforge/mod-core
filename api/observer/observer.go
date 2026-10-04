@@ -1,5 +1,7 @@
 // Package observer defines the MutationObserver interface and the ObserverGroup
-// concrete type for fan-out dispatch to multiple observers.
+// concrete type for fan-out dispatch to multiple observers. Membership is not
+// fixed at construction: an app can attach its own observer to the generated
+// group later via ObserverGroup.Add (see its doc comment for the semantics).
 //
 // # Interfaces vs concrete types
 //
@@ -114,38 +116,124 @@ const (
 // No per-observer policy split within a single group; if you need that,
 // decompose into multiple groups.
 //
-// An empty group (NewObserverGroup() with no arguments) is valid and is a
-// no-op for all methods.
+// Membership may grow after construction via Add, which is safe for
+// concurrent use. Views returned by WithPolicy and WithLogger share one
+// member set with the group they derive from, so an Add through any of them
+// is visible to all. An ObserverGroup must not be copied by value after first
+// use; always hold it by pointer.
+//
+// An empty group (NewObserverGroup() with no arguments, or the zero value
+// &ObserverGroup{}) is valid and is a no-op for all methods.
 type ObserverGroup struct {
+	// src is the root group this view derives from; nil on a root group.
+	// Views always point at the root, so chains flatten.
+	src *ObserverGroup
+
+	// mu and observers are used only on the root group (see root()).
+	mu        sync.RWMutex
 	observers []MutationObserver
-	policy    Policy
-	logger    *slog.Logger
+
+	policy Policy
+	logger *slog.Logger
 }
 
 // NewObserverGroup constructs an ObserverGroup with PolicyPropagate as the
 // default policy. Use WithPolicy to override.
 //
-// Empty input is valid and produces a no-op group; service code does not
-// need nil checks.
+// The variadic slice is copied, so the group never aliases a caller-owned
+// array. Empty input is valid and produces a no-op group; service code does
+// not need nil checks.
 func NewObserverGroup(observers ...MutationObserver) *ObserverGroup {
-	return &ObserverGroup{observers: observers}
+	cp := make([]MutationObserver, len(observers))
+	copy(cp, observers)
+	return &ObserverGroup{observers: cp}
 }
 
-// WithPolicy returns a copy of g with the given default policy set.
+// root returns the group that owns the member set: the group itself, or the
+// group a view was derived from.
+func (g *ObserverGroup) root() *ObserverGroup {
+	if g.src != nil {
+		return g.src
+	}
+	return g
+}
+
+// snapshot returns the current member slice. The returned slice is never
+// mutated (Add is copy-on-write), so callers iterate it without any lock.
+func (g *ObserverGroup) snapshot() []MutationObserver {
+	r := g.root()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.observers
+}
+
+// Add attaches observers to the group after its existing members, preserving
+// argument order; successive calls append in call order. With no arguments it
+// does nothing. It works on the zero value and is safe to call concurrently
+// with itself and with every dispatch method. Because WithPolicy and
+// WithLogger views share membership, Add through any view (or the root) is
+// visible to all of them.
+//
+// Add panics, with a message naming observer.ObserverGroup.Add, if any
+// argument is a nil interface value, or is the group itself or a view sharing
+// its member set (a direct self-nesting cycle that would recurse forever).
+// Deeper cycles (A contains B, B contains A) are not detected. Every argument
+// is validated before anything is added, so a panicking call adds nothing.
+//
+// Dispatch interaction:
+//   - With a non-nil tx, in-tx dispatch is serial in attach order, so added
+//     observers run last. Under PolicyPropagate (or MustObserve) an error from
+//     an earlier member skips them and the tx rolls back. An error from an
+//     added observer's own Observe rolls back the whole mutation, so an
+//     observer that only cares about post-commit work should make Observe a
+//     no-op that returns nil.
+//   - With a nil tx, and for ObserveAfterCommit, added observers run in
+//     parallel with every other member; ObserveAfterCommit waits for all
+//     members before returning, so long post-commit work should be handed off
+//     asynchronously.
+//   - A dispatch already in flight keeps the member snapshot it took. An Add
+//     that lands between one mutation's in-tx dispatch and its post-commit
+//     dispatch can make the new observer see ObserveAfterCommit without a
+//     matching Observe.
+//
+// The intended call site is an application startup hook, before the server
+// serves traffic; Add is safe at runtime but not intended for it.
+func (g *ObserverGroup) Add(observers ...MutationObserver) {
+	if len(observers) == 0 {
+		return
+	}
+	r := g.root()
+	for _, o := range observers {
+		if o == nil {
+			panic("observer.ObserverGroup.Add: nil observer")
+		}
+		if og, ok := o.(*ObserverGroup); ok && og != nil && og.root() == r {
+			panic("observer.ObserverGroup.Add: cannot add a group to itself or to a view of itself")
+		}
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	next := make([]MutationObserver, len(r.observers), len(r.observers)+len(observers))
+	copy(next, r.observers)
+	r.observers = append(next, observers...)
+}
+
+// WithPolicy returns a view of g with the given default policy set. The view
+// shares membership with g (and with every other view of it), so Add through
+// either is visible to both; only the policy (and logger) are per-view.
 // Builder-style: safely chainable on a shared base group.
 func (g *ObserverGroup) WithPolicy(p Policy) *ObserverGroup {
-	g2 := *g
-	g2.policy = p
-	return &g2
+	return &ObserverGroup{src: g.root(), policy: p, logger: g.logger}
 }
 
-// WithLogger returns a copy of g with the given logger set for swallowed-error
+// WithLogger returns a view of g with the given logger set for swallowed-error
 // messages. If not called, slog.Default() is used. Useful in tests that
-// capture log output.
+// capture log output. The view shares membership with g (and with every other
+// view of it), so Add through either is visible to both; only the policy and
+// logger are per-view.
 func (g *ObserverGroup) WithLogger(l *slog.Logger) *ObserverGroup {
-	g2 := *g
-	g2.logger = l
-	return &g2
+	return &ObserverGroup{src: g.root(), policy: g.policy, logger: l}
 }
 
 func (g *ObserverGroup) log() *slog.Logger {
@@ -195,7 +283,8 @@ func (g *ObserverGroup) dispatch(
 	before, after any,
 	policy Policy,
 ) error {
-	if len(g.observers) == 0 {
+	observers := g.snapshot()
+	if len(observers) == 0 {
 		return nil
 	}
 
@@ -203,7 +292,7 @@ func (g *ObserverGroup) dispatch(
 	// busy"), so observers sharing a real tx run serially in attach order.
 	// With a nil tx there is nothing to share and the parallel path is kept.
 	if tx != nil {
-		for _, obs := range g.observers {
+		for _, obs := range observers {
 			err := obs.Observe(ctx, tx, op, resource, targetEntityID, before, after)
 			if err == nil {
 				continue
@@ -219,7 +308,7 @@ func (g *ObserverGroup) dispatch(
 
 	if policy == PolicyPropagate {
 		eg, egCtx := errgroup.WithContext(ctx)
-		for _, obs := range g.observers {
+		for _, obs := range observers {
 			obs := obs
 			eg.Go(func() error {
 				return obs.Observe(egCtx, tx, op, resource, targetEntityID, before, after)
@@ -230,7 +319,7 @@ func (g *ObserverGroup) dispatch(
 
 	// PolicySwallow: run all, log errors, return nil.
 	var wg sync.WaitGroup
-	for _, obs := range g.observers {
+	for _, obs := range observers {
 		obs := obs
 		wg.Add(1)
 		go func() {
@@ -254,12 +343,13 @@ func (g *ObserverGroup) ObserveAfterCommit(
 	op, resource string, targetEntityID *int64,
 	after any,
 ) {
-	if len(g.observers) == 0 {
+	observers := g.snapshot()
+	if len(observers) == 0 {
 		return
 	}
 
 	var wg sync.WaitGroup
-	for _, obs := range g.observers {
+	for _, obs := range observers {
 		obs := obs
 		wg.Add(1)
 		go func() {
