@@ -16,3 +16,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: core-type-authorizer-helper
+          title: Core Type Authorizer Helper
+          path: phase-05-core-type-level-authorization/002-core-type-authorizer-helper.md
+          done: false
+          tier: sonnet-high
+          git:
+            branch: null
+            commit: []
+            merge: null
