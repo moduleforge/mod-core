@@ -26,3 +26,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: reproduce-and-migrate-type-id-call-sites
+          title: Reproduce And Migrate Type-Id Call Sites
+          path: phase-05-core-type-level-authorization/003-reproduce-and-migrate-type-id-call-sites.md
+          done: false
+          tier: sonnet-high
+          git:
+            branch: null
+            commit: []
+            merge: null
