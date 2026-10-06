@@ -9,4 +9,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'The task''s validation grep for the string mod-users under api/ cannot pass literally: three pre-existing files mention it in prose (api/httpapi/apps.go doc comments, api/authz/setup/grant_table_integration_test.go, api/apiresp/action_test.go). The task''s diff adds no new reference or import. The manager read the check as ''no new mod-users reference or import''; reword the validation or the prose comments if the literal check is wanted.'
+    - title: AuthorizeType nil check misses typed-nil
+      id: gFDE
+      date: "2026-10-06"
+      tags:
+        - type:bug
+        - priority:low
+        - effort:small
+        - plan/phase:core-type-level-authorization
+      text: 'Review finding (suggestion, medium confidence; agent-authored data): in api/authz/authz.go AuthorizeType rejects az == nil but an interface holding a typed nil pointer is not nil, so a TypeAuthorizer assertion can succeed and the method may panic on a nil receiver. A panic is not an allow, so this fails closed, and the same caveat applies to every other use of the Authorizer interface. Optional: mention it in the AuthorizeType doc comment.'
 closed: []
