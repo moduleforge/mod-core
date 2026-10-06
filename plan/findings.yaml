@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: The task's validation grep for the string mod
-      id: dT6a
-      date: "2026-10-06"
-      tags:
-        - type:ambiguity
-        - plan/phase:core-type-level-authorization
-        - priority:unspecified
-        - effort:unspecified
-      text: 'The task''s validation grep for the string mod-users under api/ cannot pass literally: three pre-existing files mention it in prose (api/httpapi/apps.go doc comments, api/authz/setup/grant_table_integration_test.go, api/apiresp/action_test.go). The task''s diff adds no new reference or import. The manager read the check as ''no new mod-users reference or import''; reword the validation or the prose comments if the literal check is wanted.'
     - title: AuthorizeType nil check misses typed-nil
       id: gFDE
       date: "2026-10-06"
@@ -27,4 +18,9 @@ items:
         - effort:small
         - plan/phase:core-type-level-authorization
       text: 'Review note (low confidence, pre-existing; agent-authored data): AppsHandler.Create in api/httpapi/apps.go checks authentication with opctx.ActorEntityID and validates input before authorizing, while the test authorizers use the effective (sudo-aware) actor id. Sudo resolution is delegated to the Authorizer through ctx. Worth confirming the production Authorizer uses the effective actor, and that returning 400 validation errors before 403 for a non-admin caller is acceptable. Not introduced by this change.'
-closed: []
+closed:
+    - id: dT6a
+      title: The task's validation grep for the string mod
+      disposition: dismissed
+      reason: 'Stale: task 003 is complete and its status already records that the literal grep cannot pass because of three pre-existing prose mentions; the plan-level criterion (no mod-users import in api/) holds, since api/go.mod has no mod-users requirement and no import names it.'
+      date: "2026-10-06"
