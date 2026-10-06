@@ -67,3 +67,13 @@ items:
         - plan/phase:core-type-level-authorization
         - plan/slug:fix-actor-group-target-confusion
       text: 'Review finding (suggestion, medium confidence; agent-authored data): in api/authz/authz.go AuthorizeType rejects az == nil but an interface holding a typed nil pointer is not nil, so a TypeAuthorizer assertion can succeed and the method may panic on a nil receiver. A panic is not an allow, so this fails closed, and the same caveat applies to every other use of the Authorizer interface. Optional: mention it in the AuthorizeType doc comment.'
+    - title: Apps Create uses ActorEntityID, not effective
+      id: 8rS1
+      date: "2026-10-06"
+      tags:
+        - type:security
+        - priority:high
+        - effort:small
+        - plan/phase:core-type-level-authorization
+        - plan/slug:fix-actor-group-target-confusion
+      text: 'Review note (low confidence, pre-existing; agent-authored data): AppsHandler.Create in api/httpapi/apps.go checks authentication with opctx.ActorEntityID and validates input before authorizing, while the test authorizers use the effective (sudo-aware) actor id. Sudo resolution is delegated to the Authorizer through ctx. Open questions: (1) does the production Authorizer (mod-users) evaluate grants against EffectiveActorEntityID? (2) should admin-only create handlers authorize before validating input (400 before 403 is a small request-shape oracle)? Not introduced by this change; inside mod-core the actor used for the decision is correct (opctx.EffectiveActorEntityID prefers the sudo id). Escalation (quoted data): no remediation budget was available when this was evaluated (the server returned no budget block, so the evaluator treated it as exhausted); internal escalation is off, so the question of promote vs dismiss is surfaced to the user. Recommended: promote; consider filing the mod-users half as a cross-repo followup.'
