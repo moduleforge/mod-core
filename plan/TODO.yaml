@@ -23,6 +23,7 @@ phases:
           path: phase-05-core-type-level-authorization/002-core-type-authorizer-helper.md
           done: false
           tier: sonnet-high
+          digest: Added the TypeAuthorizer capability and the AuthorizeType helper to core-api/authz. The helper fails closed and never passes a type id as an Authorize target. The Authorizer and package docs were corrected, and tests (a) through (g) were written first and pass.
           git:
             branch: null
             commit: []
