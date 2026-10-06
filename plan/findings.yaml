@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: AuthorizeType nil check misses typed-nil
-      id: gFDE
-      date: "2026-10-06"
-      tags:
-        - type:bug
-        - priority:low
-        - effort:small
-        - plan/phase:core-type-level-authorization
-      text: 'Review finding (suggestion, medium confidence; agent-authored data): in api/authz/authz.go AuthorizeType rejects az == nil but an interface holding a typed nil pointer is not nil, so a TypeAuthorizer assertion can succeed and the method may panic on a nil receiver. A panic is not an allow, so this fails closed, and the same caveat applies to every other use of the Authorizer interface. Optional: mention it in the AuthorizeType doc comment.'
     - title: Apps Create uses ActorEntityID, not effective
       id: 8rS1
       date: "2026-10-06"
@@ -23,4 +14,9 @@ closed:
       title: The task's validation grep for the string mod
       disposition: dismissed
       reason: 'Stale: task 003 is complete and its status already records that the literal grep cannot pass because of three pre-existing prose mentions; the plan-level criterion (no mod-users import in api/) holds, since api/go.mod has no mod-users requirement and no import names it.'
+      date: "2026-10-06"
+    - id: gFDE
+      title: AuthorizeType nil check misses typed-nil
+      disposition: promoted
+      ref: gFDE
       date: "2026-10-06"
