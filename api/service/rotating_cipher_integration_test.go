@@ -100,6 +100,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/moduleforge/core-api/fieldcrypto"
+	"github.com/moduleforge/core-api/internal/authztest"
 	"github.com/moduleforge/core-api/service"
 	coredb "github.com/moduleforge/core-model/db"
 )
@@ -184,6 +185,19 @@ func TestMain(m *testing.M) {
 	}
 	pool = p
 	coreQ = coredb.New(pool)
+
+	// Type-level authorization suite (type_level_authz_integration_test.go):
+	// stand-in grant/group tables, then the deterministic ownership fixture.
+	if err := authztest.SetupSchema(ctx, pool); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: authz stand-in schema: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	if err := seedTypeLevelFixture(); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: type-level authz fixture: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
 
 	code := m.Run()
 	pool.Close()
