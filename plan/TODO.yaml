@@ -35,11 +35,13 @@ phases:
           slug: reproduce-and-migrate-type-id-call-sites
           title: Reproduce And Migrate Type-Id Call Sites
           path: phase-05-core-type-level-authorization/003-reproduce-and-migrate-type-id-call-sites.md
-          done: false
+          done: true
           tier: sonnet-high
+          digest: Migrated the four type-level create sites (natural person, corporation, service account, apps) from passing a types.id as an Authorize target to authz.AuthorizeType. The bypass was reproduced first with unit and real-Postgres tests; after the fix owner, direct-grant and group-path holders are denied and wildcard create/manage holders are allowed. Only TestAppsCreate_201 changed among pre-existing assertions.
           git:
-            branch: null
-            commit: []
+            branch: plan/fix-actor-group-target-confusion-05-003
+            commit:
+                - f170a0c
             merge: null
     - number: 6
       slug: doc-updates
