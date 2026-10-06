@@ -56,6 +56,32 @@ cd model && make verify      # goose validate + sqlc compile
 cd model && make lint        # apply migrations to ephemeral Postgres (requires Docker)
 ```
 
+### Integration tests (throwaway Postgres)
+
+The four `//go:build integration` suites run against a throwaway Postgres 16+
+container with a unique name and a random host port. Run from the repo root:
+
+```sh
+name="mod-core-integ-$(openssl rand -hex 4)"
+docker run -d --rm --name "$name" -e POSTGRES_USER=users -e POSTGRES_PASSWORD=users \
+  -e POSTGRES_DB=postgres -p 127.0.0.1::5432 postgres:16
+port="$(docker port "$name" 5432/tcp | head -1 | sed 's/.*://')"
+until docker exec "$name" pg_isready -U users >/dev/null 2>&1; do sleep 1; done
+(cd api && CORE_DEV_PG_HOST=127.0.0.1 CORE_DEV_PG_PORT="$port" \
+   go test -tags=integration -p 1 -count=1 ./...)
+docker rm -f "$name"
+```
+
+- `CORE_DEV_PG_HOST`: Postgres host. When set, the `users-module-postgres`
+  container check is skipped and an unreachable Postgres fails the run.
+- `CORE_DEV_PG_PORT`: Postgres port (default `5432`).
+- `goose` must be on `PATH`.
+
+Do not use `make dev.start` or the shared `users-module-postgres` container
+for this on a shared Docker host. See the header of
+[`api/authz/setup/grant_table_integration_test.go`](api/authz/setup/grant_table_integration_test.go)
+for detail.
+
 ## Database migrations
 
 Migrations live in `model/migrations/` and are managed with goose. They run automatically on host-application startup. To run or inspect manually:

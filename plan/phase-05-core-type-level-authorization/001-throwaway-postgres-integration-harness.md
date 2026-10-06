@@ -64,3 +64,11 @@ The Docker host is **shared**. Never run `make dev.start`, `dev.restart`, `dev.s
 - After the port and container-check changes compile under `go vet -tags=integration ./...`.
 - After the full integration suite is green against a throwaway container.
 - After the header and `AGENTS.md` documentation.
+
+## Status
+
+- Outcome: succeeded (2026-10-05).
+- Added `CORE_DEV_PG_PORT` (default 5432, `pgPort` var) to the four integration suites; `CORE_DEV_PG_HOST` skips the `users-module-postgres` docker check; unreachable Postgres with explicit host exits 1; headers and `AGENTS.md` document the throwaway recipe.
+- Validation: vet (tagged and untagged), unit tests, lint clean; full integration run against a throwaway `postgres:16` passed (339 PASS lines, 0 FAIL, no skipping lines); `CORE_DEV_PG_PORT=1` exits 1; container removed; no pre-existing failures.
+- Files: `api/service/rotating_cipher_integration_test.go`, `api/httpapi/field_crypto_keys_integration_test.go`, `api/authz/setup/grant_table_integration_test.go`, `api/internal/fieldcrypto/generate_integration_test.go`, `AGENTS.md`.
+- Note: the unreachable-host message still begins "skipping ..." though the explicit-host path now exits 1.
