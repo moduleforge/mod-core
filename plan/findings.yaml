@@ -18,4 +18,13 @@ items:
         - effort:small
         - plan/phase:core-type-level-authorization
       text: 'Review finding (suggestion, medium confidence; agent-authored data): in api/authz/authz.go AuthorizeType rejects az == nil but an interface holding a typed nil pointer is not nil, so a TypeAuthorizer assertion can succeed and the method may panic on a nil receiver. A panic is not an allow, so this fails closed, and the same caveat applies to every other use of the Authorizer interface. Optional: mention it in the AuthorizeType doc comment.'
+    - title: Apps Create uses ActorEntityID, not effective
+      id: 8rS1
+      date: "2026-10-06"
+      tags:
+        - type:security
+        - priority:low
+        - effort:small
+        - plan/phase:core-type-level-authorization
+      text: 'Review note (low confidence, pre-existing; agent-authored data): AppsHandler.Create in api/httpapi/apps.go checks authentication with opctx.ActorEntityID and validates input before authorizing, while the test authorizers use the effective (sudo-aware) actor id. Sudo resolution is delegated to the Authorizer through ctx. Worth confirming the production Authorizer uses the effective actor, and that returning 400 validation errors before 403 for a non-admin caller is acceptable. Not introduced by this change.'
 closed: []
