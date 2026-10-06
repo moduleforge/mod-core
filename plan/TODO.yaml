@@ -25,7 +25,7 @@ phases:
           tier: sonnet-high
           digest: Added the TypeAuthorizer capability and the AuthorizeType helper to core-api/authz. The helper fails closed and never passes a type id as an Authorize target. The Authorizer and package docs were corrected, and tests (a) through (g) were written first and pass.
           git:
-            branch: null
+            branch: plan/fix-actor-group-target-confusion-05-002
             commit: []
             merge: null
         - number: 3
