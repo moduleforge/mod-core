@@ -1,5 +1,14 @@
 version: 2
-items: []
+items:
+    - title: Type-level auth doc claims about peers
+      id: ggLy
+      date: "2026-10-06"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:small
+        - plan/phase:doc-updates
+      text: 'Review finding (suggestion, low confidence; agent-authored data): docs/architecture/type-level-authorization.md (Fallback rule and Adopting the helper) makes three claims about other modules that could not be verified from this checkout: the production Authorizer answers a nil target from wildcard grants only; mod-users, mod-authz and mod-workflows carry local equivalent helpers; wildcard manage/create holders are unaffected. They are the claims most likely to drift. Optionally soften them to refer to the authorization-design contract, or confirm them against the peer repos.'
 closed:
     - id: dT6a
       title: The task's validation grep for the string mod
