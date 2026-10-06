@@ -99,6 +99,7 @@ import (
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/httpapi"
+	"github.com/moduleforge/core-api/internal/authztest"
 	"github.com/moduleforge/core-api/observer"
 	"github.com/moduleforge/core-api/opctx"
 	coredb "github.com/moduleforge/core-model/db"
@@ -182,6 +183,19 @@ func TestMain(m *testing.M) {
 	}
 	pool = p
 	coreQ = coredb.New(pool)
+
+	// Type-level authorization suite (apps_type_level_authz_integration_test.go):
+	// stand-in grant/group tables, then the deterministic ownership fixture.
+	if err := authztest.SetupSchema(ctx, pool); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: authz stand-in schema: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	if err := seedTypeLevelFixture(); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: type-level authz fixture: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
 
 	code := m.Run()
 	pool.Close()

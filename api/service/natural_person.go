@@ -179,9 +179,14 @@ func (s *NaturalPersonService) Create(
 	_ coredb.Querier,
 	in CreateNaturalPersonInput,
 ) (coredb.CreateNaturalPersonRow, uuid.UUID, error) {
-	// 1. Authorize with the type ID so per-resource create policy can apply.
+	// 1. Type-level authorization: creating a resource of this type is a
+	// type-level question, answered through the type-level helper. Today that
+	// is wildcard-only authority. The type id is a types.id, never an
+	// entities.id, so it must NEVER be passed to Authorize as an entity
+	// target: an entity-semantic Authorizer would match it against an
+	// unrelated entity and grant create to its owner or a targeted grantee.
 	typeID := s.typeResolver.IDForSlugMust("natural_person")
-	if err := s.az.Authorize(ctx, "create", &typeID); err != nil {
+	if err := authz.AuthorizeType(ctx, s.az, "create", typeID); err != nil {
 		return coredb.CreateNaturalPersonRow{}, uuid.UUID{}, err
 	}
 
