@@ -105,3 +105,64 @@ architectural_impact: true
 - After the red integration tests are recorded.
 - After the four migrations and the `TestAppsCreate_201` inversion, with the unit tests green.
 - After the type-aware wiring and the full integration suite green.
+
+## Status
+
+**Outcome: succeeded** (2026-10-05). Branch `plan/fix-actor-group-target-confusion-05-003`, cut from plan branch HEAD `71caac4`.
+
+### Final audit table (requirement 1)
+
+The greps from [call site audit](../notes/call-site-audit.md) were re-run at `71caac4`, including test files, and every `IDForSlug`/`IDForSlugMust`/`typeResolver` value was traced to its uses. The only production consumers of a resolved type id that feed an authorization decision are the four `create` sites. `types.Resolver` is otherwise used only by `service.New`, `NewAppsHandler`, and tests. The planning-time classification is confirmed, with no additional type-id site.
+
+| Site | Operation | Target (before) | Verdict | After |
+|---|---|---|---|---|
+| `api/service/natural_person.go` `NaturalPersonService.Create` | `create` | `&typeID` (type id) | vulnerable | `authz.AuthorizeType(ctx, s.az, "create", typeID)` |
+| `api/service/corporation.go` `CorporationService.Create` | `create` | `&typeID` (type id) | vulnerable | `authz.AuthorizeType(...)` |
+| `api/service/service_account.go` `ServiceAccountService.Create` | `create` | `&typeID` (type id) | vulnerable | `authz.AuthorizeType(...)` |
+| `api/httpapi/apps.go` `AppsHandler.Create` | `create` | `&typeID` (type id) | vulnerable | `authz.AuthorizeType(r.Context(), h.az, "create", typeID)` |
+| `api/httpapi/apps.go` `AppsHandler.List` | `list` | `nil` | OK | unchanged |
+| `api/httpapi/apps.go` get/update/delete | `read`/`update`/`delete` | `&appID` (entity id) | OK | unchanged |
+| `api/httpapi/field_crypto_keys.go` (4 sites) | `manage` | `nil` | OK | unchanged |
+| `api/service/{natural_person,corporation,service_account}.go` read/update | `read`/`update` | entity ids | OK | unchanged |
+| `api/service/entity.go` (5 sites), `display.go` | `read`/`delete` | entity ids | OK | unchanged |
+
+No `list` or other operation passes a type id. `NaturalPersonService.CreateInTx` skips `Authorize` by design, and `api/authz/setup` compares `TargetChain` to `entities.id` only; neither changed.
+
+### Red evidence (requirements 2 and 3), recorded before any production change
+
+Unit (`go test ./service ./httpapi -run TypeLevel`), log `.flow/validation-logs/red-unit.log`, every case failed on the unmodified call sites:
+
+- `TestTypeLevelCreate_EntitySemanticAuthorizerCannotBeBypassed/{natural_person,corporation,service_account}` (`type_level_authz_test.go:159,162,165`): `Create err = <nil>; want ErrForbidden`, a row was created, and `Authorize` saw non-nil target 3 / 4 / 5.
+- `TestTypeLevelCreate_PlainAuthorizerSeesNilTarget/*` (`:182`): calls were `[{create target:3|4|5}]`, wanted `[{create nil}]`.
+- `TestTypeLevelCreate_TypeAwareDenyIsFinal/*` (`:203,206,209,212`): `Create` succeeded, `AuthorizeType` was never called, and `Authorize` was called with the type id.
+- `TestTypeLevelCreate_TypeAwareAllow/*` (`:227`): `Create: unexpected error: forbidden`.
+- `TestTypeLevelCreate_TypeAwareErrorPassthrough/*` (`:254,257,260`): the sentinel was not returned, and `Authorize` was called.
+- `TestAppsCreateTypeLevel_EntitySemanticAuthorizerCannotBeBypassed` (`apps_type_level_authz_test.go:119,123,126`): `status = 201; want 403`, an app row was created, and `Authorize` saw target 99.
+- `TestAppsCreateTypeLevel_PlainAuthorizerSeesNilTarget` (`:140`), `_TypeAwareDenyIsFinal` (`:154,157,160,163`), `_TypeAwareAllow` (`:174`, 403 instead of 201), `_TypeAwareErrorPassthrough` (`:197,200,203`).
+
+Integration (throwaway `postgres:16`, unique name, random port), log `.flow/validation-logs/red-integration.log`:
+
+- `TestTypeLevelAuthz_EntitySemanticWiring_NonWildcardActorsDenied/{ownership,targeted-grant,group-path}` (`type_level_authz_integration_test.go:201,208`): for each actor (1 = Uown, 10, 11) and each of the three services, `Create ... err = <nil>; want ErrForbidden` and `1 row(s) created for denied actor`.
+- `TestTypeLevelAuthz_TypeAwareWiring_NonWildcardActorsDenied` failed the same way, plus `AuthorizeType invoked 0 time(s); want 3` (`:282`).
+- `TestTypeLevelAuthz_WildcardHoldersAllowed` failed on the type-aware counter.
+- `TestAppsTypeLevelAuthz_EntitySemanticWiring_NonWildcardActorsDenied/*` (`apps_type_level_authz_integration_test.go:203`): `POST /apps as actor 1|11|12: status = 201; want 403` and `1 app row(s) created`.
+- `TestAppsTypeLevelAuthz_TypeAwareWiring_NonWildcardActorsDenied` and `_WildcardHoldersAllowed` failed likewise.
+- The characterization tests (`..._EntitySemanticAuthorizerAdmitsTypeIDAsEntityTarget`, both packages) pass before and after: `entitySemanticAuthorizer.Authorize(ctxActor, "create", &T)` returns nil for the ownership, direct-grant, and group-path arms. This is the authorizer's contract (target is an entities.id) and why call sites must never pass a type id.
+
+### Green after the fix
+
+- Unit tests from requirement 2 pass. Integration tests from requirement 3 pass. The type-aware wiring denies Uown, Ugrant, and Ugroup on every path, the `AuthorizeType` counter equals the number of calls, and wildcard `create` and wildcard `manage`-style holders can create on all four paths under both wirings.
+- The full `-tags=integration -p 1 -count=1 -v ./...` suite passed twice in a row (idempotent re-run), with zero skips (`.flow/validation-logs/05-integration-full.log`). The throwaway container was removed; `docker ps -a --filter name=<name>` shows no rows.
+
+### Requirement 5: why `TestAppsCreate_201` changed
+
+`TestAppsCreate_201` asserted `*az.lastTarget == 99`, that is, that `Create` passes the app *type id* as the `Authorize` target. That is exactly the vulnerable shape. The assertion is inverted: the plain `appsFakeAuthorizer` (not a `TypeAuthorizer`) must see `("create", nil)`, which is what `authz.AuthorizeType` produces for such an authorizer. Its comment, and the `appsFakeAuthorizer.lastTarget` field comment, were rewritten to match. No other pre-existing assertion changed. The other pre-existing test-file edits are the `TestMain` hooks (stand-in schema plus fixture) in `rotating_cipher_integration_test.go` and `field_crypto_keys_integration_test.go`.
+
+### Files
+
+Production: `api/service/natural_person.go`, `api/service/corporation.go`, `api/service/service_account.go`, `api/httpapi/apps.go` (call sites, stale comments, `typeResolver` field and `NewAppsHandler` docs). Tests and support: `api/service/type_level_authz_test.go`, `api/service/type_level_authz_integration_test.go`, `api/httpapi/apps_type_level_authz_test.go`, `api/httpapi/apps_type_level_authz_integration_test.go`, `api/internal/authztest/authztest.go` (new; test-only authorizers, stand-in DDL, fixture; imported only by integration `_test.go` files), `api/httpapi/apps_test.go`, and the two `TestMain` hooks.
+
+### Notes and deviations
+
+- **`grep -rn --include='*.go' 'mod-users' api` cannot return nothing**: three pre-existing files (`api/httpapi/apps.go` doc comments, `api/authz/setup/grant_table_integration_test.go`, `api/apiresp/action_test.go`) mention mod-users in prose, and this task is not scoped to touch them (two are not in scope at all). The diff adds zero occurrences of `mod-users` and imports no mod-users package; the new files describe the production authorizer as the "production users-module Authorizer". Assessed as: no new reference, no import.
+- Assumptions relied on: tasks 001 and 002 landed (`CORE_DEV_PG_HOST`/`CORE_DEV_PG_PORT`, `authz.AuthorizeType`). `AppsHandler.Create` still checks `opctx.ActorEntityID` (not the sudo-aware effective actor) and still validates input before authorizing; both left unchanged as the task states.

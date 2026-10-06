@@ -184,12 +184,12 @@ func assertAppAllowed(t *testing.T, az authz.Authorizer, actor int64) {
 func TestAppsTypeLevelAuthz_EntitySemanticAuthorizerAdmitsTypeIDAsEntityTarget(t *testing.T) {
 	actors := typeLevelActors(t)
 	az := &authztest.EntitySemantic{Pool: pool}
-	typeID := typeLevelFx.TypeIDs["app"]
+	asEntityID := typeLevelFx.TypeIDs["app"]
 	for arm, actor := range actors {
 		ctx := opctx.WithActor(context.Background(), actor)
-		if err := az.Authorize(ctx, "create", &typeID); err != nil {
+		if err := az.Authorize(ctx, "create", &asEntityID); err != nil {
 			t.Errorf("%s: Authorize(create, &%d) = %v; want nil (entity-semantic authorizer matches the type id against entity %d)",
-				arm, typeID, err, typeID)
+				arm, asEntityID, err, asEntityID)
 		}
 	}
 }

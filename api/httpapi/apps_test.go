@@ -327,9 +327,9 @@ type appsFakeAuthorizer struct {
 
 	// lastAction/lastTarget record the most recent Authorize call so tests
 	// can assert on what target id AppsHandler passed — in particular, that
-	// Create passes the resolved app type id (not nil) and that
-	// GetApp/UpdateApp/DeleteApp pass the resolved entity id (not the full
-	// row) ahead of loading data.
+	// Create passes a nil target (its type-level check goes through
+	// authz.AuthorizeType) and that GetApp/UpdateApp/DeleteApp pass the
+	// resolved entity id (not the full row) ahead of loading data.
 	lastAction string
 	lastTarget *int64
 }
@@ -376,17 +376,17 @@ func TestAppsCreate_201(t *testing.T) {
 		t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
 
-	// Create must authorize with the resolved app type id, not a nil
-	// target, matching CorporationService.Create/NaturalPersonService.Create/
-	// ServiceAccountService.Create in api/service/.
+	// Create makes a type-level check through authz.AuthorizeType. This stub
+	// does not implement authz.TypeAuthorizer, so the helper falls back to
+	// Authorize("create", nil): the app type id (99) is a types.id and must
+	// never reach Authorize as an entity target, where an entity-semantic
+	// Authorizer would match it against an unrelated entity (see
+	// apps_type_level_authz_test.go).
 	if az.lastAction != "create" {
 		t.Errorf("authz action: got %q, want %q", az.lastAction, "create")
 	}
-	if az.lastTarget == nil {
-		t.Fatal("authz target: got nil, want the resolved app type id")
-	}
-	if *az.lastTarget != 99 {
-		t.Errorf("authz target: got %d, want %d (app type id)", *az.lastTarget, 99)
+	if az.lastTarget != nil {
+		t.Errorf("authz target: got %d, want nil (a type id must never be an Authorize target)", *az.lastTarget)
 	}
 
 	var resp map[string]any

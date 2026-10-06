@@ -243,11 +243,11 @@ func TestTypeLevelAuthz_EntitySemanticAuthorizerAdmitsTypeIDAsEntityTarget(t *te
 	az := &authztest.EntitySemantic{Pool: pool}
 	for arm, actor := range actors {
 		for _, slug := range typeLevelSlugs {
-			typeID := typeLevelFx.TypeIDs[slug]
+			asEntityID := typeLevelFx.TypeIDs[slug]
 			ctx := opctx.WithActor(context.Background(), actor)
-			if err := az.Authorize(ctx, "create", &typeID); err != nil {
+			if err := az.Authorize(ctx, "create", &asEntityID); err != nil {
 				t.Errorf("%s/%s: Authorize(create, &%d) = %v; want nil (entity-semantic authorizer matches the type id against entity %d)",
-					arm, slug, typeID, err, typeID)
+					arm, slug, asEntityID, err, asEntityID)
 			}
 			// ...while the same actor has no wildcard authority.
 			if err := az.Authorize(ctx, "create", nil); !errors.Is(err, apiresp.ErrForbidden) {
