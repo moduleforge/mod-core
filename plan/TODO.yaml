@@ -16,7 +16,8 @@ phases:
           digest: Added CORE_DEV_PG_PORT, an explicit-host bypass of the docker container check, and exit 1 on an unreachable explicit host to the four integration suites. Rewrote the headers and AGENTS.md around the throwaway-container recipe. The full integration suite passes (339 PASS lines, none skipped) against a throwaway postgres:16, which was removed afterwards.
           git:
             branch: plan/fix-actor-group-target-confusion-05-001
-            commit: []
+            commit:
+                - 740f007
             merge: null
         - number: 2
           slug: core-type-authorizer-helper
