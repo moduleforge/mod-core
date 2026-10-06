@@ -56,3 +56,12 @@ architectural_impact: true
 - `api/authz/authz_test.go`: the existing `stubAuthorizer` pattern.
 - mod-users `api/internal/authz/authz.go` and `api/localAuthz/authz.go` (read-only): the production Authorizer, and where `AuthorizeType`/`localAuthz.TypeAuthorizer` land in the mod-users slice.
 - mod-authz `api/service` local `authorizeType` helper (read-only, may not exist yet): the same pattern as a local copy.
+
+## Status
+
+succeeded, 2026-10-05.
+
+- Red run: before the helper existed, `go test ./authz/...` failed to compile (`undefined: authz.TypeAuthorizer`, `undefined: authz.AuthorizeType`).
+- Implemented `TypeAuthorizer` and `AuthorizeType` and corrected the `Authorizer` and package docs in `api/authz/authz.go`; tests (a)-(g) plus compile-time checks in `api/authz/authz_test.go`.
+- Validation: `go build`, `go vet`, `go test ./authz/...`, `go test ./...`, and `make lint` all pass. The only `Authorize(` call in `AuthorizeType` passes a literal `nil`.
+- Decision: the existing test file is the external package `authz_test` and was kept as is; the new tests are added there rather than switching to package `authz`, since the helper is exported.
