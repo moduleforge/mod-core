@@ -30,3 +30,16 @@ Update mod-core's architecture and contributor docs to reflect the type-level au
 - No doc in the repo (excluding `plan/` and `docs/mf-standards/`) still tells callers to pass a type id as the `Authorize` target. Check with `grep -rn -i 'type id' --include='*.md' . | grep -v -e '^./plan/' -e '^./docs/mf-standards/' -e '^./worktrees/'`, and review each hit.
 - Any new doc is linked from `README.md` (directly or through `AGENTS.md`) and follows the markdown standards (Title Case title, `## Purpose and scope` first, sentence-case sections).
 - `git diff --stat` (excluding `plan/`) touches only Markdown files, and `docs/mf-standards` is unchanged (`git diff --stat -- docs/mf-standards` is empty).
+
+## Status
+
+Outcome: succeeded (2026-10-05).
+
+Per-file review:
+
+- `AGENTS.md`: updated. The `authz/` row now names `TypeAuthorizer`/`AuthorizeType` and the entities.id target rule and links the new topic doc. The `httpapi/` row describes `AppsHandler` authorization (Create via `AuthorizeType`, List nil target, Get/Update/Delete entity id). Conventions gained the type-level authorization bullet. The throwaway-Postgres subsection from phase 05 task 001 is present and matches the `CORE_DEV_PG_HOST`/`CORE_DEV_PG_PORT` handling in the integration test headers; only the wording "four suites" was clarified to "suites (in four packages)", since there are now six integration test files.
+- `README.md`: updated. The authorization bullet mentions `AuthorizeType`, and the link list points to the new topic doc.
+- `docs/architecture/type-level-authorization.md`: added (new topic doc: contract, fallback rule, capability, adoption by modules, mod-core call sites). Reachable from `README.md` and `AGENTS.md`.
+- `docs/project-roadmap.md`: updated with a "Typed authorization target" entry (followup `ogPn`).
+- `api/authz/authz.go` package doc: no change needed. It already describes `AuthorizeType`, `TypeAuthorizer`, and the nil-target fallback consistently with the docs above.
+- `docs/mf-standards`: untouched.
