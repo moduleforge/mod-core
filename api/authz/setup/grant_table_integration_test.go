@@ -52,16 +52,32 @@ package setup_test
 // generated access functions execute correctly against a database built from
 // only mod-core's own migrations.
 //
-// Run with:
+// Run with (preferred: a throwaway Postgres container with a unique name and
+// a random host port; safe on a shared Docker host). From the repo root:
 //
-//	cd mod-core/api && \
-//	  CORE_DEV_PG_HOST=$(docker inspect users-module-postgres | \
-//	    grep -m1 '"IPAddress"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1) \
-//	  go test -tags=integration -p 1 -v ./authz/setup/...
+//	name="mod-core-integ-$(openssl rand -hex 4)"
+//	docker run -d --rm --name "$name" -e POSTGRES_USER=users -e POSTGRES_PASSWORD=users \
+//	  -e POSTGRES_DB=postgres -p 127.0.0.1::5432 postgres:16
+//	port="$(docker port "$name" 5432/tcp | head -1 | sed 's/.*://')"
+//	until docker exec "$name" pg_isready -U users >/dev/null 2>&1; do sleep 1; done
+//	(cd api && CORE_DEV_PG_HOST=127.0.0.1 CORE_DEV_PG_PORT="$port" \
+//	   go test -tags=integration -p 1 -count=1 -v ./authz/setup/...)
+//	docker rm -f "$name"
 //
-// The -p 1 flag matches the audit-module/authz-module convention: TestMain
-// drops and recreates the shadow database, so concurrent runs against the
-// same Postgres host would conflict.
+// CORE_DEV_PG_HOST and CORE_DEV_PG_PORT (default 5432) select the Postgres
+// endpoint. When CORE_DEV_PG_HOST is set the users-module-postgres container
+// check is skipped and an unreachable Postgres FAILS the run (exit 1) rather
+// than skipping it.
+//
+// Legacy alternative (NOT for use on a shared Docker host): with no env vars
+// set, the suite targets the shared users-module-postgres container on port
+// 5432 and silently skips (exit 0) if it is not running.
+//
+//	cd mod-core/api && go test -tags=integration -p 1 -v ./authz/setup/...
+//
+// The -p 1 flag matches the sibling suites' convention: TestMain drops and
+// recreates the shadow database, so concurrent runs against the same Postgres
+// host would conflict.
 
 import (
 	"context"
@@ -108,8 +124,19 @@ const coreGrantVerifyDB = "core_grant_verify_dev"
 // own container.
 const pgContainerName = "users-module-postgres"
 
+// pgPort is the Postgres TCP port: CORE_DEV_PG_PORT when set, else 5432.
+// Resolved once at package init and used for every DSN and dial.
+var pgPort = envOrDefault("CORE_DEV_PG_PORT", "5432")
+
+// envOrDefault returns the value of env var key, or def when unset or empty.
+func envOrDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
 const (
-	pgPort     = "5432"
 	pgUser     = "users"
 	pgPassword = "users"
 )
@@ -136,6 +163,9 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr,
 			"integration: skipping mod-core grant-table tests — postgres not reachable at %s:%s\n",
 			pgHost, pgPort)
+		if os.Getenv("CORE_DEV_PG_HOST") != "" {
+			os.Exit(1) // explicitly configured: a silent skip would hide a red run.
+		}
 		os.Exit(0)
 	}
 
@@ -179,13 +209,17 @@ func TestMain(m *testing.M) {
 // and the shared Postgres container is running. Matches the structural
 // precedent's prerequisite check.
 func checkIntegrationPrerequisites() error {
-	cmd := exec.Command("docker", "inspect", "--format={{.State.Running}}", pgContainerName)
-	out, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("docker inspect: %w", err)
-	}
-	if strings.TrimSpace(string(out)) != "true" {
-		return fmt.Errorf("container %s is not running", pgContainerName)
+	// An explicit CORE_DEV_PG_HOST targets a caller-managed (e.g. throwaway)
+	// Postgres, so the shared-container check does not apply.
+	if os.Getenv("CORE_DEV_PG_HOST") == "" {
+		cmd := exec.Command("docker", "inspect", "--format={{.State.Running}}", pgContainerName)
+		out, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("docker inspect: %w", err)
+		}
+		if strings.TrimSpace(string(out)) != "true" {
+			return fmt.Errorf("container %s is not running", pgContainerName)
+		}
 	}
 	if _, err := exec.LookPath("goose"); err != nil {
 		return fmt.Errorf("goose not in PATH: %w", err)
