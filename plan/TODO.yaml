@@ -11,21 +11,25 @@ phases:
           slug: throwaway-postgres-integration-harness
           title: Throwaway Postgres Integration Harness
           path: phase-05-core-type-level-authorization/001-throwaway-postgres-integration-harness.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added CORE_DEV_PG_PORT, an explicit-host bypass of the docker container check, and exit 1 on an unreachable explicit host to the four integration suites. Rewrote the headers and AGENTS.md around the throwaway-container recipe. The full integration suite passes (339 PASS lines, none skipped) against a throwaway postgres:16, which was removed afterwards.
           git:
-            branch: null
-            commit: []
+            branch: plan/fix-actor-group-target-confusion-05-001
+            commit:
+                - 740f007
             merge: null
         - number: 2
           slug: core-type-authorizer-helper
           title: Core Type Authorizer Helper
           path: phase-05-core-type-level-authorization/002-core-type-authorizer-helper.md
-          done: false
+          done: true
           tier: sonnet-high
+          digest: Added the TypeAuthorizer capability and the AuthorizeType helper to core-api/authz. The helper fails closed and never passes a type id as an Authorize target. The Authorizer and package docs were corrected, and tests (a) through (g) were written first and pass.
           git:
-            branch: null
-            commit: []
+            branch: plan/fix-actor-group-target-confusion-05-002
+            commit:
+                - d0815b1
             merge: null
         - number: 3
           slug: reproduce-and-migrate-type-id-call-sites
