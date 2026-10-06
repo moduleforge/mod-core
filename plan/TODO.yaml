@@ -39,7 +39,7 @@ phases:
           tier: sonnet-high
           digest: Migrated the four type-level create sites (natural person, corporation, service account, apps) from passing a types.id as an Authorize target to authz.AuthorizeType. The bypass was reproduced first with unit and real-Postgres tests; after the fix owner, direct-grant and group-path holders are denied and wildcard create/manage holders are allowed. Only TestAppsCreate_201 changed among pre-existing assertions.
           git:
-            branch: null
+            branch: plan/fix-actor-group-target-confusion-05-003
             commit: []
             merge: null
     - number: 6
