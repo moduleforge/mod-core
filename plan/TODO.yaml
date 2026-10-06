@@ -18,7 +18,7 @@ phases:
             branch: plan/fix-actor-group-target-confusion-05-001
             commit:
                 - 740f007
-            merge: null
+            merge: 4d996b17c2cca76e9ac4732c02dac39f5ef1821b
         - number: 2
           slug: core-type-authorizer-helper
           title: Core Type Authorizer Helper
