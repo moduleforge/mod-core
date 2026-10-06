@@ -5,6 +5,7 @@ phases:
     - number: 5
       slug: core-type-level-authorization
       title: Core Type-Level Authorization
+      diff_base: 2e59b03b6fbb069ff22da0071f4e23b57a96033e
       tasks:
         - number: 1
           slug: throwaway-postgres-integration-harness
