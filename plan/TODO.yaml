@@ -57,5 +57,6 @@ phases:
           digest: Updated AGENTS.md (authz/ and httpapi/ rows, new Conventions bullet), README.md and the roadmap, and added a type-level-authorization topic doc, all checked against the landed code. No Docker was used, and docs/mf-standards was not touched.
           git:
             branch: plan/fix-actor-group-target-confusion-06-001
-            commit: []
+            commit:
+                - de1a8e2
             merge: null
