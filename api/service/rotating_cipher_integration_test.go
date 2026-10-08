@@ -53,16 +53,32 @@ package service_test
 // seedCorporation helpers use) so the CAS write-back has a genuine row to
 // update.
 //
-// Run with:
+// Run with (preferred: a throwaway Postgres container with a unique name and
+// a random host port; safe on a shared Docker host). From the repo root:
 //
-//	cd mod-core/api && \
-//	  CORE_DEV_PG_HOST=<resolved-per-precedent> \
-//	  go test -tags=integration -p 1 -v ./service/...
+//	name="mod-core-integ-$(openssl rand -hex 4)"
+//	docker run -d --rm --name "$name" -e POSTGRES_USER=users -e POSTGRES_PASSWORD=users \
+//	  -e POSTGRES_DB=postgres -p 127.0.0.1::5432 postgres:16
+//	port="$(docker port "$name" 5432/tcp | head -1 | sed 's/.*://')"
+//	until docker exec "$name" pg_isready -U users >/dev/null 2>&1; do sleep 1; done
+//	(cd api && CORE_DEV_PG_HOST=127.0.0.1 CORE_DEV_PG_PORT="$port" \
+//	   go test -tags=integration -p 1 -count=1 -v ./service/...)
+//	docker rm -f "$name"
 //
-// The -p 1 flag matches the sibling suites' convention: each TestMain drops
-// and recreates its own shadow database, so concurrent runs against the same
-// Postgres host would conflict if more than one integration package ran at
-// once.
+// CORE_DEV_PG_HOST and CORE_DEV_PG_PORT (default 5432) select the Postgres
+// endpoint. When CORE_DEV_PG_HOST is set the users-module-postgres container
+// check is skipped and an unreachable Postgres FAILS the run (exit 1) rather
+// than skipping it.
+//
+// Legacy alternative (NOT for use on a shared Docker host): with no env vars
+// set, the suite targets the shared users-module-postgres container on port
+// 5432 and silently skips (exit 0) if it is not running.
+//
+//	cd mod-core/api && go test -tags=integration -p 1 -v ./service/...
+//
+// The -p 1 flag matches the sibling suites' convention: TestMain drops and
+// recreates the shadow database, so concurrent runs against the same Postgres
+// host would conflict.
 
 import (
 	"bytes"
@@ -84,6 +100,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/moduleforge/core-api/fieldcrypto"
+	"github.com/moduleforge/core-api/internal/authztest"
 	"github.com/moduleforge/core-api/service"
 	coredb "github.com/moduleforge/core-model/db"
 )
@@ -116,8 +133,19 @@ const coreRotateOnReadVerifyDB = "core_rotate_on_read_verify_dev"
 // own container.
 const pgContainerName = "users-module-postgres"
 
+// pgPort is the Postgres TCP port: CORE_DEV_PG_PORT when set, else 5432.
+// Resolved once at package init and used for every DSN and dial.
+var pgPort = envOrDefault("CORE_DEV_PG_PORT", "5432")
+
+// envOrDefault returns the value of env var key, or def when unset or empty.
+func envOrDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
 const (
-	pgPort     = "5432"
 	pgUser     = "users"
 	pgPassword = "users"
 )
@@ -137,6 +165,9 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr,
 			"integration: skipping mod-core rotate-on-read tests — postgres not reachable at %s:%s\n",
 			pgHost, pgPort)
+		if os.Getenv("CORE_DEV_PG_HOST") != "" {
+			os.Exit(1) // explicitly configured: a silent skip would hide a red run.
+		}
 		os.Exit(0)
 	}
 
@@ -155,6 +186,19 @@ func TestMain(m *testing.M) {
 	pool = p
 	coreQ = coredb.New(pool)
 
+	// Type-level authorization suite (type_level_authz_integration_test.go):
+	// stand-in grant/group tables, then the deterministic ownership fixture.
+	if err := authztest.SetupSchema(ctx, pool); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: authz stand-in schema: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
+	if err := seedTypeLevelFixture(); err != nil {
+		fmt.Fprintf(os.Stderr, "integration: type-level authz fixture: %v\n", err)
+		pool.Close()
+		os.Exit(1)
+	}
+
 	code := m.Run()
 	pool.Close()
 	os.Exit(code)
@@ -163,13 +207,17 @@ func TestMain(m *testing.M) {
 // checkIntegrationPrerequisites verifies that docker and goose are available
 // and the shared Postgres container is running.
 func checkIntegrationPrerequisites() error {
-	cmd := exec.Command("docker", "inspect", "--format={{.State.Running}}", pgContainerName)
-	out, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("docker inspect: %w", err)
-	}
-	if strings.TrimSpace(string(out)) != "true" {
-		return fmt.Errorf("container %s is not running", pgContainerName)
+	// An explicit CORE_DEV_PG_HOST targets a caller-managed (e.g. throwaway)
+	// Postgres, so the shared-container check does not apply.
+	if os.Getenv("CORE_DEV_PG_HOST") == "" {
+		cmd := exec.Command("docker", "inspect", "--format={{.State.Running}}", pgContainerName)
+		out, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("docker inspect: %w", err)
+		}
+		if strings.TrimSpace(string(out)) != "true" {
+			return fmt.Errorf("container %s is not running", pgContainerName)
+		}
 	}
 	if _, err := exec.LookPath("goose"); err != nil {
 		return fmt.Errorf("goose not in PATH: %w", err)

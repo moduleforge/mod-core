@@ -9,10 +9,12 @@ part of the current code.
 
 ## Roadmap overview
 
-No version-committed work is recorded here yet. Two items are recorded, both open:
+No version-committed work is recorded here yet. Three items are recorded, all open:
 
 - [Observer registration seal, mediated late-stage Add, and app-scoped Remove](#observer-registration-seal-mediated-late-stage-add-and-app-scoped-remove)
   tightens the observer registration surface. It is open and undecided.
+- [Typed authorization target](#typed-authorization-target) makes the authorization target typed.
+  It is open and undecided.
 - [Isolation of managed application functionality](#isolation-of-managed-application-functionality)
   records the investigation and decisions for an open-source release with only standalone
   deployment public. The direction is decided; implementation is deferred.
@@ -39,6 +41,20 @@ behavior and trust model. Options to consider:
   app may remove only observers it added itself (for example, `Add` returns a handle or token that
   `Remove` requires, or ownership is tracked per registrant). Never another registrant's observer,
   and never a module-provided one.
+
+### Typed authorization target
+
+**Not implemented now.** This is an open design question. Origin: followup ogPn.
+
+`Authorizer.Authorize` takes an untyped `*int64` target, which the contract defines as an
+`entities.id`. A `types.id` is also an `int64`, so the compiler cannot stop a caller from passing
+one, and an entity-semantic implementation then matches it against an unrelated entity. The
+optional `authz.TypeAuthorizer` capability and `authz.AuthorizeType` helper (see
+[Type-Level Authorization](./architecture/type-level-authorization.md)) separate type-level checks
+from entity-level ones without changing the `Authorize` signature. A longer-term option is a typed
+`Target` value that distinguishes entity targets from type targets at compile time. It would break
+every `Authorizer` implementation, decorator, and stub across the ecosystem, so it needs a
+coordinated migration and is not planned.
 
 ### Isolation of managed application functionality
 

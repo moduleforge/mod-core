@@ -42,7 +42,7 @@ import (
 // dedicated, lighter-weight handler (mirroring mod-users' original
 // AppsHandler shape) avoids pulling in the cipher dependency apps do not
 // need. It does still take typeResolver, like its service.Services
-// siblings, so Create can authorize against a typed target.
+// siblings, so Create can make its type-level authorization check.
 //
 // Membership management (assigning/removing users, editing roles) is not
 // part of this handler — those operations stay in mod-users (Phase 02 of
@@ -61,9 +61,10 @@ type AppsHandler struct {
 	// "app exists" from "app doesn't exist" ahead of the authz check).
 	entityResolver *entity.Resolver
 	// typeResolver resolves the 'app' type slug to its internal type id so
-	// Create can authorize against a typed target, matching
-	// CorporationService.Create/NaturalPersonService.Create/
-	// ServiceAccountService.Create in api/service/.
+	// Create can make its type-level authorization check
+	// (authz.AuthorizeType), matching CorporationService.Create/
+	// NaturalPersonService.Create/ServiceAccountService.Create in
+	// api/service/. The type id is never an Authorize target.
 	typeResolver *types.Resolver
 }
 
@@ -155,11 +156,15 @@ func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authorize: create is admin-only. Resolve the app type id so the
-	// policy can discriminate by resource type, matching the sibling
-	// entity-subtype services (CorporationService.Create et al.).
+	// Authorize: create is admin-only. Creating an app is a type-level
+	// question, answered through the type-level helper (wildcard-only
+	// authority today), matching the sibling entity-subtype services
+	// (CorporationService.Create et al.). The app type id is a types.id,
+	// never an entities.id, so it must NEVER be passed to Authorize as an
+	// entity target: an entity-semantic Authorizer would match it against an
+	// unrelated entity and grant create to its owner or a targeted grantee.
 	typeID := h.typeResolver.IDForSlugMust("app")
-	if err := h.az.Authorize(r.Context(), "create", &typeID); err != nil {
+	if err := authz.AuthorizeType(r.Context(), h.az, "create", typeID); err != nil {
 		apiresp.WriteError(w, r, err)
 		return
 	}
