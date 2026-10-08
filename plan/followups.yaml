@@ -67,3 +67,11 @@ items:
         - plan/phase:doc-updates
         - plan/slug:fix-actor-group-target-confusion
       text: 'Review finding (suggestion, low confidence; agent-authored data): docs/architecture/type-level-authorization.md (Fallback rule and Adopting the helper) makes three claims about other modules that could not be verified from this checkout: the production Authorizer answers a nil target from wildcard grants only; mod-users, mod-authz and mod-workflows carry local equivalent helpers; wildcard manage/create holders are unaffected. They are the claims most likely to drift. Optionally soften them to refer to the authorization-design contract, or confirm them against the peer repos.'
+    - title: Update allows blank required names
+      id: h416
+      date: "2026-10-08"
+      tags:
+        - type:bug
+        - priority:unspecified
+        - effort:unspecified
+      text: api/service/natural_person.go NaturalPersonService.UpdateByEntityUUID (~lines 305-310) trims a supplied given_name/family_name and writes it even when it trims to "", and api/service/corporation.go CorporationService.UpdateByEntityUUID (~lines 237-239) does the same for legal_name. Create rejects blank values for these fields (natural_persons.given_name_required, natural_persons.family_name_required, corporations.legal_name_required), so PUT /entities/natural-persons/{uuid} and PUT /entities/corporations/{uuid} can persist a record Create would refuse. AppsHandler.UpdateApp (api/httpapi/apps.go) instead treats a blank value as unchanged. Pick one semantics (reject with the create field codes, after authorization, or treat blank as unchanged) and apply it to both update paths with tests.
