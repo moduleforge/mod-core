@@ -50,6 +50,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: type-authorizer-contract-wording
+          title: Reword TypeAuthorizer Contract for Type-Entity Grants
+          path: phase-02-type-entity-api-and-contract/002-type-authorizer-contract-wording.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: doc-updates
       title: Documentation Updates
