@@ -83,3 +83,18 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: model/migrations/0015_apps.sql declares apps.slug UNIQUE, but AppsHandler.Create and AppsHandler.UpdateApp in api/httpapi/apps.go wrap every InsertApp/UpdateApp error with fmt.Errorf and pass it to apiresp.WriteError, so a duplicate slug (SQLSTATE 23505) surfaces as a 500 internal_error instead of a 409 conflict with a field error on slug. FieldCryptoKeyHandler.writeRotateError in api/httpapi/field_crypto_keys.go already maps 23505 to apiresp.Conflict and is the in-package precedent. Only reachable by authorized callers, so not an authorization oracle.
+    - title: HTTP discovery of type entities
+      id: r9ot
+      date: "2026-10-08"
+      tags:
+        - type:enhancement
+        - priority:unspecified
+        - effort:unspecified
+      text: |-
+        Once every types row has a type entity (types.entity_id), grants on a type are created by passing that entity's UUID as the target. But mod-core exposes no HTTP surface that lists types or maps a type slug to its type entity's UUID. Go callers can use the api/types list helper, which hides deprecated types by default and has an include-deprecated override. An admin GUI or API client cannot discover these UUIDs.
+
+        Proposed: a read-only route such as GET /v1/types?include_deprecated=..., returning slug, name, description, concrete, deprecated_at and the type entity UUID, never internal ids. Open questions:
+        - its authorization policy: authenticated-only, wildcard list, or list on the sentinel 'type' type entity;
+        - whether it belongs in mod-core or in mod-authz's grant-administration surface.
+
+        Implementing it must not add methods to coredb.Querier without updating the hand-written Querier mocks in the sibling modules that build against mod-core through replace directives (mod-tasks, mod-contacts, mod-repos, mod-tags, mod-workflows, mod-notifications, mod-authz). Alternatively, it can build on ListAllTypes.
