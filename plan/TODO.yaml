@@ -6,3 +6,7 @@ phases:
       slug: type-entity-schema
       title: Type Entity Schema
       tasks: []
+    - number: 2
+      slug: type-entity-api-and-contract
+      title: Type Entity API Surface and Contract Wording
+      tasks: []
