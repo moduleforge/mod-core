@@ -26,6 +26,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: integration-fixture-rework
+          title: Rework Id-Collision Integration Fixtures for Type Entities
+          path: phase-01-type-entity-schema/003-integration-fixture-rework.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: type-entity-api-and-contract
       title: Type Entity API Surface and Contract Wording
