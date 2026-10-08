@@ -5,7 +5,17 @@ phases:
     - number: 1
       slug: type-entity-schema
       title: Type Entity Schema
-      tasks: []
+      tasks:
+        - number: 1
+          slug: type-entity-schema
+          title: Add Types Entity Id, Sentinel Root Type, and Type Entity Trigger
+          path: phase-01-type-entity-schema/001-type-entity-schema.md
+          done: false
+          tier: sonnet-high
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: type-entity-api-and-contract
       title: Type Entity API Surface and Contract Wording
