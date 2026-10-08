@@ -43,6 +43,8 @@ if err := authz.AuthorizeType(ctx, az, "create", typeID); err != nil {
 
 The helper never passes `typeID`, or any non-nil target, to `Authorize`.
 
+The nil check detects only an untyped-nil `az`; a typed-nil pointer in the interface may panic on the nil receiver (failing closed), so Authorizers must be constructed non-nil.
+
 ## The fallback rule
 
 A nil target is the core contract's "no specific target exists yet". The production Authorizer

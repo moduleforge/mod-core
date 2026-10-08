@@ -131,8 +131,8 @@ type createAppRequest struct {
 
 // Create handles POST /apps (admin).
 func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
+	if err := authz.RequireAuthenticated(r.Context()); err != nil {
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
