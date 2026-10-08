@@ -1,4 +1,2 @@
 version: 1
-plans:
-    - slug: authz-before-validate
-      status: working
+plans: []
