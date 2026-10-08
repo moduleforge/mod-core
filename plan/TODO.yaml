@@ -1,0 +1,8 @@
+slug: type-scoped-grants
+version: 1
+title: ""
+phases:
+    - number: 1
+      slug: type-entity-schema
+      title: Type Entity Schema
+      tasks: []
