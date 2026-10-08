@@ -10,3 +10,7 @@ phases:
       slug: type-entity-api-and-contract
       title: Type Entity API Surface and Contract Wording
       tasks: []
+    - number: 3
+      slug: doc-updates
+      title: Documentation Updates
+      tasks: []
