@@ -90,6 +90,11 @@ type TypeAuthorizer interface {
 // AuthorizeType never passes typeID, or any non-nil target, to Authorize:
 // typeID is a types.id and Authorize's target is an entities.id, so doing so
 // would match an unrelated entity.
+//
+// The nil check detects only an untyped-nil Authorizer. A typed-nil pointer
+// held in the interface is not detected, and the TypeAuthorizer method call
+// may panic on the nil receiver. That fails closed (a panic is never an
+// allow), but Authorizers must be constructed non-nil.
 func AuthorizeType(ctx context.Context, az Authorizer, operation string, typeID int64) error {
 	if az == nil || typeID <= 0 {
 		return apiresp.ErrForbidden

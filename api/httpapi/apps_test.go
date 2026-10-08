@@ -18,6 +18,7 @@ import (
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/entity"
 	"github.com/moduleforge/core-api/observer"
+	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
 )
@@ -481,6 +482,21 @@ func TestAppsCreate_401_Unauthenticated(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+// A sudo-only context counts as authenticated: the 401 gate must not fire.
+func TestAppsCreate_SudoActorIsAuthenticated(t *testing.T) {
+	h := newTestAppsHandler(newAppsFakeQuerier(), &appsFakeAuthorizer{})
+	router := appsRouter(h)
+
+	req := httptest.NewRequest(http.MethodPost, "/apps", bytes.NewBufferString("{"))
+	req = req.WithContext(opctx.WithSudoActor(req.Context(), 1))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusBadRequest)
 	}
 }
 
