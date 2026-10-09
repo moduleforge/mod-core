@@ -40,7 +40,8 @@ phases:
           digest: Replaced SeedOwnerFixture with SeedCollisionFixture (test-only type authztest_collision with an unowned instance entity at id == types.id); TypeAware.AuthorizeType models the exact-type-entity contract; type-aware wiring tests re-expressed; full integration suite, make test and make lint pass.
           git:
             branch: plan/type-scoped-grants-01-003
-            commit: []
+            commit:
+                - c13cc68
             merge: null
     - number: 2
       slug: type-entity-api-and-contract
