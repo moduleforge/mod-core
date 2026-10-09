@@ -121,6 +121,7 @@ phases:
     - number: 10
       slug: remediation-01
       title: Remediation Round 1
+      diff_base: d4126c85b8eb3ab34dda0c33d03391b7b2cea511
       kind: remediation
       security_review: required
       tasks:
@@ -128,13 +129,15 @@ phases:
           slug: harden-type-entity-triggers
           title: Pin Search Path and Trim Definer Surface on Type-Entity Triggers
           path: phase-10-remediation-01/001-harden-type-entity-triggers.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Pinned search_path and qualified public. names on the two invoker-rights guards (entities_reject_type_entity_archive, types_reject_mutation); revoked PUBLIC EXECUTE on the three definer trigger functions; added the 0008 comment on hard-coded public and DEFINER rationale; fixed stale test header; added temp-table shadow test. All validation passes. One out-of-scope finding filed (huL0).
           findings:
             - VOrM
             - JBVU
             - YrDU
           git:
-            branch: null
-            commit: []
+            branch: plan/type-scoped-grants-10-001
+            commit:
+                - d8d9643
             merge: null
