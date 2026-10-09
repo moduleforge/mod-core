@@ -160,6 +160,17 @@ BEGIN
 END $$;
 -- +goose StatementEnd
 
+-- Search path and definer notes for the type-entity section below. `public` is
+-- hard-coded: it is the pinned search_path (`public, pg_temp`) and the schema
+-- qualifier on every relation these functions touch, so a temporary table or a
+-- same-named relation in another schema cannot shadow `types` or `entities`.
+-- The three deferred-check and creation trigger functions are SECURITY DEFINER
+-- because the deferred checks fire at commit as the session role, which in
+-- managed mode may lack SELECT on public.types. Their EXECUTE is revoked from
+-- PUBLIC; triggers do not need EXECUTE at fire time. The two guards that only
+-- raise (types_reject_mutation, entities_reject_type_entity_archive) stay
+-- SECURITY INVOKER with a pinned search_path.
+
 -- 5. AFTER INSERT trigger: a type's entity is created by the type's own
 --    insert. AFTER, not BEFORE: a BEFORE INSERT row trigger fires even when
 --    INSERT ... ON CONFLICT (slug) DO NOTHING then skips the row, which would
@@ -187,6 +198,8 @@ CREATE TRIGGER types_create_entity
   AFTER INSERT ON types
   FOR EACH ROW EXECUTE FUNCTION types_create_entity_trigger();
 
+REVOKE EXECUTE ON FUNCTION types_create_entity_trigger() FROM PUBLIC;
+
 -- 6. Deferred commit-time invariants (bidirectional pairing).
 --
 --    (a) every types row has a non-NULL entity_id. The trigger's NEW is the
@@ -210,6 +223,8 @@ CREATE CONSTRAINT TRIGGER types_entity_id_required
   AFTER INSERT ON types
   DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION types_check_entity_id_set();
+
+REVOKE EXECUTE ON FUNCTION types_check_entity_id_set() FROM PUBLIC;
 
 --    (b) every entity of the sentinel type is referenced by a types.entity_id.
 --        This rejects sentinel-typed entities created by anything other than
@@ -236,6 +251,8 @@ CREATE CONSTRAINT TRIGGER entities_type_entity_referenced
   DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION entities_check_type_entity_referenced();
 
+REVOKE EXECUTE ON FUNCTION entities_check_type_entity_referenced() FROM PUBLIC;
+
 -- 7. Archive guard: types are append-only and deprecation is their only
 --    lifecycle, so their entities may never be archived. BEFORE UPDATE OF
 --    archived_at, like the other immutability guards in this file. Row
@@ -243,17 +260,20 @@ CREATE CONSTRAINT TRIGGER entities_type_entity_referenced
 --    entities_owner_self_default in 0013_entity_ownership.sql); this guard
 --    only raises, so its position relative to the others is not load-bearing.
 -- +goose StatementBegin
-CREATE FUNCTION entities_reject_type_entity_archive() RETURNS TRIGGER AS $$
+CREATE FUNCTION entities_reject_type_entity_archive() RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   IF OLD.archived_at IS NULL
      AND NEW.archived_at IS NOT NULL
-     AND EXISTS (SELECT 1 FROM types s WHERE s.slug = 'type' AND s.id = NEW.fundamental_type_id)
+     AND EXISTS (SELECT 1 FROM public.types s WHERE s.slug = 'type' AND s.id = NEW.fundamental_type_id)
   THEN
     RAISE EXCEPTION 'entities: type entities cannot be archived';
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 -- +goose StatementEnd
 
 CREATE TRIGGER entities_type_entity_no_archive
