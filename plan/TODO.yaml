@@ -131,6 +131,7 @@ phases:
           path: phase-10-remediation-01/001-harden-type-entity-triggers.md
           done: false
           tier: sonnet-med
+          digest: Pinned search_path and qualified public. names on the two invoker-rights guards (entities_reject_type_entity_archive, types_reject_mutation); revoked PUBLIC EXECUTE on the three definer trigger functions; added the 0008 comment on hard-coded public and DEFINER rationale; fixed stale test header; added temp-table shadow test. All validation passes. One out-of-scope finding filed (huL0).
           findings:
             - VOrM
             - JBVU
