@@ -17,6 +17,9 @@ items:
         - priority:medium
         - effort:small
         - plan/phase:type-entity-schema
+        - resolution/task:phase-10-remediation-01/001-harden-type-entity-triggers.md
+        - resolution/plan:type-scoped-grants
+        - resolution/commit:d8d96431074483f8e3f2020cd24a11c88e6cc360
       text: In model/migrations/0008_entities.sql, the archive guard entities_reject_type_entity_archive, and in model/migrations/0002_types.sql, the sentinel and entity_id checks added to types_reject_mutation, are SECURITY INVOKER and resolve types and entities unqualified with no pinned search_path. A role with UPDATE on entities and TEMP privilege could shadow types with a temp table and bypass the type-entity archive protection. Integrity impact only, no privilege gain. Fix by schema-qualifying public.types and public.entities or adding SET search_path = public, pg_temp to both functions. Reachability depends on which roles hold UPDATE on entities in managed mode (unconfirmed).
     - title: Narrow definer rights on check triggers
       id: JBVU
