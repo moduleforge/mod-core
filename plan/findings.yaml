@@ -20,6 +20,9 @@ items:
         - priority:low
         - effort:small
         - plan/phase:remediation-01
+        - resolution/task:phase-11-remediation-02/001-complete-types-shadow-hardening.md
+        - resolution/plan:type-scoped-grants
+        - resolution/commit:4d9cdd9db1733e59d69b6e1ea676739c80eaffca
       text: 'In api/types/type_entities_integration_test.go, TestGuardsResistTempTableShadow''s types_reject_mutation half is vacuous: the temp types shadow is empty, so the unqualified sentinel lookup would also raise "must reference an entity of the sentinel type" without the search_path fix, and the assertion cannot detect a regression. The real bypass is a shadow containing a slug=''type'' row whose id equals the plain entity''s fundamental_type_id. Populate the shadow that way and assert the UPDATE still fails with the sentinel-type message, optionally matching the error text in both assertions.'
     - title: Qualify relations in other invoker functions
       id: C8uH
