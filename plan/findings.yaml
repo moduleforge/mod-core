@@ -18,6 +18,15 @@ items:
         - effort:small
         - plan/phase:remediation-01
       text: 'In api/types/type_entities_integration_test.go, TestGuardsResistTempTableShadow''s types_reject_mutation half is vacuous: the temp types shadow is empty, so the unqualified sentinel lookup would also raise "must reference an entity of the sentinel type" without the search_path fix, and the assertion cannot detect a regression. The real bypass is a shadow containing a slug=''type'' row whose id equals the plain entity''s fundamental_type_id. Populate the shadow that way and assert the UPDATE still fails with the sentinel-type message, optionally matching the error text in both assertions.'
+    - title: Qualify relations in other invoker functions
+      id: C8uH
+      date: "2026-10-09"
+      tags:
+        - type:security
+        - priority:low
+        - plan/phase:remediation-01
+        - effort:unspecified
+      text: 'Other invoker-rights functions in mod-core also resolve types and entities by unqualified name with no pinned search_path: the subtype BEFORE INSERT triggers in model/migrations/0009 through 0015 (which look up entities and call type_is_or_descends_from) and the generated accessible_<slug>_ids_for_actor bodies plus sharedCTEPrefix in api/authz/setup/setup.go. After the types fixes, a session-local temp entities table could still shadow entities for these bodies. Do a deliberate sweep qualifying public.entities and public.types, weighing the per-call cost of a function-level SET search_path in the hot list-function paths.'
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
