@@ -1,14 +1,5 @@
 version: 2
-items:
-    - title: Instance-arm docs overclaim; test hygiene
-      id: vLTf
-      date: "2026-10-09"
-      tags:
-        - type:documentation
-        - priority:low
-        - effort:small
-        - plan/phase:type-grant-instance-semantics
-      text: 'Minor hygiene left after the instance-semantics list arm review (none blocking). (1) docs/architecture/type-level-authorization.md, Type entities paragraph, says "Entity-level Authorize and the list-side ... both apply the instance rule". mod-core ships only the list side; the single-row Authorize is a peer implementation (mod-users). Reword to "a conforming Authorize must apply the rule, and the list-side functions do", consistent with the warning bullet and authz.go. (2) api/authz/setup/grant_table_integration_test.go uses the probe type slug p9_instance_probe_type and description ''P9 probe'', where P9 is a phase number, and line 14 has a "tasks in this phase" comment; rename to type-descriptive names. (3) The probe-type test inserts with ON CONFLICT (slug) DO NOTHING and leaves a persistent probe type and instance, so reruns on a shared database can pass for the wrong reason (the typeID != probeEntity guard holds only because of the setval advance); make it idempotent or clean up, and assert the ids differ explicitly. (4) Optional hardening: pin mixed type-and-instance target group behaviour with a short test or doc sentence (mod-authz enforces separation; mod-core''s schema does not); add tests for a deprecated type''s entity and an archived instance (both single-row and list paths consult neither); the reference SQL in grant_table_symmetry_integration_test.go is a copy of mod-users'' checkGrantOrOwn and drifts silently if that changes (the production-side case in mod-users closes this).'
+items: []
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
@@ -69,4 +60,9 @@ closed:
       title: authz.go comment names a change identifier
       disposition: fixed
       ref: phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
+      date: "2026-10-09"
+    - id: vLTf
+      title: Instance-arm docs overclaim; test hygiene
+      disposition: promoted
+      ref: vLTf
       date: "2026-10-09"
