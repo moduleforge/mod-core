@@ -159,6 +159,6 @@ phases:
             - huL0
             - cA7z
           git:
-            branch: null
+            branch: plan/type-scoped-grants-11-001
             commit: []
             merge: null
