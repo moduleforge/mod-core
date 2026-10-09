@@ -5,17 +5,7 @@ phases:
     - number: 1
       slug: helpers
       title: Error-Precedence Helpers
-      tasks:
-        - number: 5
-          slug: order-test-helper
-          title: Add Exported apiresp/ordertest Order-Test Helper
-          path: phase-01-helpers/005-order-test-helper.md
-          done: false
-          tier: sonnet-med
-          git:
-            branch: null
-            commit: []
-            merge: null
+      tasks: []
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
