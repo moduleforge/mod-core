@@ -138,5 +138,6 @@ phases:
             - YrDU
           git:
             branch: plan/type-scoped-grants-10-001
-            commit: []
+            commit:
+                - d8d9643
             merge: null
