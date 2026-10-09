@@ -66,3 +66,10 @@ architectural_impact: true
 - `model/migrations/0008_entities.sql:18-41`: the current concrete-type check and its INSERT/UPDATE trigger scope.
 - `api/types/types.go`: the package the helper joins.
 - Federated request, Q6: the user decision.
+
+## Status
+
+- Outcome: succeeded (2026-10-08).
+- Validation: model verify/lint, api test/lint, new integration tests (api/types) all pass; no migration files added; MF001 defined once in SQL and once as a Go constant.
+- Files: `model/migrations/0008_entities.sql`, `api/types/deprecated.go`, `api/types/deprecated_test.go`, `api/types/type_entities_integration_test.go`.
+- Assumption choice: mod-core's own create paths were not changed to map the error (no core type is deprecated).
