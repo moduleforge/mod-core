@@ -152,7 +152,7 @@ phases:
           slug: complete-types-shadow-hardening
           title: Pin Type Resolution in Concrete-Type and Ancestry Functions and Make Shadow Test Meaningful
           path: phase-11-remediation-02/001-complete-types-shadow-hardening.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Pinned search_path (public, pg_temp) and qualified public.types in type_is_or_descends_from (0002) and entities_check_concrete_type (0008), both still invoker-rights; measured SET cost ~4-5% per call and kept it; populated the shadow in TestGuardsResistTempTableShadow with error-text matching; added TestConcreteTypeAndAncestryResistTempTableShadow. Full integration suite, model verify/lint, api lint/test pass.
           findings:
