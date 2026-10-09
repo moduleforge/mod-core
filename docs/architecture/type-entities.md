@@ -27,8 +27,9 @@ like any other entity.
 
 The column and the relaxed append-only function are defined in `0002_types.sql`. Everything that
 needs the `entities` table lives in `0008_entities.sql`: the foreign key, the sentinel insert, the
-creation routine and trigger, and the commit-time checks. The sentinel is inserted in `0008`, after
-the earlier seeds, so the existing seeded `types.id` values do not change.
+creation routine and trigger, and the commit-time checks. The sentinel is inserted in `0008`
+and takes id 6, so seeded ids 1 to 5 are unchanged and `app` (seeded later, in `0014`) moves from 6
+to 7.
 
 ## How a type entity is created
 
@@ -114,16 +115,17 @@ A peer module (for example an `Authorizer` implementation) can rely on these poi
 - A type entity is never owned and never archived. Grants and target-group memberships reference it
   through the existing `grants.target_id` and `authz_target_group_members.member_id` foreign keys.
 - The sentinel's own entity represents "the type `type`". Nothing creates instances of `type` other
-  than type registration, so a create or list grant on it is inert in practice.
-- `types.id` and `entities.id` remain independent sequences. For the seeded types the two values
-  happen to coincide, because the entities were created in `types.id` order. That is an accident of
-  ordering and nothing may rely on it.
+  than type registration, so a create or list grant on it is inert in practice. A grant on it
+  confers nothing over other type entities.
+- `types.id` and `entities.id` remain independent sequences. On a fresh database the seeded types'
+  two values happen to coincide, because the entities were created in `types.id` order. That is an
+  accident of ordering and nothing may rely on it.
 
 ## Related documents
 
 - [README.md](../../README.md) - project overview and the index of documents.
 - [type-level-authorization.md](./type-level-authorization.md) - the `TypeAuthorizer` contract and
-  how a type grant is answered.
+  how a type grant is answered, and the warning that a type grant is instance-wide.
 - [display-name-http.md](./display-name-http.md) - the display-name endpoint and renderer registry.
 - [model/README.md](../../model/README.md) - migrations and the reset procedure after an in-place
   migration edit.
