@@ -107,3 +107,13 @@ items:
         - cross-repo/origin:flow-accounts
         - effort:unspecified
       text: 'moduleforge.module.yaml mounts corehttpapi.NewRouter (the /v1/entities/* routes: natural persons, corporations, service accounts, generic entity and display-name, twelve handlers) with innerMount: true and no scope:, so a composing app mounts it with no requireAuth middleware. It is safe today only because each handler starts with an opctx.ActorEntityID check and answers 401, and because no middleware sets an actor on that mount every caller, authenticated or not, gets 401. Add scope: authenticated to that mountFromModule entry (so the generated root puts requireAuth in front of it), or drop the entry if the surface is unused. flow-accounts pins the current behavior with a route-scope allowlist and a test that expects 401 for a valid session; that entry changes to authenticated once this lands.'
+    - title: Cut per-row cost of referenced-entity trigger
+      id: dlaB
+      date: "2026-10-08"
+      tags:
+        - type:optimization
+        - priority:low
+        - effort:medium
+        - plan/phase:type-entity-schema
+        - plan/slug:type-scoped-grants
+      text: The deferred constraint trigger entities_type_entity_referenced in model/migrations/0008_entities.sql queues an after-trigger event and a SECURITY DEFINER plpgsql call for every inserted entities row, though it acts only on sentinel-typed rows. Bulk inserts of N ordinary entities pay O(N) small overhead. A WHEN clause on a cheap predicate could skip it, but would need a constant sentinel id, which reintroduces a magic number. Accept the current design unless bulk entity creation proves hot.
