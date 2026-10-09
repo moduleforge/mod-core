@@ -27,6 +27,15 @@ items:
         - effort:small
         - plan/phase:type-entity-schema
       text: In model/migrations/0008_entities.sql, types_create_entity_trigger, types_check_entity_id_set and entities_check_type_entity_referenced are all SECURITY DEFINER, but only the creation trigger needs definer rights to reach the revoked types_create_entity_for routine. The two read-only deferred check functions could be SECURITY INVOKER, or at least have EXECUTE revoked from PUBLIC. Also add a comment recording that public is hard-coded in the pinned search_path and qualified names. Harmless today because trigger functions cannot be invoked directly; this only trims elevated-rights surface.
+    - title: Pin search_path on 2 more type functions
+      id: huL0
+      date: "2026-10-08"
+      tags:
+        - type:security
+        - plan/phase:remediation-01
+        - priority:unspecified
+        - effort:unspecified
+      text: 'entities_check_concrete_type (model/migrations/0008_entities.sql) and type_is_or_descends_from (model/migrations/0002_types.sql) resolve the types relation by unqualified name with no pinned search_path, the same pattern just fixed on types_reject_mutation and entities_reject_type_entity_archive. A session-local temp table named types can shadow the relation for these functions (observed: with a temp types shadow, entity inserts fail inside the concrete-type trigger). Pin SET search_path = public, pg_temp and schema-qualify public.types in both.'
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
