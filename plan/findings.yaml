@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: EntityTypeInfo loads whole types table
-      id: 8BtA
-      date: "2026-10-09"
-      tags:
-        - type:optimization
-        - priority:low
-        - plan/phase:type-entity-api-and-contract
-        - effort:unspecified
-      text: In api/types/type_info.go, EntityTypeInfo calls ListAllTypes and scans the whole types table linearly on every type-entity profile read, and display_builtins.go calls it once per field renderer (name and description), so one display render of a type entity loads the table twice. Bounded and acceptable while the types table is small and append-only, and the plan forbids a new Querier method. If type entities are rendered in bulk or the table grows, add an in-process entity_id-to-type map in Resolver (the table is append-only) or a dedicated by-entity-id query when the Querier surface may change. It runs only after read authorization has passed, so this is not a security issue.
     - title: Peer-module rule stated as fact in arch doc
       id: ptqd
       date: "2026-10-09"
@@ -58,4 +49,9 @@ closed:
       title: Dangling note pointer in 0008 comment
       disposition: promoted
       ref: H7G4
+      date: "2026-10-09"
+    - id: 8BtA
+      title: EntityTypeInfo loads whole types table
+      disposition: promoted
+      ref: 8BtA
       date: "2026-10-09"
