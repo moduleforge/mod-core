@@ -140,3 +140,13 @@ items:
         - plan/phase:remediation-02
         - plan/slug:type-scoped-grants
       text: 'The search-path comment in model/migrations/0008_entities.sql (type-entity section, near the concrete-type function) says type_is_or_descends_from is covered in 0002_types.sql with "see the note there on its search_path", but 0002 has no such note: only the SET search_path clause on the function and a header comment that does not mention it. Add a one-line comment above type_is_or_descends_from in 0002 explaining the pinned search_path, or drop the cross-reference. Comment-only change, no runtime effect.'
+    - title: EntityTypeInfo loads whole types table
+      id: 8BtA
+      date: "2026-10-09"
+      tags:
+        - type:optimization
+        - priority:low
+        - effort:unspecified
+        - plan/phase:type-entity-api-and-contract
+        - plan/slug:type-scoped-grants
+      text: In api/types/type_info.go, EntityTypeInfo calls ListAllTypes and scans the whole types table linearly on every type-entity profile read, and display_builtins.go calls it once per field renderer (name and description), so one display render of a type entity loads the table twice. Bounded and acceptable while the types table is small and append-only, and the plan forbids a new Querier method. If type entities are rendered in bulk or the table grows, add an in-process entity_id-to-type map in Resolver (the table is append-only) or a dedicated by-entity-id query when the Querier surface may change. It runs only after read authorization has passed, so this is not a security issue.
