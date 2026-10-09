@@ -80,6 +80,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: document-helpers
+          title: Document Error-Precedence Helpers in API Docs
+          path: phase-02-helper-docs/002-document-helpers.md
+          done: false
+          tier: sonnet-low
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: doc-updates
       title: Documentation Updates
