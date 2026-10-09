@@ -98,3 +98,12 @@ items:
         - whether it belongs in mod-core or in mod-authz's grant-administration surface.
 
         Implementing it must not add methods to coredb.Querier without updating the hand-written Querier mocks in the sibling modules that build against mod-core through replace directives (mod-tasks, mod-contacts, mod-repos, mod-tags, mod-workflows, mod-notifications, mod-authz). Alternatively, it can build on ListAllTypes.
+    - title: mod-core entity router has no auth scope
+      id: ldm9
+      date: "2026-10-08"
+      tags:
+        - type:security
+        - priority:low
+        - cross-repo/origin:flow-accounts
+        - effort:unspecified
+      text: 'moduleforge.module.yaml mounts corehttpapi.NewRouter (the /v1/entities/* routes: natural persons, corporations, service accounts, generic entity and display-name, twelve handlers) with innerMount: true and no scope:, so a composing app mounts it with no requireAuth middleware. It is safe today only because each handler starts with an opctx.ActorEntityID check and answers 401, and because no middleware sets an actor on that mount every caller, authenticated or not, gets 401. Add scope: authenticated to that mountFromModule entry (so the generated root puts requireAuth in front of it), or drop the entry if the surface is unused. flow-accounts pins the current behavior with a route-scope allowlist and a test that expects 401 for a valid session; that entry changes to authenticated once this lands.'
