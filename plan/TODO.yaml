@@ -118,3 +118,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: push-to-origin
+          title: Push mod-core and docs-mf-standards Main to Origin
+          path: phase-04-release/002-push-to-origin.md
+          done: false
+          tier: haiku-med
+          git:
+            branch: null
+            commit: []
+            merge: null
