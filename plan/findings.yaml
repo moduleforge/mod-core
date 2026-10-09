@@ -27,4 +27,13 @@ items:
         - plan/phase:type-entity-schema
         - effort:unspecified
       text: In model/migrations/0008_entities.sql, types_create_entity_trigger, types_check_entity_id_set and entities_check_type_entity_referenced are all SECURITY DEFINER, but only the creation trigger needs definer rights to reach the revoked types_create_entity_for routine. The two read-only deferred check functions could be SECURITY INVOKER, or at least have EXECUTE revoked from PUBLIC. Also add a comment recording that public is hard-coded in the pinned search_path and qualified names. Harmless today because trigger functions cannot be invoked directly; this only trims elevated-rights surface.
+    - title: Cut per-row cost of referenced-entity trigger
+      id: dlaB
+      date: "2026-10-08"
+      tags:
+        - type:optimization
+        - priority:low
+        - plan/phase:type-entity-schema
+        - effort:unspecified
+      text: The deferred constraint trigger entities_type_entity_referenced in model/migrations/0008_entities.sql queues an after-trigger event and a SECURITY DEFINER plpgsql call for every inserted entities row, though it acts only on sentinel-typed rows. Bulk inserts of N ordinary entities pay O(N) small overhead. A WHEN clause on a cheap predicate could skip it, but would need a constant sentinel id, which reintroduces a magic number. Accept the current design unless bulk entity creation proves hot.
 closed: []
