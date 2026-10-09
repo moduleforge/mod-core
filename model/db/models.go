@@ -79,4 +79,5 @@ type Type struct {
 	Description  pgtype.Text        `json:"description"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	DeprecatedAt *time.Time         `json:"deprecated_at"`
+	EntityID     pgtype.Int8        `json:"entity_id"`
 }

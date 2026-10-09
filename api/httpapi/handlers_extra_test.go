@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/moduleforge/core-api/service"
+	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
 )
 
@@ -283,5 +285,42 @@ func TestProfileResponse_ServiceAccount(t *testing.T) {
 	}
 	if resp["label"] != "my-svc" {
 		t.Errorf("label: got %v", resp["label"])
+	}
+}
+
+// --- profileResponse type branch ---
+
+func TestProfileResponse_Type(t *testing.T) {
+	dep := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	parent := int64(3)
+	profile := service.Profile{
+		Kind: "type",
+		Type: &types.TypeInfo{
+			ID: 7, Slug: "widget", Name: "Widget", Description: "a widget",
+			ParentID: &parent, Concrete: true, DeprecatedAt: &dep, EntityID: 99,
+		},
+	}
+	resp := profileResponse(profile)
+	want := map[string]any{
+		"kind": "type", "type_slug": "widget", "type_name": "Widget",
+		"type_description": "a widget", "concrete": true, "deprecated_at": "2026-03-04T05:06:07Z",
+	}
+	for k, v := range want {
+		if resp[k] != v {
+			t.Errorf("%s: got %v, want %v", k, resp[k], v)
+		}
+	}
+	for _, k := range []string{"id", "parent_id", "entity_id", "type_id"} {
+		if _, ok := resp[k]; ok {
+			t.Errorf("internal id key %q must not be emitted", k)
+		}
+	}
+	if len(resp) != len(want) {
+		t.Errorf("unexpected keys in %v", resp)
+	}
+
+	profile.Type.DeprecatedAt = nil
+	if _, ok := profileResponse(profile)["deprecated_at"]; ok {
+		t.Error("deprecated_at must be omitted when NULL")
 	}
 }

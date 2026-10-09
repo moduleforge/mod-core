@@ -11,7 +11,7 @@ import (
 // ownArmClause builds the exact own-arm WHERE-clause text — the type
 // predicate conjoined with the owner_id equality — as GrantTableGenerator
 // emits it for slug. The type predicate substring recurs verbatim on all
-// three UNION arms (wildcard, own, TargetChain), so checking the type
+// four UNION arms (wildcard, own, TargetChain, instance), so checking the type
 // predicate and the owner_id equality as independent strings.Contains calls
 // cannot detect a regression that drops the type predicate from specifically
 // the own arm while leaving it on the other two arms: strings.Contains would
@@ -456,6 +456,56 @@ func TestGrantTableGenerator_NoDownstreamTableRefs(t *testing.T) {
 				t.Errorf("slug %q: body must not contain downstream reference %q; got:\n%s", slug, pattern, body)
 			}
 		}
+	}
+}
+
+// instanceArmClause builds the exact instance-arm WHERE-clause text as
+// GrantTableGenerator emits it for slug: the exact-type join, the TargetChain
+// join through types.entity_id, the type predicate, and the type-entity
+// exclusion, all conjoined so they are proven to belong to the SAME arm.
+func instanceArmClause(slug string) string {
+	return fmt.Sprintf(`SELECT e.id FROM entities e
+  JOIN types t ON t.id = e.fundamental_type_id
+  JOIN TargetChain tc ON tc.tid = t.entity_id
+  WHERE type_is_or_descends_from(e.fundamental_type_id, '%s')
+    AND NOT EXISTS (SELECT 1 FROM types tt WHERE tt.entity_id = e.id)`, slug)
+}
+
+// TestGrantTableGenerator_InstanceArm asserts the instance-semantics arm is
+// present for every slug with its exact-type join, type predicate and
+// type-entity exclusion conjoined, and that no parent/child type walk exists.
+func TestGrantTableGenerator_InstanceArm(t *testing.T) {
+	t.Parallel()
+	slugs := []string{
+		"natural_person", "corporation", "service_account", "legal_entity",
+		"tag", "task", "authz_actor_group", "authz_target_group", "type",
+	}
+	gen := setup.NewGrantTableGenerator()
+	for _, slug := range slugs {
+		t.Run(slug, func(t *testing.T) {
+			t.Parallel()
+			body, err := gen.GenerateForResource(slug)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			for _, want := range []string{
+				"JOIN types t ON t.id = e.fundamental_type_id",
+				"NOT EXISTS (SELECT 1 FROM types tt WHERE tt.entity_id = e.id)",
+			} {
+				if !strings.Contains(body, want) {
+					t.Errorf("body missing %q; got:\n%s", want, body)
+				}
+			}
+			if !strings.Contains(body, instanceArmClause(slug)) {
+				t.Errorf("body missing conjoined instance-arm clause; got:\n%s", body)
+			}
+			if got := strings.Count(body, "NOT EXISTS (SELECT 1 FROM types tt"); got != 1 {
+				t.Errorf("exclusion must appear exactly once (instance arm only); got %d", got)
+			}
+			if strings.Contains(body, "parent_id") {
+				t.Errorf("body must not walk the type hierarchy via parent_id; got:\n%s", body)
+			}
+		})
 	}
 }
 

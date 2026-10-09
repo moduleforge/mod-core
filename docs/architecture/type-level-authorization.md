@@ -47,10 +47,15 @@ The nil check detects only an untyped-nil `az`; a typed-nil pointer in the inter
 
 ## The fallback rule
 
-A nil target is the core contract's "no specific target exists yet". The production Authorizer
-answers it from wildcard grants only, which is the same authority `TypeAuthorizer` answers. So an
-`Authorizer` that lacks the capability, hides it behind a decorator, or is a test stub still fails
-closed rather than matching an unrelated entity.
+A nil target is the core contract's "no specific target exists yet". The authorization-design
+contract requires an `Authorizer` to answer it from wildcard grants only. So an `Authorizer` that
+lacks the capability, hides it behind a decorator, or is a test stub still fails closed rather than
+matching an unrelated entity.
+
+The same rule has a fail-closed consequence for type grants. The nil-target fallback answers from
+wildcard grants only, so an `Authorizer` that lacks the capability, or hides it behind a decorator,
+denies a holder of a type grant. A type grant takes effect only through an implementation that
+provides `TypeAuthorizer`.
 
 ## Implementing the capability
 
@@ -61,35 +66,91 @@ AuthorizeType(ctx context.Context, operation string, typeID int64) error
 ```
 
 Go interfaces are structural, so no import of the core type is needed to satisfy it. The method
-answers type-scoped authority only (today, wildcard grants) and never consults entity ownership or
-entity-targeted grants. Callers do not invoke it directly; they call `authz.AuthorizeType`.
+answers type-scoped authority only:
+
+- wildcard grants (`target_id IS NULL`), and
+- grants whose target is the entity of exactly `typeID` (the lookup is `types.entity_id` for that
+  `typeID`), held directly or through target-group membership, by the actor or any actor group in
+  its chain.
+
+It never consults entity ownership. It never walks to parent or child types: a grant on a parent
+type does not cover its subtypes (no subtype inheritance). It never treats `typeID` as an
+`entities.id`. Callers do not invoke it directly; they call `authz.AuthorizeType`.
+
+## Type entities
+
+Every type has one entity of the sentinel type `type`, created together with the type. Grants and
+target groups reference it through `grants.target_id`. A grant on a type's entity
+(`types.entity_id`) confers the type-level abilities checked through `AuthorizeType`, for example
+`create` and `list`, and also the same operation over every existing and future instance of exactly
+that type. Entity-level `Authorize` and the list-side `accessible_<slug>_ids_for_actor` functions
+that `GrantTableGenerator` produces both apply the instance rule. It works through target groups
+and actor groups. It never extends to subtypes or parent types, and it never applies to type
+entities themselves: a grant on the sentinel `type` entity confers nothing over other type
+entities. The reverse does not hold: a grant on an instance never satisfies a type-level check, and
+`AuthorizeType` and the `TypeAuthorizer` contract are unchanged.
+
+A type's own entity is a legitimate `entities.id` target for entity-level operations on the type
+entity itself, for example `read` or `grant`. It is never a stand-in for the type id in a
+type-level `create` or `list` check.
+
+The design requires that type entities and instance entities not share a target group, and that
+mod-authz, not mod-core, enforces it. mod-core's schema does not enforce it, and this document
+does not assert that any peer module does. See [type-entities.md](./type-entities.md) for the type
+entity data model.
+
+> **Warning: a type grant is an instance-wide grant.**
+>
+> - A grant on a type entity confers the operation over **every existing and future instance** of
+>   exactly that type, for every operation in its closure. `manage` on a type entity is full control
+>   of every instance (read, update, delete, `assume`, `grant`, `revoke`, and any other operation
+>   `manage` implies). For example, `manage` on the `natural_person` type entity confers `assume`
+>   of every user account in a deployment that includes mod-users.
+> - The `assume` of every user account that `manage` on the `natural_person` type entity confers
+>   includes accounts that themselves hold wildcard or admin grants, so that grant is effectively
+>   full admin.
+> - `manage` or `grant` on the type entity of `authz_actor_group` or `authz_target_group` confers
+>   authority over every group of that kind. Adding a member needs `grant` on the member and, for
+>   actor groups, `update` and `grant` on the group; a bare `update` only permits removal. Such a
+>   holder can edit groups that hold wildcard grants, a path to privilege escalation. The same
+>   applies to every other type that has instances.
+> - `list` implies `read`, so a type-level `list` grant also reads every instance of the type.
+> - `manage` or `grant` on a type-only target group confers all of the above for every type in the
+>   group.
+> - It does not extend to subtypes or parent types, and it never applies to type entities
+>   themselves.
+> - A holder of `grant` on a type entity can hand out instance-wide authority over that type. Grant
+>   on type entities only to principals trusted with every instance, and prefer `create` and `list`
+>   for create-only or list-only authority.
+> - Every `Authorizer` implementation, and every hand-written stand-in of one in tests, must apply
+>   the same rule as `GrantTableGenerator`, or single-row and list checks disagree for type-grant
+>   holders.
 
 ## Adopting the helper in a module
 
-A module that carries a local structural interface and helper for the same purpose (for example
-mod-users, mod-authz, and mod-workflows) can switch to the core definition once its build sees a
-mod-core commit that contains it:
+A module that carries a local structural interface and helper for the same purpose can switch to
+the core definition once its build sees a mod-core commit that contains it:
 
 - Replace the local helper body with `authz.AuthorizeType(ctx, az, op, typeID)`.
 - Replace the local interface with an alias, `type TypeAuthorizer = authz.TypeAuthorizer`, keeping
   any existing compile-time assertion. The method signatures must stay identical so structural
   satisfaction holds.
-- Authorizer decorators may forward `AuthorizeType` to the wrapped authorizer. Until they do,
-  callers take the nil fallback, which is safe.
+- Authorizer decorators should forward `AuthorizeType` to the wrapped authorizer. Until they do,
+  callers take the nil fallback, which fails closed.
 
-Modules do not have to wait for each other: the local helpers and the core helper have the same
-method set, so they interoperate.
+Modules do not have to wait for each other: a local helper and the core helper must have the same
+method set, so that they interoperate.
 
 ## mod-core call sites
 
 mod-core's four type-level `create` paths use the helper: `NaturalPersonService.Create`,
 `CorporationService.Create`, `ServiceAccountService.Create`, and `AppsHandler.Create`
-(`POST /v1/apps`). A non-wildcard actor who owns, or holds a targeted grant over, the entity whose
-id equals the type id is denied with `ErrForbidden`. Wildcard `manage` and `create` holders are
-unaffected. mod-core has no type-scoped `list` call: `AppsHandler.List` authorizes with a nil
-target.
+(`POST /v1/apps`). These call sites never pass the type id as an entity target. A grant on an
+unrelated entity whose id happens to equal the type id confers nothing. A grant on the type's own
+entity is honoured only through `AuthorizeType`. mod-core has no type-scoped `list` call:
+`AppsHandler.List` authorizes with a nil target.
 
 The ecosystem call-shape table in `docs/mf-standards/architecture/authorization-design.md` still
-describes passing the type id as the target. That submodule is tracked separately and is not edited
-from mod-core; the rule in this document and in the `api/authz/authz.go` doc comments is
-authoritative for mod-core.
+describes passing the type id as the target. That submodule is not edited from mod-core; the
+design requires that mod-authz, not mod-core, correct it. The rule in this
+document and in the `api/authz/authz.go` doc comments is authoritative for mod-core.

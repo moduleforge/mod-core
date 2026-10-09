@@ -54,9 +54,23 @@ import (
 // int64 and both sequences start at 1: an entity-semantic implementation will
 // match the value against an unrelated entity, which is an authorization
 // bypass. Type-level checks go through AuthorizeType, and implementations that
-// can answer them implement TypeAuthorizer. (The ecosystem call-shape table in
+// can answer them implement TypeAuthorizer. A type's own entity
+// (types.entity_id) is a legitimate entities.id target for entity-level
+// operations on the type entity itself, for example "read" or "grant". It is
+// never a stand-in for the type id in a type-level "create" or "list" check.
+// (The ecosystem call-shape table in
 // docs/mf-standards/architecture/authorization-design.md currently says
-// otherwise and is being corrected.)
+// otherwise; mod-authz is required to deliver the corrected table.)
+//
+// Instance semantics: a conforming implementation also allows
+// Authorize(op, &instance) when the actor chain holds a grant, for an operation
+// satisfying op, on the entity of the instance's exact fundamental type
+// (directly or through target groups), unless the target is itself a type
+// entity. GrantTableGenerator's list-side accessible_<slug>_ids_for_actor
+// functions apply the same rule, so an implementation that omits it makes list
+// and single-row checks disagree for type-grant holders. This makes a type grant
+// instance-wide; see docs/architecture/type-level-authorization.md for the
+// warning.
 //
 // The Authorizer resolves the effective actor from ctx via the opctx accessors.
 // When SudoActorEntityID is set on ctx, the Authorizer must treat that ID as
@@ -69,9 +83,17 @@ type Authorizer interface {
 // TypeAuthorizer is an optional capability of an Authorizer: it answers
 // type-level questions ("may the effective actor create/list resources of type
 // typeID?") distinctly from entity-level ones. typeID is a types.id, never an
-// entities.id. It answers type-scoped authority only (today, wildcard grants)
-// and never consults entity ownership or entity-targeted grants. Callers should
-// not invoke it directly; use AuthorizeType.
+// entities.id. It answers type-scoped authority only:
+//
+//   - wildcard grants (target_id IS NULL), and
+//   - grants whose target is the exact type's entity (types.entity_id for
+//     typeID), held directly or through target-group membership, by the actor
+//     or any actor group in its chain.
+//
+// Instance access is answered by Authorize, not by this capability. It never
+// consults entity ownership. It never walks to parent or child types:
+// a grant on a parent type does not cover its subtypes. It never treats typeID
+// as an entities.id. Callers should not invoke it directly; use AuthorizeType.
 type TypeAuthorizer interface {
 	AuthorizeType(ctx context.Context, operation string, typeID int64) error
 }
@@ -85,7 +107,9 @@ type TypeAuthorizer interface {
 // Authorize). Otherwise it calls az.Authorize(ctx, operation, nil): a nil
 // target is the core contract's "no specific target", which implementations
 // answer from wildcard grants only, so decorators, foreign authorizers, and
-// stubs that hide or lack AuthorizeType still fail closed.
+// stubs that hide or lack AuthorizeType still fail closed. The fallback
+// therefore denies type-grant holders: a type grant takes effect only through
+// an implementation that provides TypeAuthorizer.
 //
 // AuthorizeType never passes typeID, or any non-nil target, to Authorize:
 // typeID is a types.id and Authorize's target is an entities.id, so doing so
