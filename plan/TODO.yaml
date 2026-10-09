@@ -86,6 +86,7 @@ phases:
           path: phase-03-doc-updates/001-update-architecture-docs.md
           done: false
           tier: sonnet-high
+          digest: Updated AGENTS.md, README.md, model/README.md, display-name-http.md and type-level-authorization.md for type entities, the sentinel, the deprecated-type rule and the dev-DB reset note; added docs/architecture/type-entities.md; reworded the two peer-module claims in type-level-authorization.md into requirements (finding ptqd). Greps for entity_id, package count, link and plan identifiers pass.
           git:
             branch: null
             commit: []
