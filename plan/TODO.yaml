@@ -42,7 +42,7 @@ phases:
             branch: plan/type-scoped-grants-01-003
             commit:
                 - c13cc68
-            merge: null
+            merge: 12dba05ac52c84f585b97702c8f3577217cfd4bf
     - number: 2
       slug: type-entity-api-and-contract
       title: Type Entity API Surface and Contract Wording
