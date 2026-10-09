@@ -112,3 +112,11 @@ architectural_impact: true
 - After `0002_types.sql` and `0008_entities.sql` apply cleanly under `make lint`.
 - After the `types.sql` column lists are updated and `model/db` is regenerated.
 - After the new integration tests pass.
+
+## Status
+
+- Outcome: succeeded (2026-10-08).
+- Validation: `make verify`, `make lint` (model), `make gen` (no diff), `make test` and `make lint` (api) pass. All 13 new integration tests in `api/types` pass, as do the `api/authz/setup` and `api/internal/fieldcrypto` integration packages. `api/service` and `api/httpapi` integration `TestMain` fail as expected: `integration: type-level authz fixture: entities.id 3 (== types.id of "natural_person") is already taken; the ownership arm cannot be set up deterministically` (service) and `entities.id 7 (== types.id of "app") is already taken ...` (httpapi). Task 003 fixes both. mod-authz and mod-users `go vet ./...` compile against this worktree's mod-core (checked with a scratch `go.work` replace, since their own `replace` directives point at the main checkout).
+- `model/db/querier.go` is unchanged; `coredb.Type` gains `EntityID pgtype.Int8`.
+- Files: `model/migrations/0002_types.sql`, `model/migrations/0008_entities.sql`, `model/queries/types.sql`, `model/db/models.go`, `model/db/types.sql.go`, `api/types/type_entities_integration_test.go`.
+- Archive guard placed in `0008` (`entities_type_entity_no_archive`). No mock stub fixes were needed.
