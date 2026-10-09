@@ -1,0 +1,8 @@
+slug: error-precedence-foundation
+version: 1
+title: ""
+phases:
+    - number: 1
+      slug: helpers
+      title: Error-Precedence Helpers
+      tasks: []
