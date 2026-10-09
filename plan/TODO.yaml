@@ -62,7 +62,7 @@ phases:
             branch: plan/type-scoped-grants-02-001
             commit:
                 - 0eefad4
-            merge: null
+            merge: be2c1374ff7199d8287621a2354ce3918ca0ff68
         - number: 2
           slug: type-authorizer-contract-wording
           title: Reword TypeAuthorizer Contract for Type-Entity Grants
