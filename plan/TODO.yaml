@@ -18,7 +18,7 @@ phases:
             branch: plan/type-scoped-grants-01-001
             commit:
                 - b084525
-            merge: null
+            merge: c6e55278dd6b904f68f04493a9932cbd53248438
         - number: 2
           slug: deprecated-type-create-rejection
           title: Reject Entity Creation for Deprecated Types
