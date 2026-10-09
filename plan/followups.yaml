@@ -40,15 +40,6 @@ items:
         - plan/phase:observer-group-add
         - plan/slug:observer-group-registration
       text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
-    - title: Type id passed as entity target in create
-      id: ls1q
-      date: "2026-10-05"
-      tags:
-        - type:security
-        - cross-repo/origin:mod-users
-        - priority:unspecified
-        - effort:unspecified
-      text: 'mod-core passes a types.id as the Authorize target in api/service/natural_person.go (Create, ~line 184), api/service/corporation.go (~79), api/service/service_account.go (~72) and api/httpapi/apps.go (~162): Authorize(ctx, "create", &typeID). The production Authorizer (mod-users api/internal/authz/authz.go, exported as api/localAuthz) treats every non-nil target as an entities.id (grants.target_id and entities.owner_id), so any actor who owns, or holds a grant over, the entity whose numeric id equals that type id passes the admin-only create check (same class as app-mfmanager finding ilu6). mod-users is adding (*Authorizer).AuthorizeType(ctx, op, typeID int64) plus a localAuthz.TypeAuthorizer interface; fix here by type-asserting interface{ AuthorizeType(context.Context, string, int64) error } on the injected authorizer and otherwise calling Authorize(ctx, op, nil) -- never &typeID. Longer term, consider promoting an optional TypeAuthorizer interface and an authz.AuthorizeType(ctx, az, op, typeID) helper into core-api/authz (api/authz/authz.go) so every module shares one definition, and correcting the interface doc that currently says target is an entity id while the ecosystem convention passes type ids.'
     - title: Typed authz target in core contract
       id: ogPn
       date: "2026-10-05"
