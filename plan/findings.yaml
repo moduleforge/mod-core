@@ -8,6 +8,9 @@ items:
         - priority:low
         - plan/phase:type-entity-api-and-contract
         - effort:unspecified
+        - resolution/task:phase-03-doc-updates/001-update-architecture-docs.md
+        - resolution/plan:type-scoped-grants
+        - resolution/commit:e548e0ba2ef573b8b9a86a88a90ed2f9a53a242b
       text: 'The Type entities section of docs/architecture/type-level-authorization.md says "Type entities and instance entities cannot share a target group; the mod-authz slice of the type-scoped-grants change enforces this", asserting peer-module behaviour as fact. The rest of the doc was reworded into requirements (requires, must, should) to soften unverifiable peer-module claims (followup ggLy), so this sentence is inconsistent. Reword as a requirement, for example: the design requires that type entities and instance entities not share a target group, and that rule is enforced by mod-authz, not by mod-core. Also avoid naming a change or plan identifier in the doc text.'
 closed:
     - id: dlaB

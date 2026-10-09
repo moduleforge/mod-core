@@ -78,16 +78,19 @@ phases:
     - number: 3
       slug: doc-updates
       title: Documentation Updates
+      diff_base: 6b439f4a2a11d85cc301bb919df6eb6bb6beb83c
       tasks:
         - number: 1
           slug: update-architecture-docs
           title: Update Architecture Docs
           path: phase-03-doc-updates/001-update-architecture-docs.md
-          done: false
+          done: true
           tier: sonnet-high
+          digest: Updated AGENTS.md, README.md, model/README.md, display-name-http.md and type-level-authorization.md for type entities, the sentinel, the deprecated-type rule and the dev-DB reset note; added docs/architecture/type-entities.md; reworded the two peer-module claims in type-level-authorization.md into requirements (finding ptqd). Greps for entity_id, package count, link and plan identifiers pass.
           git:
-            branch: null
-            commit: []
+            branch: plan/type-scoped-grants-03-001
+            commit:
+                - e548e0b
             merge: null
     - number: 9
       slug: type-grant-instance-semantics
