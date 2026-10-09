@@ -74,7 +74,7 @@ phases:
             branch: plan/type-scoped-grants-02-002
             commit:
                 - 9e06009
-            merge: null
+            merge: 3571182a4d8738aa390335fa0550f253075f4700
     - number: 3
       slug: doc-updates
       title: Documentation Updates
