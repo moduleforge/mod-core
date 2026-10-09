@@ -5,7 +5,17 @@ phases:
     - number: 1
       slug: helpers
       title: Error-Precedence Helpers
-      tasks: []
+      tasks:
+        - number: 1
+          slug: unprocessable-error
+          title: Add ErrUnprocessable and Unprocessable for 422
+          path: phase-01-helpers/001-unprocessable-error.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
