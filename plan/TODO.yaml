@@ -16,6 +16,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: decode-json-and-uuid-param
+          title: Add apiresp.DecodeJSON and ParseUUIDParam
+          path: phase-01-helpers/002-decode-json-and-uuid-param.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
