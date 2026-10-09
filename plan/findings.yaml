@@ -9,6 +9,15 @@ items:
         - plan/phase:type-entity-api-and-contract
         - effort:unspecified
       text: In api/types/type_info.go, EntityTypeInfo calls ListAllTypes and scans the whole types table linearly on every type-entity profile read, and display_builtins.go calls it once per field renderer (name and description), so one display render of a type entity loads the table twice. Bounded and acceptable while the types table is small and append-only, and the plan forbids a new Querier method. If type entities are rendered in bulk or the table grows, add an in-process entity_id-to-type map in Resolver (the table is append-only) or a dedicated by-entity-id query when the Querier surface may change. It runs only after read authorization has passed, so this is not a security issue.
+    - title: Peer-module rule stated as fact in arch doc
+      id: ptqd
+      date: "2026-10-09"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:type-entity-api-and-contract
+        - effort:unspecified
+      text: 'The Type entities section of docs/architecture/type-level-authorization.md says "Type entities and instance entities cannot share a target group; the mod-authz slice of the type-scoped-grants change enforces this", asserting peer-module behaviour as fact. The rest of the doc was reworded into requirements (requires, must, should) to soften unverifiable peer-module claims (followup ggLy), so this sentence is inconsistent. Reword as a requirement, for example: the design requires that type entities and instance entities not share a target group, and that rule is enforced by mod-authz, not by mod-core. Also avoid naming a change or plan identifier in the doc text.'
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
