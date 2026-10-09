@@ -117,7 +117,7 @@ phases:
           tier: sonnet-med
           digest: 'Added TestGrantVerification_TypeGrantListSingleRowSymmetry: compares the generated list function with a verbatim port of mod-users'' checkGrantOrOwn SQL (ported from mod-users plan branch commit 6d228fd, containing both the instance seed and the type-entity exclusion) for 5 actor fixtures x 4 slugs x 8 candidates; both mutation checks (remove exclusion, remove arm) fail it. Test-only; lint passes; local Postgres 14 used.'
           git:
-            branch: null
+            branch: plan/type-scoped-grants-09-002
             commit: []
             merge: null
         - number: 3
