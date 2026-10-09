@@ -6,16 +6,6 @@ phases:
       slug: helpers
       title: Error-Precedence Helpers
       tasks:
-        - number: 1
-          slug: decode-json-and-uuid-param
-          title: Add apiresp.DecodeJSON and ParseUUIDParam
-          path: phase-01-helpers/001-decode-json-and-uuid-param.md
-          done: false
-          tier: sonnet-med
-          git:
-            branch: null
-            commit: []
-            merge: null
         - number: 2
           slug: require-auth-middleware
           title: Add authz.RequireAuth chi Middleware
