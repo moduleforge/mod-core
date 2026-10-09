@@ -4,3 +4,5 @@ leadProject: core
 waves:
     - name: wave-1-foundation
       planGroups: []
+    - name: wave-2-conformance
+      planGroups: []
