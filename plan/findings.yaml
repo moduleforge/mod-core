@@ -18,4 +18,13 @@ items:
         - plan/phase:type-entity-schema
         - effort:unspecified
       text: In model/migrations/0008_entities.sql, the archive guard entities_reject_type_entity_archive, and in model/migrations/0002_types.sql, the sentinel and entity_id checks added to types_reject_mutation, are SECURITY INVOKER and resolve types and entities unqualified with no pinned search_path. A role with UPDATE on entities and TEMP privilege could shadow types with a temp table and bypass the type-entity archive protection. Integrity impact only, no privilege gain. Fix by schema-qualifying public.types and public.entities or adding SET search_path = public, pg_temp to both functions. Reachability depends on which roles hold UPDATE on entities in managed mode (unconfirmed).
+    - title: Narrow definer rights on check triggers
+      id: JBVU
+      date: "2026-10-08"
+      tags:
+        - type:security
+        - priority:low
+        - plan/phase:type-entity-schema
+        - effort:unspecified
+      text: In model/migrations/0008_entities.sql, types_create_entity_trigger, types_check_entity_id_set and entities_check_type_entity_referenced are all SECURITY DEFINER, but only the creation trigger needs definer rights to reach the revoked types_create_entity_for routine. The two read-only deferred check functions could be SECURITY INVOKER, or at least have EXECUTE revoked from PUBLIC. Also add a comment recording that public is hard-coded in the pinned search_path and qualified names. Harmless today because trigger functions cannot be invoked directly; this only trims elevated-rights surface.
 closed: []
