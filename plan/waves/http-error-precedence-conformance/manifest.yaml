@@ -41,3 +41,11 @@ waves:
             - error-precedence-foundation
           plans:
             mod-workflows: PLACEHOLDER
+        - name: mod-tasks and mod-tags handler conformance
+          slug: tasks-tags-conformance
+          description: 'Depends on wave 1 helpers. mod-tasks: RequireAuth and remove ~26 inline checks; 8 decode sites to DecodeJSON keeping tasks/subtasks/recurrences code prefixes; PATCH handler (tasks.go:541+) runs stateless field checks before GetByUUID; audit 409/422 (tasks.not_recurring, tasks.due_date_required_for_recurrence are late state-dependent 400s). USER DECISION: plain-integer-id subtask and recurrence routes must change to match the rule (403 regardless of existence for unauthorized callers; no 404-vs-403 distinction); this supersedes the prior documented module decision, so update the module docs accordingly. mod-tags: RequireAuth, remove ~11 inline checks (/tag-templates stays authn-only), 3 decode sites, audit one_of_domain as 409 or 422. Order tests for both.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-tasks: PLACEHOLDER
+            tags: PLACEHOLDER
