@@ -57,6 +57,7 @@ phases:
           path: phase-02-type-entity-api-and-contract/001-type-entity-read-surface.md
           done: false
           tier: sonnet-med
+          digest: Type entities are readable through GET /v1/entities/{uuid} and the display-name endpoint (replacing the 500 and null display name). api/types gained List (hides deprecated types unless IncludeDeprecated) and EntityTypeInfo, built only on ListAllTypes. Resolver documented as the always-include override. Querier unchanged, no model/ diff. Unit and integration tests pass.
           git:
             branch: null
             commit: []
