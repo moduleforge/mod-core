@@ -1,0 +1,4 @@
+version: 1
+name: HTTP Error Precedence Conformance
+leadProject: core
+waves: []
