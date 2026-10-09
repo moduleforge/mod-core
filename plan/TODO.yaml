@@ -69,7 +69,7 @@ phases:
           tier: sonnet-med
           digest: Rewrote the TypeAuthorizer, Authorizer and AuthorizeType doc comments and the type-level-authorization architecture doc for type-scoped grants (wildcard plus exact-type entity grants; no ownership, no inheritance, no instance access). Added a Type entities section and folded in ggLy by reframing peer-module claims as requirements. Comments and docs only; lint and tests pass.
           git:
-            branch: null
+            branch: plan/type-scoped-grants-02-002
             commit: []
             merge: null
     - number: 3
