@@ -120,7 +120,7 @@ phases:
             branch: plan/type-scoped-grants-09-002
             commit:
                 - 65e298f
-            merge: null
+            merge: ebe5e5c0cb9b63c5e6e2b6474873a3ee522c9c67
         - number: 3
           slug: instance-semantics-contract-and-warning-docs
           title: Reverse the No-Instance-Access Wording and Document the Instance-Semantics Warning
