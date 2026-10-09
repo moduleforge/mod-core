@@ -88,3 +88,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: type-grant-list-single-row-symmetry
+          title: List and Single-Row Symmetry Test for a Type-Grant Holder
+          path: phase-09-type-grant-instance-semantics/002-type-grant-list-single-row-symmetry.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
