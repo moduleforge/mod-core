@@ -56,3 +56,10 @@ waves:
             - error-precedence-foundation
           plans:
             mod-billing: PLACEHOLDER
+        - name: mod-tokens handler conformance (unaudited)
+          slug: tokens-conformance
+          description: 'Depends on wave 1 helpers. Review against the rule within flow-accounts'' fixed wire contract: RFC 8628 flat bodies on the two device endpoints and byte-for-byte envelopes. RequireAuth only on authenticated/verified registrars; public device, refresh and revoke routes authenticate by credential possession. Keep RequireJSONBody and RequireJSONBodyDevice (4 KiB, issuance.request_invalid). Audit 409/422; order test adapted for RFC endpoints. Propose contract deviations; do not make them unilaterally (followup Tpe2 tracks flow-accounts coordination).'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-tokens: PLACEHOLDER
