@@ -73,3 +73,10 @@ Out of scope:
 - `docs/architecture/type-level-authorization.md`: the current architecture doc.
 - Followup `ggLy` (in `plan/followups.yaml` at the project root): the unverifiable peer claims.
 - Architect report `mod-authz/.flow/research/qWTH-architect-report.md` §1.6 and §2.1 "Risk": the original rationale for the rewording.
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Validation: `make lint` and `make test` in `api` pass; diff limited to `api/authz/authz.go` (comments only) and `docs/architecture/type-level-authorization.md`; stale-phrase grep empty; `entity_id` lookup named; "no instance access" and "no subtype inheritance" stated.
+- Files: `api/authz/authz.go`, `docs/architecture/type-level-authorization.md`.
+- Followup `ggLy`: peer-module claims reworded as requirements on implementations / attributed to the authorization-design contract.
