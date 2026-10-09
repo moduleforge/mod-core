@@ -113,7 +113,7 @@ phases:
           slug: type-grant-list-single-row-symmetry
           title: List and Single-Row Symmetry Test for a Type-Grant Holder
           path: phase-09-type-grant-instance-semantics/002-type-grant-list-single-row-symmetry.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: 'Added TestGrantVerification_TypeGrantListSingleRowSymmetry: compares the generated list function with a verbatim port of mod-users'' checkGrantOrOwn SQL (ported from mod-users plan branch commit 6d228fd, containing both the instance seed and the type-entity exclusion) for 5 actor fixtures x 4 slugs x 8 candidates; both mutation checks (remove exclusion, remove arm) fail it. Test-only; lint passes; local Postgres 14 used.'
           git:
