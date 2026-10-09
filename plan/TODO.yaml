@@ -69,7 +69,17 @@ phases:
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
-      tasks: []
+      tasks:
+        - number: 1
+          slug: fix-type-level-authorization-doc
+          title: Fix Type-Level Authorization Doc Claims
+          path: phase-02-helper-docs/001-fix-type-level-authorization-doc.md
+          done: false
+          tier: haiku-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: doc-updates
       title: Documentation Updates
