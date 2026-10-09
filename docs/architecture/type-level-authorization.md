@@ -88,8 +88,10 @@ A type's own entity is a legitimate `entities.id` target for entity-level operat
 entity itself, for example `read` or `grant`. It is never a stand-in for the type id in a
 type-level `create` or `list` check.
 
-Type entities and instance entities cannot share a target group; the mod-authz slice of the
-type-scoped-grants change enforces this.
+The design requires that type entities and instance entities not share a target group, and that
+mod-authz, not mod-core, enforces it. mod-core's schema does not enforce it, and this document
+does not assert that any peer module does. See [type-entities.md](./type-entities.md) for the type
+entity data model.
 
 ## Adopting the helper in a module
 
@@ -117,5 +119,5 @@ entity is honoured only through `AuthorizeType`. mod-core has no type-scoped `li
 
 The ecosystem call-shape table in `docs/mf-standards/architecture/authorization-design.md` still
 describes passing the type id as the target. That submodule is not edited from mod-core; the
-correction is tracked in the mod-authz slice of the type-scoped-grants change. The rule in this
+design requires that mod-authz, not mod-core, correct it. The rule in this
 document and in the `api/authz/authz.go` doc comments is authoritative for mod-core.
