@@ -235,3 +235,39 @@ func isErrForbidden(err error) bool {
 func isErrInvalid(err error) bool {
 	return errors.Is(err, ErrInvalidInput)
 }
+
+func TestResolveProfileByEntityID_Type(t *testing.T) {
+	q := newMockQuerier()
+	entityID := q.nextSeq()
+	sentinel := coredb.Type{ID: 6, Slug: "type", Name: "Type", Concrete: true}
+	q.types["type"] = sentinel
+	target := coredb.Type{
+		ID: 7, Slug: "widget", Name: "Widget", Concrete: true,
+		Description: pgtype.Text{String: "a widget", Valid: true},
+		EntityID:    pgtype.Int8{Int64: entityID, Valid: true},
+	}
+	q.types["widget"] = target
+	q.entitiesByID[entityID] = coredb.GetEntityByUUIDRow{
+		ID: entityID, Uuid: uuid.New(), FundamentalTypeID: sentinel.ID, FundamentalTypeSlug: "type",
+	}
+
+	profile, err := ResolveProfileByEntityID(context.Background(), q, entityID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if profile.Kind != "type" {
+		t.Errorf("kind: got %q, want type", profile.Kind)
+	}
+	if profile.Type == nil || profile.Type.Slug != "widget" || profile.Type.Name != "Widget" {
+		t.Fatalf("Type: got %+v", profile.Type)
+	}
+}
+
+func TestResolveProfileByEntityID_TypeNotFound(t *testing.T) {
+	q := newMockQuerier()
+	entityID := q.nextSeq()
+	q.entitiesByID[entityID] = coredb.GetEntityByUUIDRow{ID: entityID, Uuid: uuid.New(), FundamentalTypeSlug: "type"}
+	if _, err := ResolveProfileByEntityID(context.Background(), q, entityID); err == nil {
+		t.Fatal("expected error for a type entity with no types row")
+	}
+}
