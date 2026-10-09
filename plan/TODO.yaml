@@ -137,6 +137,6 @@ phases:
             - JBVU
             - YrDU
           git:
-            branch: null
+            branch: plan/type-scoped-grants-10-001
             commit: []
             merge: null
