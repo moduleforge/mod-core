@@ -29,7 +29,10 @@ CREATE INDEX types_parent_id_idx ON types(parent_id);
 -- The body references the entities table, which does not exist yet. plpgsql
 -- resolves relations at run time, so the function is definable here.
 -- +goose StatementBegin
-CREATE FUNCTION types_reject_mutation() RETURNS TRIGGER AS $$
+CREATE FUNCTION types_reject_mutation() RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'types rows are append-only; DELETE is not permitted';
@@ -50,8 +53,8 @@ BEGIN
     END IF;
     IF NOT EXISTS (
       SELECT 1
-        FROM entities e
-        JOIN types s ON s.id = e.fundamental_type_id AND s.slug = 'type'
+        FROM public.entities e
+        JOIN public.types s ON s.id = e.fundamental_type_id AND s.slug = 'type'
        WHERE e.id = NEW.entity_id
     ) THEN
       RAISE EXCEPTION 'types.entity_id must reference an entity of the sentinel type ''type''';
@@ -65,7 +68,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 -- +goose StatementEnd
 
 CREATE TRIGGER types_no_delete

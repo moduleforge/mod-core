@@ -28,3 +28,7 @@ Scope is limited to the three findings: pin the search path on the two invoker-r
 - Finding `JBVU` in this plan's `plan/findings.yaml` (definer surface on the trigger functions).
 - Finding `YrDU` in this plan's `plan/findings.yaml` (stale header comment).
 - `plan/notes/type-entity-design.md` (binding design, including the SECURITY DEFINER and pinned search_path constraint).
+
+## Status
+
+Outcome: succeeded (2026-10-08). Pinned `search_path = public, pg_temp` and qualified `public.` names on `types_reject_mutation` (0002) and `entities_reject_type_entity_archive` (0008), both still SECURITY INVOKER; revoked PUBLIC EXECUTE on the three definer trigger functions; added the explanatory comment in 0008; fixed the header in `api/types/type_entities_integration_test.go` and added `TestGuardsResistTempTableShadow`. Validation: `grep SeedOwnerFixture api/` empty; `model make verify`/`lint`, `api make lint`/`test`, and the full `-tags=integration` suite pass. Root `make build` fails only at the gui `build:tokens` step (node environment), unrelated to this change.

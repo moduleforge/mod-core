@@ -9,9 +9,9 @@ package types_test
 // entity is created by the type's own insert, and the pairing is guarded at
 // insert time, update time, archive time, and commit time.
 //
-// The tests live in api/types, not api/service or api/httpapi, because those
-// packages' TestMains call authztest.SeedOwnerFixture, which refuses once type
-// entities occupy the low entity ids.
+// The tests live in api/types because they need their own TestMain, which
+// builds a dedicated shadow database and applies mod-core's migrations to it
+// (the other api packages' TestMains do not).
 //
 // Harness adapted from api/authz/setup/grant_table_integration_test.go (same
 // CORE_DEV_PG_HOST / CORE_DEV_PG_PORT handling, own shadow database). Run, from
@@ -578,5 +578,74 @@ func TestDeprecatedTypeCreateRejected(t *testing.T) {
 	mustExec(t, `UPDATE types SET deprecated_at = NULL WHERE id = $1`, typeID)
 	if err := execErr(`SELECT core_create_entity($1)`, typeID); err != nil {
 		t.Errorf("creation after un-deprecating failed: %v", err)
+	}
+}
+
+// TestGuardsResistTempTableShadow proves the invoker-rights guards resolve
+// `types` through the pinned search_path / qualified names: a session-local
+// temp table named types (which would otherwise come first in the implicit
+// pg_temp search) cannot blind them.
+func TestGuardsResistTempTableShadow(t *testing.T) {
+	ctx := context.Background()
+	slug := newSlug("shadow")
+	insertType(t, slug)
+
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire: %v", err)
+	}
+	defer conn.Release()
+
+	// Fixtures are built first: other (unrelated) entity triggers resolve
+	// `types` unqualified and would trip over the shadow while inserting.
+	var typeEntityUUID string
+	if err := conn.QueryRow(ctx, `
+SELECT e.uuid::text FROM public.types t JOIN public.entities e ON e.id = t.entity_id WHERE t.slug = $1`, slug).Scan(&typeEntityUUID); err != nil {
+		t.Fatalf("lookup type entity: %v", err)
+	}
+	// types_reject_mutation fixture: a types row with entity_id NULL (creation
+	// trigger disabled) and a plain, non-sentinel entity, in a transaction
+	// that is always rolled back.
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback of a test transaction
+	if _, err := tx.Exec(ctx, `ALTER TABLE public.types DISABLE TRIGGER types_create_entity`); err != nil {
+		t.Fatalf("disable trigger: %v", err)
+	}
+	var typeID int64
+	if err := tx.QueryRow(ctx, `
+INSERT INTO public.types (slug, parent_id, concrete, name)
+SELECT $1, id, true, 'x' FROM public.types WHERE slug = 'entity' RETURNING id`, newSlug("shadownull")).Scan(&typeID); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	var plainEntity int64
+	if err := tx.QueryRow(ctx, `
+INSERT INTO public.entities (fundamental_type_id) SELECT id FROM public.types WHERE slug = 'app' RETURNING id`).Scan(&plainEntity); err != nil {
+		t.Fatalf("insert plain entity: %v", err)
+	}
+
+	// Now shadow `types` for this session with an empty temp table, which
+	// precedes public in the default search path.
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE types (id BIGINT, slug TEXT, entity_id BIGINT, fundamental_type_id BIGINT) ON COMMIT DROP`); err != nil {
+		t.Fatalf("create temp shadow: %v", err)
+	}
+
+	// Archive guard: an unqualified lookup would find no sentinel in the
+	// shadow and allow the archive. Use a savepoint so the tx survives.
+	if _, err := tx.Exec(ctx, `SAVEPOINT a`); err != nil {
+		t.Fatalf("savepoint: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE public.entities SET archived_at = now() WHERE uuid = $1::uuid`, typeEntityUUID); err == nil {
+		t.Error("archiving a type entity succeeded under a temp types shadow; want rejection")
+	}
+	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT a`); err != nil {
+		t.Fatalf("rollback to savepoint: %v", err)
+	}
+
+	// types_reject_mutation: a non-sentinel entity_id must still be rejected.
+	if _, err := tx.Exec(ctx, `UPDATE public.types SET entity_id = $1 WHERE id = $2`, plainEntity, typeID); err == nil {
+		t.Error("NULL -> non-sentinel-typed entity succeeded under a temp types shadow; want rejection")
 	}
 }
