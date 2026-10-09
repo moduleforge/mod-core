@@ -1,29 +1,5 @@
 version: 2
-items:
-    - title: type-entities.md seed-id wording ambiguous
-      id: sym7
-      date: "2026-10-09"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:doc-updates
-        - effort:unspecified
-        - resolution/task:phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
-        - resolution/plan:type-scoped-grants
-        - resolution/commit:6a0eff6caaf0eb17d11da1b72b1ff0b542b6c698
-      text: docs/architecture/type-entities.md (around lines 28-31) says the sentinel is inserted "after the earlier seeds, so the existing seeded types.id values do not change", while model/README.md says app moves from types.id 6 to 7. Both are true (earlier seeds are 0003-0007), but a reader may take the first sentence to mean no seeded id changed. Reword to say ids 1 to 5 are unchanged and that app (seeded later in 0014) moves from 6 to 7 because the sentinel takes id 6. Also, around lines 118-120 the doc says types.id equals entities.id for the seeded types; scope that to a fresh database or drop the sentence, since the doc already says nothing may rely on it.
-    - title: authz.go comment names a change identifier
-      id: V1FX
-      date: "2026-10-09"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:doc-updates
-        - effort:unspecified
-        - resolution/task:phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
-        - resolution/plan:type-scoped-grants
-        - resolution/commit:6a0eff6caaf0eb17d11da1b72b1ff0b542b6c698
-      text: The doc comment in api/authz/authz.go around line 63 still says "the mod-authz slice of the type-scoped-grants change delivers the ...", naming a change identifier and asserting peer-module delivery as fact. The equivalent text in docs/architecture/type-level-authorization.md was already reworded into a requirement without the identifier. Reword the comment the same way (the design requires mod-authz to deliver the corrected call-shape table), comment-only, no runtime effect.
+items: []
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
@@ -74,4 +50,14 @@ closed:
       title: Peer-module rule stated as fact in arch doc
       disposition: fixed
       ref: phase-03-doc-updates/001-update-architecture-docs.md
+      date: "2026-10-09"
+    - id: sym7
+      title: type-entities.md seed-id wording ambiguous
+      disposition: fixed
+      ref: phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
+      date: "2026-10-09"
+    - id: V1FX
+      title: authz.go comment names a change identifier
+      disposition: fixed
+      ref: phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
       date: "2026-10-09"
