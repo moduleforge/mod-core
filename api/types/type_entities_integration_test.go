@@ -36,6 +36,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/moduleforge/core-api/types"
 )
 
 const (
@@ -524,5 +526,57 @@ SELECT $1, id, true, $1 FROM types WHERE slug = 'entity'`, slug); err != nil {
 	}
 	if got := queryInt(t, `SELECT count(*) FROM types t JOIN entities e ON e.id = t.entity_id WHERE t.slug = $1`, slug); got != 1 {
 		t.Error("type inserted under managed-mode grants has no linked entity")
+	}
+}
+
+func TestDeprecatedTypeCreateRejected(t *testing.T) {
+	ctx := context.Background()
+	slug := newSlug("depcreate")
+	typeID := insertType(t, slug)
+
+	// An entity created while the type is live stays usable after deprecation.
+	var liveUUID string
+	if err := pool.QueryRow(ctx, `SELECT (core_create_entity($1)).uuid::text`, typeID).Scan(&liveUUID); err != nil {
+		t.Fatalf("create entity of live type: %v", err)
+	}
+
+	mustExec(t, `UPDATE types SET deprecated_at = now() WHERE id = $1`, typeID)
+
+	err := execErr(`SELECT core_create_entity($1)`, typeID)
+	if err == nil {
+		t.Fatal("creating an entity of a deprecated type succeeded; want rejection")
+	}
+	if !types.IsDeprecatedTypeError(err) {
+		t.Errorf("IsDeprecatedTypeError(%v) = false; want true", err)
+	}
+	if !strings.Contains(err.Error(), slug) {
+		t.Errorf("error %q does not name the type slug %q", err, slug)
+	}
+	// Raw insert and the with_owner variant are covered by the same trigger.
+	if err := execErr(`INSERT INTO entities (fundamental_type_id) VALUES ($1)`, typeID); !types.IsDeprecatedTypeError(err) {
+		t.Errorf("raw insert: IsDeprecatedTypeError(%v) = false; want true", err)
+	}
+
+	// A non-deprecated type is unaffected.
+	other := insertType(t, newSlug("depother"))
+	if err := execErr(`SELECT core_create_entity($1)`, other); err != nil {
+		t.Errorf("creating an entity of a non-deprecated type failed: %v", err)
+	}
+
+	// Existing entities remain readable, archivable, and tolerate a no-op type UPDATE.
+	if got := queryInt(t, `SELECT count(*) FROM entities WHERE uuid = $1::uuid`, liveUUID); got != 1 {
+		t.Errorf("existing entity of deprecated type not readable: count=%d", got)
+	}
+	if err := execErr(`UPDATE entities SET fundamental_type_id = fundamental_type_id WHERE uuid = $1::uuid`, liveUUID); err != nil {
+		t.Errorf("no-op type update on existing entity failed: %v", err)
+	}
+	if err := execErr(`SELECT core_archive_entity($1::uuid)`, liveUUID); err != nil {
+		t.Errorf("archiving existing entity of deprecated type failed: %v", err)
+	}
+
+	// Un-deprecating re-enables creation.
+	mustExec(t, `UPDATE types SET deprecated_at = NULL WHERE id = $1`, typeID)
+	if err := execErr(`SELECT core_create_entity($1)`, typeID); err != nil {
+		t.Errorf("creation after un-deprecating failed: %v", err)
 	}
 }

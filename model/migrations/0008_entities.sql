@@ -19,14 +19,26 @@ CREATE INDEX entities_archived_at_idx ON entities(archived_at) WHERE archived_at
 -- +goose StatementBegin
 CREATE FUNCTION entities_check_concrete_type() RETURNS TRIGGER AS $$
 DECLARE
-  v_concrete BOOLEAN;
+  v_concrete   BOOLEAN;
+  v_deprecated TIMESTAMPTZ;
+  v_slug       TEXT;
 BEGIN
-  SELECT concrete INTO v_concrete FROM types WHERE id = NEW.fundamental_type_id;
+  SELECT concrete, deprecated_at, slug INTO v_concrete, v_deprecated, v_slug
+    FROM types WHERE id = NEW.fundamental_type_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'entities: fundamental_type_id % does not reference a known type', NEW.fundamental_type_id;
   END IF;
   IF NOT v_concrete THEN
     RAISE EXCEPTION 'entities: fundamental_type_id must reference a concrete type; % is abstract', NEW.fundamental_type_id;
+  END IF;
+  -- Creating an entity of a deprecated type is rejected, INSERT only: a no-op
+  -- UPDATE OF fundamental_type_id on an existing row of a since-deprecated type
+  -- must keep working (real changes are blocked by entities_immutable_type).
+  -- SQLSTATE 'MF001' is a stable contract; Go callers match it via
+  -- types.IsDeprecatedTypeError (api/types/deprecated.go).
+  IF TG_OP = 'INSERT' AND v_deprecated IS NOT NULL THEN
+    RAISE EXCEPTION 'entities: type % is deprecated; new entities of it cannot be created', v_slug
+      USING ERRCODE = 'MF001';
   END IF;
   RETURN NEW;
 END;

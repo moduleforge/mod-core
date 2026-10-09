@@ -1,0 +1,12 @@
+version: 2
+items:
+    - title: api/types/type_entities_integration_test.go h
+      id: YrDU
+      date: "2026-10-09"
+      tags:
+        - type:ambiguity
+        - plan/phase:type-entity-schema
+        - priority:unspecified
+        - effort:unspecified
+      text: api/types/type_entities_integration_test.go header comment names authztest.SeedOwnerFixture, which no longer exists (renamed SeedCollisionFixture in task 1.003); stale comment, fix on next touch of that file.
+closed: []
