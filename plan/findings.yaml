@@ -17,6 +17,9 @@ items:
         - priority:low
         - plan/phase:doc-updates
         - effort:unspecified
+        - resolution/task:phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
+        - resolution/plan:type-scoped-grants
+        - resolution/commit:6a0eff6caaf0eb17d11da1b72b1ff0b542b6c698
       text: The doc comment in api/authz/authz.go around line 63 still says "the mod-authz slice of the type-scoped-grants change delivers the ...", naming a change identifier and asserting peer-module delivery as fact. The equivalent text in docs/architecture/type-level-authorization.md was already reworded into a requirement without the identifier. Reword the comment the same way (the design requires mod-authz to deliver the corrected call-shape table), comment-only, no runtime effect.
 closed:
     - id: dlaB
