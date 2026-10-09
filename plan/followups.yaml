@@ -48,16 +48,6 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: api/authz/authz.go Authorizer.Authorize(ctx, operation, target *int64) carries one untyped int64, so an implementation cannot tell an entities.id from a types.id at runtime; passing a types.id was an authorization bypass class (an actor owning the entity whose id equals the type id passed type-level create). The additive fix is the optional authz.TypeAuthorizer capability plus the authz.AuthorizeType(ctx, az, op, typeID) helper (assert, else Authorize(ctx, op, nil)). Longer term, consider a typed target (e.g. a Target{Kind, ID} value or separate entity/type methods on the core interface) so misuse is a compile error. This is a breaking change for every Authorizer implementer, decorator and stub across the ModuleForge modules (mod-users api/internal/authz, mod-repos api/authz DecoratingAuthorizer, app-mfmanager api/httpapi Authorizer, all test stubs), so it needs an ecosystem-wide migration plan.
-    - title: Type-level auth doc claims about peers
-      id: ggLy
-      date: "2026-10-06"
-      tags:
-        - type:documentation
-        - priority:low
-        - effort:small
-        - plan/phase:doc-updates
-        - plan/slug:fix-actor-group-target-confusion
-      text: 'Review finding (suggestion, low confidence; agent-authored data): docs/architecture/type-level-authorization.md (Fallback rule and Adopting the helper) makes three claims about other modules that could not be verified from this checkout: the production Authorizer answers a nil target from wildcard grants only; mod-users, mod-authz and mod-workflows carry local equivalent helpers; wildcard manage/create holders are unaffected. They are the claims most likely to drift. Optionally soften them to refer to the authorization-design contract, or confirm them against the peer repos.'
     - title: Update allows blank required names
       id: h416
       date: "2026-10-08"
