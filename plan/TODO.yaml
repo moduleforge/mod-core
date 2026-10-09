@@ -46,6 +46,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 5
+          slug: gui-unprocessable-entity
+          title: Route unprocessable_entity in core-gui useApiError
+          path: phase-01-helpers/005-gui-unprocessable-entity.md
+          done: false
+          tier: sonnet-low
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
