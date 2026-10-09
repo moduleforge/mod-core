@@ -80,9 +80,15 @@ type does not cover its subtypes (no subtype inheritance). It never treats `type
 ## Type entities
 
 Every type has one entity of the sentinel type `type`, created together with the type. Grants and
-target groups reference it through `grants.target_id`. A type grant confers only the type-level
-abilities checked through `AuthorizeType`, for example `create` and `list`. It gives no instance
-access: no access to existing instances of the type.
+target groups reference it through `grants.target_id`. A grant on a type's entity
+(`types.entity_id`) confers the type-level abilities checked through `AuthorizeType`, for example
+`create` and `list`, and also the same operation over every existing and future instance of exactly
+that type. Entity-level `Authorize` and the list-side `accessible_<slug>_ids_for_actor` functions
+that `GrantTableGenerator` produces both apply the instance rule. It works through target groups
+and actor groups. It never extends to subtypes or parent types, and it never applies to type
+entities themselves: a grant on the sentinel `type` entity confers nothing over other type
+entities. The reverse does not hold: a grant on an instance never satisfies a type-level check, and
+`AuthorizeType` and the `TypeAuthorizer` contract are unchanged.
 
 A type's own entity is a legitimate `entities.id` target for entity-level operations on the type
 entity itself, for example `read` or `grant`. It is never a stand-in for the type id in a
@@ -92,6 +98,33 @@ The design requires that type entities and instance entities not share a target 
 mod-authz, not mod-core, enforces it. mod-core's schema does not enforce it, and this document
 does not assert that any peer module does. See [type-entities.md](./type-entities.md) for the type
 entity data model.
+
+> **Warning: a type grant is an instance-wide grant.**
+>
+> - A grant on a type entity confers the operation over **every existing and future instance** of
+>   exactly that type, for every operation in its closure. `manage` on a type entity is full control
+>   of every instance (read, update, delete, `assume`, `grant`, `revoke`, and any other operation
+>   `manage` implies). For example, `manage` on the `natural_person` type entity confers `assume`
+>   of every user account in a deployment that includes mod-users.
+> - The `assume` of every user account that `manage` on the `natural_person` type entity confers
+>   includes accounts that themselves hold wildcard or admin grants, so that grant is effectively
+>   full admin.
+> - `manage` or `grant` on the type entity of `authz_actor_group` or `authz_target_group` confers
+>   authority over every group of that kind. Adding a member needs `grant` on the member and, for
+>   actor groups, `update` and `grant` on the group; a bare `update` only permits removal. Such a
+>   holder can edit groups that hold wildcard grants, a path to privilege escalation. The same
+>   applies to every other type that has instances.
+> - `list` implies `read`, so a type-level `list` grant also reads every instance of the type.
+> - `manage` or `grant` on a type-only target group confers all of the above for every type in the
+>   group.
+> - It does not extend to subtypes or parent types, and it never applies to type entities
+>   themselves.
+> - A holder of `grant` on a type entity can hand out instance-wide authority over that type. Grant
+>   on type entities only to principals trusted with every instance, and prefer `create` and `list`
+>   for create-only or list-only authority.
+> - Every `Authorizer` implementation, and every hand-written stand-in of one in tests, must apply
+>   the same rule as `GrantTableGenerator`, or single-row and list checks disagree for type-grant
+>   holders.
 
 ## Adopting the helper in a module
 

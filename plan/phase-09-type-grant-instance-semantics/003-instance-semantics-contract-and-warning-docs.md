@@ -79,3 +79,7 @@ Files in scope:
 - After `api/authz/authz.go`.
 - After `docs/architecture/` (both files, if `type-entities.md` exists).
 - After AGENTS.md and README.md.
+
+## Status
+
+Outcome: succeeded (2026-10-09). Old rule reworded in `docs/architecture/type-level-authorization.md` and `AGENTS.md`; Warning block added (including escalation paths); `api/authz/authz.go` comments updated (comment lines only); `docs/architecture/type-entities.md` carry-over fixes applied. `make lint` passes; grep checks clean. Remaining "confers nothing" hits state the new rule.

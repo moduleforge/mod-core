@@ -100,3 +100,9 @@ architectural_impact: true
 
 - After the arm, the doc comments and the unit tests, with `make test` green.
 - After the integration matrix passes.
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Added the fourth `UNION` instance arm (exact type via `types.entity_id`, `NOT EXISTS (SELECT 1 FROM types tt WHERE tt.entity_id = e.id)` on the arm for every slug) and updated the doc comments, including the warning paragraph, in `api/authz/setup/grant_table.go`. Unit tests (`TestGrantTableGenerator_InstanceArm`) in `api/authz/setup/setup_test.go`; `"type"` added to the `TestMain` slug list plus `TestGrantVerification_TypeGrantInstanceSemantics` (and helpers) in `api/authz/setup/grant_table_integration_test.go`.
+- Validation: `make build/test/lint` green; `./authz/setup/...` and full `-tags=integration ./...` green against a throwaway local Postgres 14 (Docker unreachable); grep checks pass; sibling `go vet` passes. Mutation checks (drop exclusion, join on `types.id`, join on `parent_id`) each failed the tests and were reverted.
