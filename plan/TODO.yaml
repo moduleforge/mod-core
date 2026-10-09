@@ -11,11 +11,13 @@ phases:
           slug: type-entity-schema
           title: Add Types Entity Id, Sentinel Root Type, and Type Entity Trigger
           path: phase-01-type-entity-schema/001-type-entity-schema.md
-          done: false
+          done: true
           tier: sonnet-high
+          digest: Every types row now has a unique sentinel-typed entity via AFTER INSERT SECURITY DEFINER trigger; sentinel type is types.id 6 (self-referential), app moved to 7, seeds 1-5 unchanged; entity_id settable once NULL->sentinel-typed entity; commit-time pairing invariants plus sentinel-deprecation and type-entity-archive guards added; Querier method set unchanged; 13 integration tests added.
           git:
-            branch: null
-            commit: []
+            branch: plan/type-scoped-grants-01-001
+            commit:
+                - b084525
             merge: null
         - number: 2
           slug: deprecated-type-create-rejection
