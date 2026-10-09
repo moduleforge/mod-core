@@ -101,7 +101,7 @@ phases:
           slug: instance-semantics-list-arm
           title: Add the Instance-Semantics Arm to GrantTableGenerator
           path: phase-09-type-grant-instance-semantics/001-instance-semantics-list-arm.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: 'Added the fourth UNION arm to GrantTableGenerator: instances whose exact fundamental type''s entity (types.entity_id) is in TargetChain, with the generic type-entity exclusion on the arm for every slug and no sentinel literal or parent_id. Comments updated to four arms plus short warning. Unit tests (instance arm conjoined clause, 9 slugs) and 9-subtest integration matrix pass; mutation checks (drop exclusion, wrong join key, parent join) each fail tests. Full integration suite, make build/test/lint pass. Local Postgres 14 used (Docker unavailable).'
           git:
