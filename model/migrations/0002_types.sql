@@ -8,13 +8,26 @@ CREATE TABLE types (
   name           TEXT NOT NULL,
   description    TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  deprecated_at  TIMESTAMPTZ
+  deprecated_at  TIMESTAMPTZ,
+  -- The entity that represents this type (type-scoped grants target it through
+  -- grants.target_id). Nullable at the DDL level: the entities table does not
+  -- exist yet, so the FK to entities(id) is added in 0008_entities.sql, which
+  -- also installs the AFTER INSERT trigger that creates and links the entity
+  -- and the deferred invariant that makes the column non-NULL at commit.
+  entity_id      BIGINT UNIQUE
 );
 
 CREATE INDEX types_parent_id_idx ON types(parent_id);
 
--- Append-only enforcement: rows may never be DELETEd,
--- and may only be UPDATEd to set/unset deprecated_at.
+-- Append-only enforcement: rows may never be DELETEd, and may only be UPDATEd
+-- to set/unset deprecated_at, with one further exception: entity_id may be set
+-- exactly once (NULL -> non-NULL) to an entity whose fundamental type is the
+-- sentinel type 'type' (see 0008_entities.sql). Setting deprecated_at on the
+-- sentinel row itself is rejected, because every later type registration
+-- creates an entity of the sentinel type.
+--
+-- The body references the entities table, which does not exist yet. plpgsql
+-- resolves relations at run time, so the function is definable here.
 -- +goose StatementBegin
 CREATE FUNCTION types_reject_mutation() RETURNS TRIGGER AS $$
 BEGIN
@@ -30,6 +43,25 @@ BEGIN
      OR OLD.created_at IS DISTINCT FROM NEW.created_at
   THEN
     RAISE EXCEPTION 'types rows are append-only; only deprecated_at may be updated';
+  END IF;
+  IF OLD.entity_id IS DISTINCT FROM NEW.entity_id THEN
+    IF OLD.entity_id IS NOT NULL OR NEW.entity_id IS NULL THEN
+      RAISE EXCEPTION 'types.entity_id is immutable once set';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1
+        FROM entities e
+        JOIN types s ON s.id = e.fundamental_type_id AND s.slug = 'type'
+       WHERE e.id = NEW.entity_id
+    ) THEN
+      RAISE EXCEPTION 'types.entity_id must reference an entity of the sentinel type ''type''';
+    END IF;
+  END IF;
+  IF OLD.slug = 'type'
+     AND NEW.deprecated_at IS NOT NULL
+     AND OLD.deprecated_at IS DISTINCT FROM NEW.deprecated_at
+  THEN
+    RAISE EXCEPTION 'the sentinel type ''type'' cannot be deprecated';
   END IF;
   RETURN NEW;
 END;
