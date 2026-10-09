@@ -46,6 +46,9 @@ Files in scope:
    Replace mod-users' "until mod-core's arm lands" point: by the time this ships, both arms exist.
 5. **`AGENTS.md`.** In the `authz/` row (and the Conventions bullet on type entities, if phase 3 added one), add one sentence: a grant on a type's entity also covers that exact type's instances, with an inline link to the warning in `type-level-authorization.md`. If AGENTS.md describes the access-function generator or "three arms" anywhere, update it to four.
 6. Describe shipped behaviour only. Do not name plan, phase or task identifiers in project docs. Use inline links, not "see" pointers. Follow each file's existing tone and wrap width.
+7. **Carry-over documentation fixes** (findings V1FX and sym7 in this plan's findings store; do not edit that file). While editing the files in scope:
+   - In the `api/authz/authz.go` `Authorizer` doc comment (around line 63), reword the sentence that says "the mod-authz slice of the type-scoped-grants change delivers the ..." into a requirement without any change identifier (the design requires mod-authz to deliver the corrected call-shape table). Comment-only.
+   - In `docs/architecture/type-entities.md`, reword the sentence near the top that says the sentinel is inserted "after the earlier seeds, so the existing seeded `types.id` values do not change" to say ids 1 to 5 are unchanged and that `app` (seeded later in 0014) moves from 6 to 7 because the sentinel takes id 6. Scope or drop the sentence that says `types.id` equals `entities.id` for the seeded types (it holds only on a fresh database, and the doc already says nothing may rely on it).
 
 ## Validation
 
