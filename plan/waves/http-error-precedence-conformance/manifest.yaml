@@ -88,3 +88,16 @@ waves:
             - users-conformance
           plans:
             app-mfmanager-workspace: PLACEHOLDER
+        - name: app-mftodo and app-mfgit conformance and module adoption
+          slug: mftodo-mfgit-conformance
+          description: Review app-owned handlers (mftodo appsetup callback, managed-auth gate, runtime-config handlers; mfgit static.go). Regenerate cmd/server with mfgen after mod-core scope fix (followup VFHF), then make localize. Bump versions.lock.yaml pins for core, audit, authz, users, tasks, tags, plus repos for mfgit. Audit GUI payloads under strict decoding and 401/403/422 changes; run mftodo Playwright e2e and mfgit /v1 smoke tests.
+          dependencies:
+            - error-precedence-foundation
+            - core-handler-conformance
+            - authz-conformance
+            - users-conformance
+            - tasks-tags-conformance
+            - repos-conformance
+          plans:
+            app-mfgit-workspace: PLACEHOLDER
+            app-mftodo-workspace: PLACEHOLDER
