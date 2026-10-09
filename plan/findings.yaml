@@ -33,7 +33,7 @@ items:
       tags:
         - type:optimization
         - priority:low
+        - effort:medium
         - plan/phase:type-entity-schema
-        - effort:unspecified
       text: The deferred constraint trigger entities_type_entity_referenced in model/migrations/0008_entities.sql queues an after-trigger event and a SECURITY DEFINER plpgsql call for every inserted entities row, though it acts only on sentinel-typed rows. Bulk inserts of N ordinary entities pay O(N) small overhead. A WHEN clause on a cheap predicate could skip it, but would need a constant sentinel id, which reintroduces a magic number. Accept the current design unless bulk entity creation proves hot.
 closed: []
