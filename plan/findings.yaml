@@ -8,6 +8,9 @@ items:
         - priority:low
         - plan/phase:doc-updates
         - effort:unspecified
+        - resolution/task:phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
+        - resolution/plan:type-scoped-grants
+        - resolution/commit:6a0eff6caaf0eb17d11da1b72b1ff0b542b6c698
       text: docs/architecture/type-entities.md (around lines 28-31) says the sentinel is inserted "after the earlier seeds, so the existing seeded types.id values do not change", while model/README.md says app moves from types.id 6 to 7. Both are true (earlier seeds are 0003-0007), but a reader may take the first sentence to mean no seeded id changed. Reword to say ids 1 to 5 are unchanged and that app (seeded later in 0014) moves from 6 to 7 because the sentinel takes id 6. Also, around lines 118-120 the doc says types.id equals entities.id for the seeded types; scope that to a fresh database or drop the sentence, since the doc already says nothing may rely on it.
     - title: authz.go comment names a change identifier
       id: V1FX
