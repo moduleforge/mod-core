@@ -88,11 +88,12 @@ CREATE TRIGGER types_append_only_update
 CREATE OR REPLACE FUNCTION type_is_or_descends_from(p_type_id BIGINT, p_target_slug TEXT)
 RETURNS BOOLEAN AS $$
 WITH RECURSIVE walk AS (
-  SELECT id, slug, parent_id FROM types WHERE id = p_type_id
+  SELECT id, slug, parent_id FROM public.types WHERE id = p_type_id
   UNION ALL
   SELECT t.id, t.slug, t.parent_id
-  FROM types t JOIN walk w ON t.id = w.parent_id
+  FROM public.types t JOIN walk w ON t.id = w.parent_id
 )
 SELECT EXISTS (SELECT 1 FROM walk WHERE slug = p_target_slug);
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE
+SET search_path = public, pg_temp;
 -- +goose StatementEnd

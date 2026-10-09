@@ -30,3 +30,10 @@ Scope is limited to the two findings: pin type resolution in `entities_check_con
 - Finding `cA7z` in this plan's `plan/findings.yaml` (vacuous shadow-test half).
 - `plan/phase-10-remediation-01/001-harden-type-entity-triggers.md` (the preceding round whose test this extends).
 - `plan/notes/type-entity-design.md` (binding design).
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Changed: `model/migrations/0002_types.sql` (type_is_or_descends_from: `public.types` qualification plus `SET search_path = public, pg_temp`), `model/migrations/0008_entities.sql` (entities_check_concrete_type: `public.types`, `SET search_path = public, pg_temp`, still SECURITY INVOKER; search-path note extended), `api/types/type_entities_integration_test.go` (populated shadow, error-text matching, new `TestConcreteTypeAndAncestryResistTempTableShadow`, comment updated).
+- SET search_path cost on type_is_or_descends_from measured at about 0.28 us/call (5.8 us vs 5.6 us over 200k calls, 3 alternating runs), so it was kept.
+- Validation: reverting both migrations fails the new concrete/ancestry assertions; reverting only types_reject_mutation pinning fails the reworked shadow assertion; full -tags=integration suite, `cd model && make verify`, `model make lint`, `api make lint`, `api make test` pass. Root `make test` fails only in the gui bun step (dependencies not installed), model and api steps pass. Root has no `lint` target.

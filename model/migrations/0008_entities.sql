@@ -17,14 +17,17 @@ CREATE INDEX entities_archived_at_idx ON entities(archived_at) WHERE archived_at
 
 -- Enforce that fundamental_type_id must reference a concrete type.
 -- +goose StatementBegin
-CREATE FUNCTION entities_check_concrete_type() RETURNS TRIGGER AS $$
+CREATE FUNCTION entities_check_concrete_type() RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 DECLARE
   v_concrete   BOOLEAN;
   v_deprecated TIMESTAMPTZ;
   v_slug       TEXT;
 BEGIN
   SELECT concrete, deprecated_at, slug INTO v_concrete, v_deprecated, v_slug
-    FROM types WHERE id = NEW.fundamental_type_id;
+    FROM public.types WHERE id = NEW.fundamental_type_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'entities: fundamental_type_id % does not reference a known type', NEW.fundamental_type_id;
   END IF;
@@ -42,7 +45,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 -- +goose StatementEnd
 
 -- Both triggers below are scoped to fundamental_type_id changes only.
@@ -169,7 +172,10 @@ END $$;
 -- managed mode may lack SELECT on public.types. Their EXECUTE is revoked from
 -- PUBLIC; triggers do not need EXECUTE at fire time. The two guards that only
 -- raise (types_reject_mutation, entities_reject_type_entity_archive) stay
--- SECURITY INVOKER with a pinned search_path.
+-- SECURITY INVOKER with a pinned search_path. The same pinning and
+-- qualification covers entities_check_concrete_type (above) and, in
+-- 0002_types.sql, type_is_or_descends_from (see the note there on its
+-- search_path).
 
 -- 5. AFTER INSERT trigger: a type's entity is created by the type's own
 --    insert. AFTER, not BEFORE: a BEFORE INSERT row trigger fires even when

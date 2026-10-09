@@ -581,6 +581,30 @@ func TestDeprecatedTypeCreateRejected(t *testing.T) {
 	}
 }
 
+// shadowDDL creates a session-local temp table named types, which precedes
+// public in the default search path, carrying every column the guarded
+// functions read.
+const shadowDDL = `CREATE TEMP TABLE types (id BIGINT, slug TEXT, parent_id BIGINT, concrete BOOLEAN, deprecated_at TIMESTAMPTZ, entity_id BIGINT, fundamental_type_id BIGINT) ON COMMIT DROP`
+
+// expectErrContaining runs stmt inside a savepoint so the surrounding
+// transaction survives, and requires an error whose text contains want.
+func expectErrContaining(ctx context.Context, t *testing.T, tx pgx.Tx, want, what, stmt string, args ...any) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `SAVEPOINT s`); err != nil {
+		t.Fatalf("savepoint: %v", err)
+	}
+	_, err := tx.Exec(ctx, stmt, args...)
+	switch {
+	case err == nil:
+		t.Errorf("%s succeeded under a temp types shadow; want rejection containing %q", what, want)
+	case !strings.Contains(err.Error(), want):
+		t.Errorf("%s: error %q does not contain %q", what, err.Error(), want)
+	}
+	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT s`); err != nil {
+		t.Fatalf("rollback to savepoint: %v", err)
+	}
+}
+
 // TestGuardsResistTempTableShadow proves the invoker-rights guards resolve
 // `types` through the pinned search_path / qualified names: a session-local
 // temp table named types (which would otherwise come first in the implicit
@@ -596,8 +620,8 @@ func TestGuardsResistTempTableShadow(t *testing.T) {
 	}
 	defer conn.Release()
 
-	// Fixtures are built first: other (unrelated) entity triggers resolve
-	// `types` unqualified and would trip over the shadow while inserting.
+	// Fixtures are built first, before the shadow exists, so that the inserts
+	// below run against the real types table.
 	var typeEntityUUID string
 	if err := conn.QueryRow(ctx, `
 SELECT e.uuid::text FROM public.types t JOIN public.entities e ON e.id = t.entity_id WHERE t.slug = $1`, slug).Scan(&typeEntityUUID); err != nil {
@@ -620,32 +644,107 @@ INSERT INTO public.types (slug, parent_id, concrete, name)
 SELECT $1, id, true, 'x' FROM public.types WHERE slug = 'entity' RETURNING id`, newSlug("shadownull")).Scan(&typeID); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	var plainEntity int64
+	var plainEntity, plainTypeID int64
 	if err := tx.QueryRow(ctx, `
-INSERT INTO public.entities (fundamental_type_id) SELECT id FROM public.types WHERE slug = 'app' RETURNING id`).Scan(&plainEntity); err != nil {
+INSERT INTO public.entities (fundamental_type_id) SELECT id FROM public.types WHERE slug = 'app' RETURNING id, fundamental_type_id`).Scan(&plainEntity, &plainTypeID); err != nil {
 		t.Fatalf("insert plain entity: %v", err)
 	}
 
-	// Now shadow `types` for this session with an empty temp table, which
-	// precedes public in the default search path.
-	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE types (id BIGINT, slug TEXT, entity_id BIGINT, fundamental_type_id BIGINT) ON COMMIT DROP`); err != nil {
+	// Now shadow `types` for this session. The shadow is populated with one row
+	// that claims the plain entity's fundamental type (app) is the sentinel
+	// 'type': an unqualified lookup in types_reject_mutation would see it and
+	// wrongly accept the plain entity.
+	if _, err := tx.Exec(ctx, shadowDDL); err != nil {
 		t.Fatalf("create temp shadow: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO pg_temp.types (id, slug, concrete) VALUES ($1, 'type', true)`, plainTypeID); err != nil {
+		t.Fatalf("populate temp shadow: %v", err)
 	}
 
 	// Archive guard: an unqualified lookup would find no sentinel in the
-	// shadow and allow the archive. Use a savepoint so the tx survives.
-	if _, err := tx.Exec(ctx, `SAVEPOINT a`); err != nil {
-		t.Fatalf("savepoint: %v", err)
-	}
-	if _, err := tx.Exec(ctx, `UPDATE public.entities SET archived_at = now() WHERE uuid = $1::uuid`, typeEntityUUID); err == nil {
-		t.Error("archiving a type entity succeeded under a temp types shadow; want rejection")
-	}
-	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT a`); err != nil {
-		t.Fatalf("rollback to savepoint: %v", err)
-	}
+	// shadow and allow the archive.
+	expectErrContaining(ctx, t, tx, "type entities cannot be archived", "archiving a type entity",
+		`UPDATE public.entities SET archived_at = now() WHERE uuid = $1::uuid`, typeEntityUUID)
 
 	// types_reject_mutation: a non-sentinel entity_id must still be rejected.
-	if _, err := tx.Exec(ctx, `UPDATE public.types SET entity_id = $1 WHERE id = $2`, plainEntity, typeID); err == nil {
-		t.Error("NULL -> non-sentinel-typed entity succeeded under a temp types shadow; want rejection")
+	expectErrContaining(ctx, t, tx, "must reference an entity of the sentinel type", "NULL -> non-sentinel-typed entity_id",
+		`UPDATE public.types SET entity_id = $1 WHERE id = $2`, plainEntity, typeID)
+}
+
+// TestConcreteTypeAndAncestryResistTempTableShadow proves
+// entities_check_concrete_type and type_is_or_descends_from resolve
+// public.types, so a temp table named types cannot make an abstract or
+// deprecated type look concrete and live, nor fake ancestry.
+func TestConcreteTypeAndAncestryResistTempTableShadow(t *testing.T) {
+	ctx := context.Background()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire: %v", err)
+	}
+	defer conn.Release()
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback of a test transaction
+
+	// Fixtures first, against the real table: ids of an abstract type and an
+	// app type, plus a deprecated concrete type.
+	var abstractID, appID, corpID int64
+	if err := tx.QueryRow(ctx, `SELECT id FROM public.types WHERE slug = 'entity' AND NOT concrete`).Scan(&abstractID); err != nil {
+		t.Fatalf("lookup abstract type: %v", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT id FROM public.types WHERE slug = 'app'`).Scan(&appID); err != nil {
+		t.Fatalf("lookup app type: %v", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT id FROM public.types WHERE slug = 'corporation'`).Scan(&corpID); err != nil {
+		t.Fatalf("lookup corporation type: %v", err)
+	}
+	var deprecatedID int64
+	if err := tx.QueryRow(ctx, `
+INSERT INTO public.types (slug, parent_id, concrete, name)
+SELECT $1, id, true, 'x' FROM public.types WHERE slug = 'entity' RETURNING id`, newSlug("shadowdep")).Scan(&deprecatedID); err != nil {
+		t.Fatalf("insert deprecated-to-be type: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE public.types SET deprecated_at = now() WHERE id = $1`, deprecatedID); err != nil {
+		t.Fatalf("deprecate type: %v", err)
+	}
+
+	if _, err := tx.Exec(ctx, shadowDDL); err != nil {
+		t.Fatalf("create temp shadow: %v", err)
+	}
+
+	// Ancestry, true case: the shadow is empty, so a function that resolved
+	// the shadow would answer false for a real descendant.
+	var got bool
+	if err := tx.QueryRow(ctx, `SELECT public.type_is_or_descends_from($1, 'legal_entity')`, corpID).Scan(&got); err != nil {
+		t.Fatalf("ancestry query: %v", err)
+	}
+	if !got {
+		t.Error("type_is_or_descends_from(corporation, legal_entity) = false under an empty temp types shadow; want true")
+	}
+
+	// Shadow rows: the abstract and the deprecated type both claim to be
+	// concrete and live; app claims to be natural_person.
+	if _, err := tx.Exec(ctx, `
+INSERT INTO pg_temp.types (id, slug, parent_id, concrete, deprecated_at) VALUES
+  ($1, 'entity', NULL, true, NULL),
+  ($2, 'shadowdep', NULL, true, NULL),
+  ($3, 'natural_person', NULL, true, NULL)`, abstractID, deprecatedID, appID); err != nil {
+		t.Fatalf("populate temp shadow: %v", err)
+	}
+
+	expectErrContaining(ctx, t, tx, "must reference a concrete type", "inserting an entity of an abstract type",
+		`INSERT INTO public.entities (fundamental_type_id) VALUES ($1)`, abstractID)
+	expectErrContaining(ctx, t, tx, "is deprecated", "inserting an entity of a deprecated type",
+		`INSERT INTO public.entities (fundamental_type_id) VALUES ($1)`, deprecatedID)
+
+	// Ancestry, false case: the shadow fakes app as natural_person; the real
+	// answer is false.
+	if err := tx.QueryRow(ctx, `SELECT public.type_is_or_descends_from($1, 'natural_person')`, appID).Scan(&got); err != nil {
+		t.Fatalf("ancestry query: %v", err)
+	}
+	if got {
+		t.Error("type_is_or_descends_from(app, natural_person) = true under a faking temp types shadow; want the public.types answer (false)")
 	}
 }
