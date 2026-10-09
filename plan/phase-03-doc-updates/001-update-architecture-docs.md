@@ -45,6 +45,7 @@ Follow the `update-architecture-docs` task-procedure at `plugins/flow/task-proce
 
     Base the decision on [the type entity design note](../notes/type-entity-design.md), which is plan-ephemeral and will be deleted. If the doc is added, link it from README.md's architecture-doc sentence and from AGENTS.md.
 - Describe shipped behaviour only. Do not copy plan, phase or task identifiers into project docs.
+- In `docs/architecture/type-level-authorization.md`, reword the two sentences that assert peer-module (mod-authz) enforcement as fact and name a change identifier (the "Type entities and instance entities cannot share a target group; the mod-authz slice of the ... change enforces this" sentence in the Type entities section, and the closing authorization-design paragraph that says the correction is "tracked in the mod-authz slice of the ... change"). State them as requirements instead (the design requires that type entities and instance entities not share a target group, and that mod-authz, not mod-core, enforces it), consistent with the requirement wording used elsewhere in that doc. This resolves finding ptqd in this plan's findings store. Leave the "no access to existing instances" wording alone, which a later phase owns.
 
 ## Validation
 
