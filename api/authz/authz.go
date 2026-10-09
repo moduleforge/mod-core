@@ -60,8 +60,17 @@ import (
 // never a stand-in for the type id in a type-level "create" or "list" check.
 // (The ecosystem call-shape table in
 // docs/mf-standards/architecture/authorization-design.md currently says
-// otherwise; the mod-authz slice of the type-scoped-grants change delivers the
-// correction.)
+// otherwise; mod-authz is required to deliver the corrected table.)
+//
+// Instance semantics: a conforming implementation also allows
+// Authorize(op, &instance) when the actor chain holds a grant, for an operation
+// satisfying op, on the entity of the instance's exact fundamental type
+// (directly or through target groups), unless the target is itself a type
+// entity. GrantTableGenerator's list-side accessible_<slug>_ids_for_actor
+// functions apply the same rule, so an implementation that omits it makes list
+// and single-row checks disagree for type-grant holders. This makes a type grant
+// instance-wide; see docs/architecture/type-level-authorization.md for the
+// warning.
 //
 // The Authorizer resolves the effective actor from ctx via the opctx accessors.
 // When SudoActorEntityID is set on ctx, the Authorizer must treat that ID as
@@ -81,7 +90,8 @@ type Authorizer interface {
 //     typeID), held directly or through target-group membership, by the actor
 //     or any actor group in its chain.
 //
-// It never consults entity ownership. It never walks to parent or child types:
+// Instance access is answered by Authorize, not by this capability. It never
+// consults entity ownership. It never walks to parent or child types:
 // a grant on a parent type does not cover its subtypes. It never treats typeID
 // as an entities.id. Callers should not invoke it directly; use AuthorizeType.
 type TypeAuthorizer interface {
