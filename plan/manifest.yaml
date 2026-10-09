@@ -9,3 +9,6 @@ plans:
             note: mod-core phase 9 (Q1 list arm) must run after mod-users phase 8; task 9.002 ports its landed checkGrantOrOwn SQL
     - slug: error-precedence-foundation
       status: working
+      wave:
+        slug: http-error-precedence-conformance
+        leadProject: core
