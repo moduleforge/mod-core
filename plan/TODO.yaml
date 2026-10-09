@@ -128,3 +128,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: bump-mod-core-pins
+          title: Record New mod-core Pin in Four Lockfile Repos
+          path: phase-04-release/003-bump-mod-core-pins.md
+          done: false
+          tier: sonnet-low
+          git:
+            branch: null
+            commit: []
+            merge: null
