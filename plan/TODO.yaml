@@ -25,6 +25,7 @@ phases:
           path: phase-01-type-entity-schema/002-deprecated-type-create-rejection.md
           done: false
           tier: sonnet-med
+          digest: Added an INSERT-only deprecated-type rejection (SQLSTATE MF001) to entities_check_concrete_type in place in 0008, plus api/types.IsDeprecatedTypeError and DeprecatedTypeSQLState. Unit test and DB-level integration test cover them. mod-core create paths not remapped.
           git:
             branch: null
             commit: []
