@@ -108,7 +108,7 @@ phases:
             branch: plan/type-scoped-grants-09-001
             commit:
                 - d9e535f
-            merge: null
+            merge: bb62608d55f7093146811cb68db01186eafe4d3e
         - number: 2
           slug: type-grant-list-single-row-symmetry
           title: List and Single-Row Symmetry Test for a Type-Grant Holder
