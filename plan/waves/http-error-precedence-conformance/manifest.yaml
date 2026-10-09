@@ -63,3 +63,10 @@ waves:
             - error-precedence-foundation
           plans:
             mod-tokens: PLACEHOLDER
+        - name: mod-repos handler conformance (unaudited)
+          slug: repos-conformance
+          description: Depends on wave 1 helpers. Keep public GET routes under resolveActorOrAnonymous (anonymous gets 401 via isPublicOnlyCaller; masking stays absolute). RequireAuth on authenticated groups only; review ~19 inline actor checks. DecodeJSON for JSON bodies only (release-asset uploads, 2 GiB MaxBytesReader, out of scope). Audit ~144 InvalidInput uses for 409/422 (e.g. visibility-ceiling invariant); order test. SSH transport uniform refusal out of scope.
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            repos: PLACEHOLDER
