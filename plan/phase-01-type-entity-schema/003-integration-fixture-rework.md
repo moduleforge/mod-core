@@ -65,3 +65,11 @@ Files in scope:
 - After `authztest.go`'s fixture and `TypeAware` changes compile.
 - After the `api/service` integration package passes.
 - After the `api/httpapi` integration package passes.
+
+## Status
+
+- Outcome: succeeded (2026-10-08).
+- `SeedOwnerFixture` replaced by `authztest.SeedCollisionFixture` (records the entity at `id == types.id` per slug and whether it is the type's own type entity; also registers test-only type `authztest_collision` after advancing the types id sequence, with an unowned instance entity at `id == types.id`). `TypeAware.AuthorizeType` now allows wildcard or a grant on the exact type's entity (direct or via target group).
+- Tests re-expressed in `api/service/type_level_authz_integration_test.go` and `api/httpapi/apps_type_level_authz_integration_test.go`; ownership arm removed and replaced by an unowned-entity assertion test.
+- Validation: full integration suite over `./...` passes; `cd api && make test && make lint` passes; grep shows only explanatory mentions of the removed ownership arm.
+- Note: `api/types/type_entities_integration_test.go` header still names `authztest.SeedOwnerFixture` (out of this task's file scope, left unchanged).

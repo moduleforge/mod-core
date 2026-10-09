@@ -10,21 +10,30 @@ package service_test
 // The bug: these methods authorized `create` by passing a types.id as the
 // Authorize target. The production Authorizer reads every non-nil target as an
 // entities.id, and entities.id / types.id are independent sequences that both
-// start at 1. So an actor that owns, or holds a targeted grant over, the entity
-// whose id equals the type id could create natural persons, corporations and
-// service accounts. The tests here use the entity-semantic and type-aware test
+// start at 1. So an actor that held a targeted grant over the entity whose id
+// equals the type id could create natural persons, corporations and service
+// accounts. The tests here use the entity-semantic and type-aware test
 // authorizers in api/internal/authztest, which MODEL the production
 // authorizer; they are not production code.
+//
+// Type entities occupy the low entity ids (a seeded type's entity id equals its
+// types.id), so an owned entity can no longer be seeded at a type id: the id is
+// taken, the occupant is a type entity, and type entities are unowned with an
+// immutable owner_id. The former ownership arm (Uown) is therefore gone and is
+// replaced by TestTypeLevelAuthz_EntityAtTypeIDIsUnowned.
 //
 // Setup (see TestMain in rotating_cipher_integration_test.go, which calls
 // authztest.SetupSchema and seedTypeLevelFixture after the DB reset):
 //
 //   - stand-in grants / group tables (mod-core's schema has none);
-//   - Uown, a non-wildcard actor that owns corporation-typed entities whose
-//     entities.id equals each type id under test (ownership arm);
-//   - per test, Ugrant (direct targeted grants over each such entity) and
-//     Ugroup (member of an actor group that holds a grant over a target group
-//     containing each such entity), the targeted-grant arms.
+//   - per test, Ugrant (direct targeted grants over the entity whose id equals
+//     each type id under test) and Ugroup (member of an actor group that holds
+//     a grant over a target group containing each such entity), the
+//     targeted-grant arms, denied under the entity-semantic wiring;
+//   - under the type-aware wiring, grants on the exact type's entity are
+//     admitted, grants on another type's entity are denied (no inheritance),
+//     and a grant on an INSTANCE entity whose id equals a test-only type's
+//     types.id is denied (the ilu6 regression in its new form).
 //
 // Run recipe (throwaway Postgres container) is in the header of
 // rotating_cipher_integration_test.go.
@@ -55,11 +64,11 @@ var typeLevelSlugs = []string{"natural_person", "corporation", "service_account"
 // typeLevelFx is populated by seedTypeLevelFixture from TestMain.
 var typeLevelFx authztest.Fixture
 
-// seedTypeLevelFixture builds the deterministic ownership arm after the DB
-// reset and the stand-in schema, before m.Run. It returns an error (TestMain
-// exits 1) rather than skipping if any required entity id is already taken.
+// seedTypeLevelFixture builds the id-collision fixture after the DB reset and
+// the stand-in schema, before m.Run. It returns an error (TestMain exits 1)
+// rather than skipping if the fixture cannot be built.
 func seedTypeLevelFixture() error {
-	fx, err := authztest.SeedOwnerFixture(context.Background(), pool, typeLevelSlugs...)
+	fx, err := authztest.SeedCollisionFixture(context.Background(), pool, typeLevelSlugs...)
 	if err != nil {
 		return err
 	}
@@ -67,11 +76,11 @@ func seedTypeLevelFixture() error {
 	return nil
 }
 
-// typeLevelActors seeds the three non-wildcard actors and returns them keyed
-// by arm. Ownership: the shared fixture owner. Targeted grant: a direct grant
-// over each type-id entity. Group path: actor-group membership plus a grant on
-// a target group that contains each type-id entity.
-func typeLevelActors(t *testing.T) map[string]int64 {
+// grantActors seeds two non-wildcard actors keyed by arm, each granted create
+// over every entity in targets: "targeted-grant" holds direct grants;
+// "group-path" is a member of an actor group that holds a grant on a target
+// group containing every target.
+func grantActors(t *testing.T, targets []int64) map[string]int64 {
 	t.Helper()
 	ctx := context.Background()
 
@@ -97,20 +106,33 @@ func typeLevelActors(t *testing.T) map[string]int64 {
 	if err := authztest.Grant(ctx, pool, actorGroup, authztest.OpCreate, &targetGroup); err != nil {
 		t.Fatal(err)
 	}
-	for _, slug := range typeLevelSlugs {
-		te := typeLevelFx.TypeEntityIDs[slug]
-		if err := authztest.Grant(ctx, pool, ugrant, authztest.OpCreate, &te); err != nil {
+	for _, target := range targets {
+		if err := authztest.Grant(ctx, pool, ugrant, authztest.OpCreate, &target); err != nil {
 			t.Fatal(err)
 		}
-		if err := authztest.AddTargetGroupMember(ctx, pool, targetGroup, te); err != nil {
+		if err := authztest.AddTargetGroupMember(ctx, pool, targetGroup, target); err != nil {
 			t.Fatal(err)
 		}
 	}
 	return map[string]int64{
-		"ownership":      typeLevelFx.OwnerID,
 		"targeted-grant": ugrant,
 		"group-path":     ugroup,
 	}
+}
+
+// typeLevelActors returns the targeted-grant arms over the entity whose id
+// equals each type id under test.
+func typeLevelActors(t *testing.T) map[string]int64 {
+	t.Helper()
+	targets := make([]int64, 0, len(typeLevelSlugs))
+	for _, slug := range typeLevelSlugs {
+		id, ok := typeLevelFx.CollidingEntityIDs[slug]
+		if !ok {
+			t.Fatalf("no entity with id == types.id for %q", slug)
+		}
+		targets = append(targets, id)
+	}
+	return grantActors(t, targets)
 }
 
 // wildcardHolder seeds an actor with a wildcard (target_id IS NULL) grant on
@@ -268,10 +290,63 @@ func TestTypeLevelAuthz_EntitySemanticWiring_NonWildcardActorsDenied(t *testing.
 	}
 }
 
-// With the type-aware authorizer, non-wildcard arms are denied through
-// AuthorizeType (proved by the invocation counter).
-func TestTypeLevelAuthz_TypeAwareWiring_NonWildcardActorsDenied(t *testing.T) {
-	actors := typeLevelActors(t)
+// The entity at id == types.id is never owned. Type entities are unowned and
+// owner_id is immutable, so an ownership arm cannot exist for it. When that
+// entity is a type entity, its fundamental type is the sentinel `type`.
+func TestTypeLevelAuthz_EntityAtTypeIDIsUnowned(t *testing.T) {
+	ctx := context.Background()
+	for _, slug := range typeLevelSlugs {
+		id, ok := typeLevelFx.CollidingEntityIDs[slug]
+		if !ok {
+			t.Fatalf("%s: no entity with id == types.id %d", slug, typeLevelFx.TypeIDs[slug])
+		}
+		var ownerNull bool
+		var fundamental string
+		if err := pool.QueryRow(ctx, `
+SELECT e.owner_id IS NULL, t.slug FROM entities e JOIN types t ON t.id = e.fundamental_type_id
+WHERE e.id = $1`, id).Scan(&ownerNull, &fundamental); err != nil {
+			t.Fatalf("%s: read entity %d: %v", slug, id, err)
+		}
+		if !ownerNull {
+			t.Errorf("%s: entity %d (== types.id) has an owner; want owner_id IS NULL", slug, id)
+		}
+		if typeLevelFx.CollidingIsOwnTypeEntity[slug] && fundamental != "type" {
+			t.Errorf("%s: type entity %d has fundamental type %q; want %q", slug, id, fundamental, "type")
+		}
+	}
+}
+
+// With the type-aware authorizer, an actor granted create on the EXACT type's
+// entity (directly or via an actor-group / target-group path) may create on
+// that path, through AuthorizeType (proved by the invocation counter).
+func TestTypeLevelAuthz_TypeAwareWiring_ExactTypeEntityGrantAllowed(t *testing.T) {
+	targets := make([]int64, 0, len(typeLevelSlugs))
+	for _, slug := range typeLevelSlugs {
+		targets = append(targets, typeLevelFx.TypeEntityIDs[slug])
+	}
+	actors := grantActors(t, targets)
+	az := authztest.NewTypeAware(pool)
+	svcs := newTypeLevelServices(t, az)
+	for arm, actor := range actors {
+		t.Run(arm, func(t *testing.T) {
+			before := az.TypeCalls()
+			assertAllowedRow(t, svcs, actor)
+			if got := az.TypeCalls() - before; got != int64(len(typeLevelPaths)) {
+				t.Errorf("AuthorizeType invoked %d time(s); want %d (one per path)", got, len(typeLevelPaths))
+			}
+		})
+	}
+}
+
+// An actor granted create on a DIFFERENT type's entity is denied on every
+// path. legal_entity is the parent of natural_person and corporation, so this
+// also pins that a parent type's grant is not inherited by its subtypes.
+func TestTypeLevelAuthz_TypeAwareWiring_OtherTypeEntityGrantDenied(t *testing.T) {
+	legal, err := coreQ.GetTypeBySlug(context.Background(), "legal_entity")
+	if err != nil {
+		t.Fatalf("resolve legal_entity: %v", err)
+	}
+	actors := grantActors(t, []int64{legal.EntityID.Int64})
 	az := authztest.NewTypeAware(pool)
 	svcs := newTypeLevelServices(t, az)
 	for arm, actor := range actors {
@@ -280,6 +355,38 @@ func TestTypeLevelAuthz_TypeAwareWiring_NonWildcardActorsDenied(t *testing.T) {
 			assertDeniedNoRow(t, svcs, actor)
 			if got := az.TypeCalls() - before; got != int64(len(typeLevelPaths)) {
 				t.Errorf("AuthorizeType invoked %d time(s); want %d (one per path)", got, len(typeLevelPaths))
+			}
+		})
+	}
+}
+
+// The ilu6 regression in its new form: an actor whose grant targets an
+// INSTANCE entity whose entities.id equals a (test-only) type's types.id is
+// denied by AuthorizeType, because the type-aware authorizer resolves the
+// type's entity through types.entity_id and never reads typeID as an entities
+// id. The entity-semantic authorizer, by contrast, admits it as an entity
+// target (the characterization that makes this test meaningful).
+func TestTypeLevelAuthz_TypeAwareWiring_InstanceAtTypeIDDenied(t *testing.T) {
+	inst := typeLevelFx.Instance
+	if inst.TypeEntityID == inst.TypeID {
+		t.Fatalf("fixture invalid: type entity id == types.id (%d)", inst.TypeID)
+	}
+	actors := grantActors(t, []int64{inst.InstanceID})
+	ta := authztest.NewTypeAware(pool)
+	es := &authztest.EntitySemantic{Pool: pool}
+	for arm, actor := range actors {
+		t.Run(arm, func(t *testing.T) {
+			ctx := opctx.WithActor(context.Background(), actor)
+			target := inst.TypeID
+			if err := es.Authorize(ctx, "create", &target); err != nil {
+				t.Errorf("Authorize(create, &%d) = %v; want nil (instance entity %d has that id)", target, err, inst.InstanceID)
+			}
+			before := ta.TypeCalls()
+			if err := authz.AuthorizeType(ctx, ta, "create", inst.TypeID); !errors.Is(err, apiresp.ErrForbidden) {
+				t.Errorf("AuthorizeType(create, %d) = %v; want ErrForbidden", inst.TypeID, err)
+			}
+			if got := ta.TypeCalls() - before; got != 1 {
+				t.Errorf("AuthorizeType invoked %d time(s); want 1", got)
 			}
 		})
 	}
