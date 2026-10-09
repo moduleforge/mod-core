@@ -55,3 +55,10 @@ Follow the `update-architecture-docs` task-procedure at `plugins/flow/task-proce
 - `grep -rnE "\]\((\./)?docs/architecture/type-entities\.md" README.md AGENTS.md` matches, if the dedicated doc was added.
 - No plan, phase or task identifiers appear in the edited project docs: `grep -rn "type-scoped-grants\|phase-0" AGENTS.md README.md model/README.md docs/architecture/` returns nothing.
 - Markdown follows the project's style: sentence-case section titles, and `## Purpose and scope` first in any new doc.
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Files reviewed and changed: `AGENTS.md` (types/, authz/, model/migrations/ rows, integration-test package count raised to five, new Conventions bullet, links to the new doc), `README.md` (entity-schema bullet, architecture-doc sentence links the new doc), `model/README.md` (migrations description, reset section extended for `0002` and `0008`), `docs/architecture/display-name-http.md` (builtin `type` renderer), `docs/architecture/type-level-authorization.md` (two peer-module claims reworded as requirements; rest confirmed consistent with shipped behaviour; "no access to existing instances" untouched).
+- New: `docs/architecture/type-entities.md`, added because the invariants and their rationale (AFTER vs BEFORE trigger, SECURITY DEFINER, deferred checks), the sibling contract and the deprecation rules do not fit a table row in AGENTS.md.
+- Validation: all five checks passed (log in `.flow/validation-logs/01-greps.log`).

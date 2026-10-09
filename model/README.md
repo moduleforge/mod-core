@@ -3,7 +3,9 @@
 Generic entity-identity foundation for the moduleforge platform. This module
 holds the goose versioned migrations and sqlc-generated Go queries for the
 base entity hierarchy: `entities`, `legal_entities`, `natural_persons`,
-`corporations`, `service_accounts`, and `apps`. It is extracted from mod-users so
+`corporations`, `service_accounts`, and `apps`, together with the `types`
+registry in which every type is paired with an entity (`types.entity_id`; see
+[../docs/architecture/type-entities.md](../docs/architecture/type-entities.md)). It is extracted from mod-users so
 that any downstream module can depend on a stable, shared identity schema
 without pulling in mod-users application logic.
 
@@ -87,3 +89,11 @@ goose -dir migrations postgres "$DATABASE_URL" up
 or recreate the database wholesale — the more likely choice here, since the encrypted-blob wire
 format change (`nonce || ciphertext || tag` → `version || nonce || ciphertext || tag`) requires
 regenerating existing data anyway.
+
+`0002_types.sql` and `0008_entities.sql` were also edited in place, to add the `types.entity_id` column,
+the sentinel root type `type`, and the trigger and constraints that give every type an entity. A
+database that applied the earlier versions of these files must be reset by recreating it wholesale.
+The `down-to` route above does not apply: the two files have no `Down` section, and the change
+renumbers data. The sentinel is inserted after the earlier seeds, so `app` moves from `types.id` 6 to
+7, and the lowest entity ids now belong to type entities, so rows and foreign keys that refer to the
+old values cannot be migrated forward in place.
