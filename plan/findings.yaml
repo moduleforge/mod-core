@@ -6,9 +6,12 @@ items:
       tags:
         - type:security
         - priority:low
+        - effort:medium
         - plan/phase:remediation-01
-        - effort:unspecified
-      text: 'Other invoker-rights functions in mod-core also resolve types and entities by unqualified name with no pinned search_path: the subtype BEFORE INSERT triggers in model/migrations/0009 through 0015 (which look up entities and call type_is_or_descends_from) and the generated accessible_<slug>_ids_for_actor bodies plus sharedCTEPrefix in api/authz/setup/setup.go. After the types fixes, a session-local temp entities table could still shadow entities for these bodies. Do a deliberate sweep qualifying public.entities and public.types, weighing the per-call cost of a function-level SET search_path in the hot list-function paths.'
+      text: |-
+        Other invoker-rights functions in mod-core also resolve types and entities by unqualified name with no pinned search_path: the subtype BEFORE INSERT triggers in model/migrations/0009 through 0015 (which look up entities and call type_is_or_descends_from) and the generated accessible_<slug>_ids_for_actor bodies plus sharedCTEPrefix in api/authz/setup/setup.go. After the types fixes, a session-local temp entities table could still shadow entities for these bodies. Do a deliberate sweep qualifying public.entities and public.types, weighing the per-call cost of a function-level SET search_path in the hot list-function paths.
+
+        Evaluation note (quoted data): unqualified FROM entities at 0009_legal_entities.sql:17, 0010_natural_persons.sql:24, 0011_corporations.sql:23, 0012_service_accounts.sql:17, 0015_apps.sql:21; unpinned entities_owner_default_self in 0013_entity_ownership.sql:16-26; generated bodies in api/authz/setup/grant_table.go:28-124 and setup.go:56-57 (LANGUAGE sql STABLE). Exposure needs TEMP privilege plus INSERT on a subtype table. Open question for the user: do the sweep in type-scoped-grants (which relaxes its frozen GrantTableGenerator-body constraint), or as a standalone hardening item? Options: (1) standalone backlog item, recommended: design once across triggers and generated SQL including a managed-mode schema check (app-mfmanager managed-app layout relies on search_path ordering, 0013:67-80) and SET cost measurement; (2) fix only the migration-side triggers 0009-0013 and 0015 and leave the generator; (3) full sweep including the generator. Recommended: option 1.
     - title: Dangling note pointer in 0008 comment
       id: H7G4
       date: "2026-10-09"
