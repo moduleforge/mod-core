@@ -77,4 +77,14 @@ phases:
     - number: 9
       slug: type-grant-instance-semantics
       title: Type-Grant Instance Semantics, List Side - Optional Q1
-      tasks: []
+      tasks:
+        - number: 1
+          slug: instance-semantics-list-arm
+          title: Add the Instance-Semantics Arm to GrantTableGenerator
+          path: phase-09-type-grant-instance-semantics/001-instance-semantics-list-arm.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
