@@ -9,6 +9,15 @@ items:
         - plan/phase:remediation-01
         - effort:unspecified
       text: 'Other invoker-rights functions in mod-core also resolve types and entities by unqualified name with no pinned search_path: the subtype BEFORE INSERT triggers in model/migrations/0009 through 0015 (which look up entities and call type_is_or_descends_from) and the generated accessible_<slug>_ids_for_actor bodies plus sharedCTEPrefix in api/authz/setup/setup.go. After the types fixes, a session-local temp entities table could still shadow entities for these bodies. Do a deliberate sweep qualifying public.entities and public.types, weighing the per-call cost of a function-level SET search_path in the hot list-function paths.'
+    - title: Dangling note pointer in 0008 comment
+      id: H7G4
+      date: "2026-10-09"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:remediation-02
+        - effort:unspecified
+      text: 'The search-path comment in model/migrations/0008_entities.sql (type-entity section, near the concrete-type function) says type_is_or_descends_from is covered in 0002_types.sql with "see the note there on its search_path", but 0002 has no such note: only the SET search_path clause on the function and a header comment that does not mention it. Add a one-line comment above type_is_or_descends_from in 0002 explaining the pinned search_path, or drop the cross-reference. Comment-only change, no runtime effect.'
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
