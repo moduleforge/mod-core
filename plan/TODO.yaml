@@ -126,7 +126,8 @@ phases:
           digest: Reworded the old no-instance-access rule to the instance-wide contract in the architecture docs, AGENTS.md and authz.go doc comments; added the Warning block with the same escalation paths as mod-users D13; applied the two carry-over documentation fixes (peer-claim sentence in authz.go, seed-id wording in type-entities.md). Docs and comments only; lint passes; go doc output intact.
           git:
             branch: plan/type-scoped-grants-09-003
-            commit: []
+            commit:
+                - 6a0eff6
             merge: null
     - number: 10
       slug: remediation-01
