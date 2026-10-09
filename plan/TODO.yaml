@@ -16,6 +16,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: require-auth-middleware
+          title: Add authz.RequireAuth chi Middleware
+          path: phase-01-helpers/002-require-auth-middleware.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
