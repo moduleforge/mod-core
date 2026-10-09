@@ -17,6 +17,12 @@ import (
 // The types table is append-only, so a permanent in-process cache is safe: a
 // slug that was present at startup will never be removed or reassigned a
 // different ID.
+//
+// Resolver deliberately includes deprecated types: existing entities of a
+// deprecated type and type-level authorization checks still need slug-to-id
+// resolution. It is the documented always-include override to the rule that
+// lists of types hide deprecated types by default (see List, which hides them
+// unless ListOptions.IncludeDeprecated is set).
 type Resolver struct {
 	bySlug map[string]int64
 }

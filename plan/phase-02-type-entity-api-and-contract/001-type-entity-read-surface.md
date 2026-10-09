@@ -86,3 +86,9 @@ architectural_impact: true
 - After the `api/types` helpers and their tests.
 - After the profile and HTTP response changes.
 - After the display renderer and the OpenAPI update.
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Validation: `cd api && make test && make lint` passed; `go build ./...` passed (root `make build` fails only in the `gui` step, which needs uninstalled node dependencies); sentinel grep shows only the `types.SentinelSlug` constant definition and a comment; `git diff -- model/` empty; full integration suite passed against a throwaway Postgres.
+- Source: `api/types/type_info.go` (TypeInfo, List ordered by id, EntityTypeInfo, ErrTypeNotFound, SentinelSlug), `api/types/types.go` (Resolver doc), `api/service/profile.go`, `api/service/display_builtins.go`, `api/httpapi/response.go`, `api/openapi.fragment.yaml`, plus unit tests and `api/types/type_entity_profile_integration_test.go`.

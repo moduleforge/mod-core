@@ -215,3 +215,26 @@ func TestDisplayService_RenderField_RenderFailure(t *testing.T) {
 		t.Errorf("value: got %q, want empty", value)
 	}
 }
+
+func TestDisplayService_RenderField_Type(t *testing.T) {
+	q := newMockQuerier()
+	svc := newDisplayService(q)
+	entityID := q.nextSeq()
+	entityUUID := uuid.New()
+	row := coredb.GetEntityByUUIDRow{ID: entityID, Uuid: entityUUID, FundamentalTypeID: 6, FundamentalTypeSlug: "type"}
+	q.entities[entityUUID] = row
+	q.entitiesByID[entityID] = row
+	q.types["widget"] = coredb.Type{
+		ID: 7, Slug: "widget", Name: "Widget", Description: pgtype.Text{String: "a widget", Valid: true},
+		EntityID: pgtype.Int8{Int64: entityID, Valid: true},
+	}
+
+	name, available, err := svc.RenderField(context.Background(), q, entityUUID, display.FieldName)
+	if err != nil || !available || name != "Widget" {
+		t.Fatalf("name: got (%q, %v, %v), want (Widget, true, nil)", name, available, err)
+	}
+	desc, available, err := svc.RenderField(context.Background(), q, entityUUID, display.FieldDescription)
+	if err != nil || !available || desc != "a widget" {
+		t.Fatalf("description: got (%q, %v, %v), want (a widget, true, nil)", desc, available, err)
+	}
+}
