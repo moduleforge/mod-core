@@ -15,8 +15,8 @@ items:
       tags:
         - type:bug
         - priority:low
+        - effort:small
         - plan/phase:remediation-01
-        - effort:unspecified
       text: 'In api/types/type_entities_integration_test.go, TestGuardsResistTempTableShadow''s types_reject_mutation half is vacuous: the temp types shadow is empty, so the unqualified sentinel lookup would also raise "must reference an entity of the sentinel type" without the search_path fix, and the assertion cannot detect a regression. The real bypass is a shadow containing a slug=''type'' row whose id equals the plain entity''s fundamental_type_id. Populate the shadow that way and assert the UPDATE still fails with the sentinel-type message, optionally matching the error text in both assertions.'
 closed:
     - id: dlaB
