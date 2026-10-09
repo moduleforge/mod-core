@@ -6,16 +6,6 @@ phases:
       slug: helpers
       title: Error-Precedence Helpers
       tasks:
-        - number: 2
-          slug: require-auth-middleware
-          title: Add authz.RequireAuth chi Middleware
-          path: phase-01-helpers/002-require-auth-middleware.md
-          done: false
-          tier: sonnet-med
-          git:
-            branch: null
-            commit: []
-            merge: null
         - number: 3
           slug: authorize-resolve
           title: Add entity.Resolver.AuthorizeResolve
