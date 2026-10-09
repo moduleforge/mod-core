@@ -9,6 +9,15 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'entities_check_concrete_type (model/migrations/0008_entities.sql) and type_is_or_descends_from (model/migrations/0002_types.sql) resolve the types relation by unqualified name with no pinned search_path, the same pattern just fixed on types_reject_mutation and entities_reject_type_entity_archive. A session-local temp table named types can shadow the relation for these functions (observed: with a temp types shadow, entity inserts fail inside the concrete-type trigger). Pin SET search_path = public, pg_temp and schema-qualify public.types in both.'
+    - title: Shadow test half cannot fail
+      id: cA7z
+      date: "2026-10-09"
+      tags:
+        - type:bug
+        - priority:low
+        - plan/phase:remediation-01
+        - effort:unspecified
+      text: 'In api/types/type_entities_integration_test.go, TestGuardsResistTempTableShadow''s types_reject_mutation half is vacuous: the temp types shadow is empty, so the unqualified sentinel lookup would also raise "must reference an entity of the sentinel type" without the search_path fix, and the assertion cannot detect a regression. The real bypass is a shadow containing a slug=''type'' row whose id equals the plain entity''s fundamental_type_id. Populate the shadow that way and assert the UPDATE still fails with the sentinel-type message, optionally matching the error text in both assertions.'
 closed:
     - id: dlaB
       title: Cut per-row cost of referenced-entity trigger
