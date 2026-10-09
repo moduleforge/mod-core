@@ -49,6 +49,7 @@ phases:
     - number: 2
       slug: type-entity-api-and-contract
       title: Type Entity API Surface and Contract Wording
+      diff_base: 6c80f751325a14c82c50f0e1fab3dc1d12778a2b
       tasks:
         - number: 1
           slug: type-entity-read-surface
