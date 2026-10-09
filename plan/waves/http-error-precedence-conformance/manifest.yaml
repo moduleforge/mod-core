@@ -27,3 +27,10 @@ waves:
             - error-precedence-foundation
           plans:
             authz: PLACEHOLDER
+        - name: mod-users handler conformance
+          slug: users-conformance
+          description: 'Depends on wave 1 helpers. Preparatory: mod-core pin already bumped to 02f8ef0 (6bab8f5). Delete 403-before-400 special case in user_accounts.go:63-76 (rule: stateless validation before authorization; followup hunL dismissed). Membership handlers (apps.go ~75,142,172,218) parse {uuid} and decode body before authorizing. server.Decode (respond.go:50, 16 callers) becomes thin wrapper over DecodeJSON (closes size-cap/unknown-field gaps); oidc_providers.go:421; keep ssh_keys cap. Delete writeAuthzError/writeServiceError wrappers; convert 65 literal server.Error sites to sentinels where equivalent; preserve action-required envelopes and credential-failure 401s. Full review of every handler file; public auth routes must NOT get RequireAuth. Audit 409/422; order tests; re-bump mod-core pin after foundation changes.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-users: PLACEHOLDER
