@@ -98,3 +98,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: instance-semantics-contract-and-warning-docs
+          title: Reverse the No-Instance-Access Wording and Document the Instance-Semantics Warning
+          path: phase-09-type-grant-instance-semantics/003-instance-semantics-contract-and-warning-docs.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
