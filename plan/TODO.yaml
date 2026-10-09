@@ -10,3 +10,7 @@ phases:
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
       tasks: []
+    - number: 3
+      slug: doc-updates
+      title: Documentation Updates
+      tasks: []
