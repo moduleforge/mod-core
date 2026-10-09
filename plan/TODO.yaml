@@ -5,6 +5,7 @@ phases:
     - number: 1
       slug: type-entity-schema
       title: Type Entity Schema
+      diff_base: c64b4415b26a63dc683d393c281a5c9374a58efb
       tasks:
         - number: 1
           slug: type-entity-schema
