@@ -1,2 +1,14 @@
 version: 1
-plans: []
+plans:
+    - slug: type-scoped-grants
+      status: working
+      dependencies:
+        /Users/zane/playground/moduleforge/mod-users:
+            phase: "8"
+            task: 001-instance-semantics-arm
+            note: mod-core phase 9 (Q1 list arm) must run after mod-users phase 8; task 9.002 ports its landed checkGrantOrOwn SQL
+    - slug: error-precedence-foundation
+      status: working
+      wave:
+        slug: http-error-precedence-conformance
+        leadProject: core

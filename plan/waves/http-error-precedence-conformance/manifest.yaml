@@ -1,0 +1,103 @@
+version: 1
+name: HTTP Error Precedence Conformance
+leadProject: core
+waves:
+    - name: wave-1-foundation
+      planGroups:
+        - name: Error-precedence spec and mod-core helpers
+          slug: error-precedence-foundation
+          description: 'Rule: 401 -> 400 (stateless shape) -> 403 -> 404; 409/422 after authz; late 400 fallback only. (1) docs-mf-standards: replace ''Helpers: TBD'' in architecture/http-error-precedence.md with helper APIs; allow masked entity resolve in authorize step; fix versions-lockfile.md (four lockfile carriers, not three). (2) mod-core docs/architecture/type-level-authorization.md: ''same method set'' -> ''same AuthorizeType signature''; alias bullet applies only to mod-users localAuthz.TypeAuthorizer (closes followup ggLy). (3) mod-core api helpers, additive: chi RequireAuth on authz.RequireAuthenticated (sudo-aware); apiresp.DecodeJSON(w,r,dst,opts...) with size cap, unknown-field rejection, Validator hook, WithMaxBytes/WithCodePrefix/WithAllowUnknownFields; ErrUnprocessable/Unprocessable(...FieldError) + classify/publicMessage; entity.Resolver.AuthorizeResolve; optional ParseUUIDParam; EXPORTED table-driven order-test helper (not internal/); core-gui useApiError routes unprocessable_entity. No handler framework, validation DSL, second mapper, or mod-authz additions. Final task is the release step: merge to main, push mod-core and docs-mf-standards to origin (needs user consent), confirm aggregate mod-core checkout is on new main.'
+          plans:
+            core: error-precedence-foundation
+            docs-mf-standards: error-precedence-foundation
+    - name: wave-2-conformance
+      planGroups:
+        - name: mod-core (and mod-audit) handler conformance
+          slug: core-handler-conformance
+          description: 'Depends on wave 1 helpers. (a) FIRST authenticate entity routes: set scope: authenticated explicitly on mod-core''s manifest route (mfgen treats empty scope as public; mfgen followup VFHF), mount RequireAuth on NewRouter and apps/field-crypto registrars, then replace ~26 inline ActorEntityID checks (sudo-unaware); never delete a check before its replacement is in place. (b) Existence leaks via AuthorizeResolve: apps.go 257-307, 390-403 (loadAppByUUIDParam 448-466; drop AllowNotFound("app")), service/corporation.go:204-213, natural_person.go:275, service_account.go:182,195; tests that missing and existing ids both give 403. (c) Decode UpdateApp body before authz (apps.go:294-325); swap decode blocks to DecodeJSON incl. field_crypto_keys helper; delete writeCoreServiceErr pass-throughs; audit state-dependent ErrInvalidInput for 409/422. (d) mod-audit: review read handler, RequireAuth, order test. Wire risks: 404->403 for non-admins on /v1/apps, unknown fields rejected, body cap, 401 instead of 400.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            audit: PLACEHOLDER
+            core: PLACEHOLDER
+        - name: mod-authz handler conformance
+          slug: authz-conformance
+          description: 'Depends on wave 1 helpers. Mount RequireAuth on RegisterRoutes so 401 precedes path/body UUID parse 400s (grants.go:37-47). Fix existence leak in service/actor_group_service.go:193-215 with AuthorizeResolve and delete the masking hack in httpapi/router.go:116-121. Move ~9 decode sites to DecodeJSON (first size cap/unknown-field rejection; wire-visible to authz admin clients incl. app-mfmanager accessapi). Audit 409 vs 422; add order test. Optional: local authorizeType lacks core''s nil-az and typeID<=0 guards.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            authz: PLACEHOLDER
+        - name: mod-users handler conformance
+          slug: users-conformance
+          description: 'Depends on wave 1 helpers. Preparatory: mod-core pin already bumped to 02f8ef0 (6bab8f5). Delete 403-before-400 special case in user_accounts.go:63-76 (rule: stateless validation before authorization; followup hunL dismissed). Membership handlers (apps.go ~75,142,172,218) parse {uuid} and decode body before authorizing. server.Decode (respond.go:50, 16 callers) becomes thin wrapper over DecodeJSON (closes size-cap/unknown-field gaps); oidc_providers.go:421; keep ssh_keys cap. Delete writeAuthzError/writeServiceError wrappers; convert 65 literal server.Error sites to sentinels where equivalent; preserve action-required envelopes and credential-failure 401s. Full review of every handler file; public auth routes must NOT get RequireAuth. Audit 409/422; order tests; re-bump mod-core pin after foundation changes.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-users: PLACEHOLDER
+        - name: mod-workflows handler conformance
+          slug: workflows-conformance
+          description: 'Depends on wave 1 helpers. Mount RequireAuth on the router: 21 of 26 handlers return 400 before 401 (instance_handlers.go:117-136, version_handlers.go:285-345); remove 5 inline checks in definition_handlers. Move ~10 decode sites to DecodeJSON (version handlers at 295, 332, 381 don''t reject unknown fields today; wire-visible). Optionally move parseUUIDParam to core helper; delete writeServiceError pass-through (response.go:58). Audit 409/422 (instance state transitions likely 409); order test. No app composes this module.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-workflows: PLACEHOLDER
+        - name: mod-tasks and mod-tags handler conformance
+          slug: tasks-tags-conformance
+          description: 'Depends on wave 1 helpers. mod-tasks: RequireAuth and remove ~26 inline checks; 8 decode sites to DecodeJSON keeping tasks/subtasks/recurrences code prefixes; PATCH handler (tasks.go:541+) runs stateless field checks before GetByUUID; audit 409/422 (tasks.not_recurring, tasks.due_date_required_for_recurrence are late state-dependent 400s). USER DECISION: plain-integer-id subtask and recurrence routes must change to match the rule (403 regardless of existence for unauthorized callers; no 404-vs-403 distinction); this supersedes the prior documented module decision, so update the module docs accordingly. mod-tags: RequireAuth, remove ~11 inline checks (/tag-templates stays authn-only), 3 decode sites, audit one_of_domain as 409 or 422. Order tests for both.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-tasks: PLACEHOLDER
+            tags: PLACEHOLDER
+        - name: mod-billing handler conformance (unaudited)
+          slug: billing-conformance
+          description: 'Depends on wave 1 helpers. Review all 12 handler files. Keep the 4 KiB RequireJSONBody guard via DecodeJSON with WithMaxBytes(4096) and existing codes. Public Paddle webhook (1 MiB, signature over raw bytes) must NOT get RequireAuth or DecodeJSON. USER DECISION: owner subscription routes (subscriptionIDFromUUID resolves/fetches before authorizing) must change to a masked resolve so unauthorized callers get 403 regardless of existence. Operator routes already pre-authorize. Audit guard conflicts 409 vs 422 (SeatOverflowError stays 409); order test. Wire risk falls on flow-accounts (followup Tpe2) and billing-gui.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-billing: PLACEHOLDER
+        - name: mod-tokens handler conformance (unaudited)
+          slug: tokens-conformance
+          description: 'Depends on wave 1 helpers. Review against the rule within flow-accounts'' fixed wire contract: RFC 8628 flat bodies on the two device endpoints and byte-for-byte envelopes. RequireAuth only on authenticated/verified registrars; public device, refresh and revoke routes authenticate by credential possession. Keep RequireJSONBody and RequireJSONBodyDevice (4 KiB, issuance.request_invalid). Audit 409/422; order test adapted for RFC endpoints. Propose contract deviations; do not make them unilaterally (followup Tpe2 tracks flow-accounts coordination).'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            mod-tokens: PLACEHOLDER
+        - name: mod-repos handler conformance (unaudited)
+          slug: repos-conformance
+          description: Depends on wave 1 helpers. Keep public GET routes under resolveActorOrAnonymous (anonymous gets 401 via isPublicOnlyCaller; masking stays absolute). RequireAuth on authenticated groups only; review ~19 inline actor checks. DecodeJSON for JSON bodies only (release-asset uploads, 2 GiB MaxBytesReader, out of scope). Audit ~144 InvalidInput uses for 409/422 (e.g. visibility-ceiling invariant); order test. SSH transport uniform refusal out of scope.
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            repos: PLACEHOLDER
+        - name: mod-contacts and mod-notifications handler conformance
+          slug: contacts-notifications-conformance
+          description: 'Depends on wave 1 helpers. contacts: 2 handler files, 8 inline checks, decode sites, audit 47 InvalidInput uses. notifications: all gates live in the service layer so in-process callers stay gated; module-level RequireAuth may be added on top only, never replacing those checks; GET /channels/enabled stays authn-only; masked fetch-then-authorize reads fine for dependent data; PATCH /channels/{key} 404 after admin gate is fine. Order tests for both. No app composes either module.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            contacts: PLACEHOLDER
+            mod-notifications: PLACEHOLDER
+        - name: app-mfmanager handler conformance and module adoption
+          slug: mfmanager-conformance
+          description: 'Review the app''s own api/ (17 handler files, 15 json.NewDecoder sites, zero apiresp usage so possibly its own envelope) and adopt the helpers. Check accessapi (actor groups, target groups, grants) against stricter mod-authz behavior. After dependencies are merged and pushed: bump versions.lock.yaml pins for mod-core, mod-authz, mod-audit, mod-users; regenerate cmd/server with mfgen (picks up mod-core scope fix; mfgen followup VFHF). Audit GUI payloads against unknown-field rejection and 401/403/422 changes; end-to-end checks.'
+          dependencies:
+            - error-precedence-foundation
+            - core-handler-conformance
+            - authz-conformance
+            - users-conformance
+          plans:
+            app-mfmanager-workspace: PLACEHOLDER
+        - name: app-mftodo and app-mfgit conformance and module adoption
+          slug: mftodo-mfgit-conformance
+          description: Review app-owned handlers (mftodo appsetup callback, managed-auth gate, runtime-config handlers; mfgit static.go). Regenerate cmd/server with mfgen after mod-core scope fix (followup VFHF), then make localize. Bump versions.lock.yaml pins for core, audit, authz, users, tasks, tags, plus repos for mfgit. Audit GUI payloads under strict decoding and 401/403/422 changes; run mftodo Playwright e2e and mfgit /v1 smoke tests.
+          dependencies:
+            - error-precedence-foundation
+            - core-handler-conformance
+            - authz-conformance
+            - users-conformance
+            - tasks-tags-conformance
+            - repos-conformance
+          plans:
+            app-mfgit-workspace: PLACEHOLDER
+            app-mftodo-workspace: PLACEHOLDER

@@ -83,3 +83,80 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: model/migrations/0015_apps.sql declares apps.slug UNIQUE, but AppsHandler.Create and AppsHandler.UpdateApp in api/httpapi/apps.go wrap every InsertApp/UpdateApp error with fmt.Errorf and pass it to apiresp.WriteError, so a duplicate slug (SQLSTATE 23505) surfaces as a 500 internal_error instead of a 409 conflict with a field error on slug. FieldCryptoKeyHandler.writeRotateError in api/httpapi/field_crypto_keys.go already maps 23505 to apiresp.Conflict and is the in-package precedent. Only reachable by authorized callers, so not an authorization oracle.
+    - title: HTTP discovery of type entities
+      id: r9ot
+      date: "2026-10-08"
+      tags:
+        - type:enhancement
+        - priority:unspecified
+        - effort:unspecified
+      text: |-
+        Once every types row has a type entity (types.entity_id), grants on a type are created by passing that entity's UUID as the target. But mod-core exposes no HTTP surface that lists types or maps a type slug to its type entity's UUID. Go callers can use the api/types list helper, which hides deprecated types by default and has an include-deprecated override. An admin GUI or API client cannot discover these UUIDs.
+
+        Proposed: a read-only route such as GET /v1/types?include_deprecated=..., returning slug, name, description, concrete, deprecated_at and the type entity UUID, never internal ids. Open questions:
+        - its authorization policy: authenticated-only, wildcard list, or list on the sentinel 'type' type entity;
+        - whether it belongs in mod-core or in mod-authz's grant-administration surface.
+
+        Implementing it must not add methods to coredb.Querier without updating the hand-written Querier mocks in the sibling modules that build against mod-core through replace directives (mod-tasks, mod-contacts, mod-repos, mod-tags, mod-workflows, mod-notifications, mod-authz). Alternatively, it can build on ListAllTypes.
+    - title: mod-core entity router has no auth scope
+      id: ldm9
+      date: "2026-10-08"
+      tags:
+        - type:security
+        - priority:low
+        - cross-repo/origin:flow-accounts
+        - effort:unspecified
+      text: 'moduleforge.module.yaml mounts corehttpapi.NewRouter (the /v1/entities/* routes: natural persons, corporations, service accounts, generic entity and display-name, twelve handlers) with innerMount: true and no scope:, so a composing app mounts it with no requireAuth middleware. It is safe today only because each handler starts with an opctx.ActorEntityID check and answers 401, and because no middleware sets an actor on that mount every caller, authenticated or not, gets 401. Add scope: authenticated to that mountFromModule entry (so the generated root puts requireAuth in front of it), or drop the entry if the surface is unused. flow-accounts pins the current behavior with a route-scope allowlist and a test that expects 401 for a valid session; that entry changes to authenticated once this lands.'
+    - title: Cut per-row cost of referenced-entity trigger
+      id: dlaB
+      date: "2026-10-08"
+      tags:
+        - type:optimization
+        - priority:low
+        - effort:medium
+        - plan/phase:type-entity-schema
+        - plan/slug:type-scoped-grants
+      text: The deferred constraint trigger entities_type_entity_referenced in model/migrations/0008_entities.sql queues an after-trigger event and a SECURITY DEFINER plpgsql call for every inserted entities row, though it acts only on sentinel-typed rows. Bulk inserts of N ordinary entities pay O(N) small overhead. A WHEN clause on a cheap predicate could skip it, but would need a constant sentinel id, which reintroduces a magic number. Accept the current design unless bulk entity creation proves hot.
+    - title: Qualify relations in other invoker functions
+      id: C8uH
+      date: "2026-10-09"
+      tags:
+        - type:security
+        - priority:low
+        - effort:medium
+        - plan/phase:remediation-01
+        - plan/slug:type-scoped-grants
+      text: |-
+        Other invoker-rights functions in mod-core also resolve types and entities by unqualified name with no pinned search_path: the subtype BEFORE INSERT triggers in model/migrations/0009 through 0015 (which look up entities and call type_is_or_descends_from) and the generated accessible_<slug>_ids_for_actor bodies plus sharedCTEPrefix in api/authz/setup/setup.go. After the types fixes, a session-local temp entities table could still shadow entities for these bodies. Do a deliberate sweep qualifying public.entities and public.types, weighing the per-call cost of a function-level SET search_path in the hot list-function paths.
+
+        Evaluation note (quoted data): unqualified FROM entities at 0009_legal_entities.sql:17, 0010_natural_persons.sql:24, 0011_corporations.sql:23, 0012_service_accounts.sql:17, 0015_apps.sql:21; unpinned entities_owner_default_self in 0013_entity_ownership.sql:16-26; generated bodies in api/authz/setup/grant_table.go:28-124 and setup.go:56-57 (LANGUAGE sql STABLE). Exposure needs TEMP privilege plus INSERT on a subtype table. Open question for the user: do the sweep in type-scoped-grants (which relaxes its frozen GrantTableGenerator-body constraint), or as a standalone hardening item? Options: (1) standalone backlog item, recommended: design once across triggers and generated SQL including a managed-mode schema check (app-mfmanager managed-app layout relies on search_path ordering, 0013:67-80) and SET cost measurement; (2) fix only the migration-side triggers 0009-0013 and 0015 and leave the generator; (3) full sweep including the generator. Recommended: option 1.
+    - title: Dangling note pointer in 0008 comment
+      id: H7G4
+      date: "2026-10-09"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:remediation-02
+        - plan/slug:type-scoped-grants
+      text: 'The search-path comment in model/migrations/0008_entities.sql (type-entity section, near the concrete-type function) says type_is_or_descends_from is covered in 0002_types.sql with "see the note there on its search_path", but 0002 has no such note: only the SET search_path clause on the function and a header comment that does not mention it. Add a one-line comment above type_is_or_descends_from in 0002 explaining the pinned search_path, or drop the cross-reference. Comment-only change, no runtime effect.'
+    - title: EntityTypeInfo loads whole types table
+      id: 8BtA
+      date: "2026-10-09"
+      tags:
+        - type:optimization
+        - priority:low
+        - effort:unspecified
+        - plan/phase:type-entity-api-and-contract
+        - plan/slug:type-scoped-grants
+      text: In api/types/type_info.go, EntityTypeInfo calls ListAllTypes and scans the whole types table linearly on every type-entity profile read, and display_builtins.go calls it once per field renderer (name and description), so one display render of a type entity loads the table twice. Bounded and acceptable while the types table is small and append-only, and the plan forbids a new Querier method. If type entities are rendered in bulk or the table grows, add an in-process entity_id-to-type map in Resolver (the table is append-only) or a dedicated by-entity-id query when the Querier surface may change. It runs only after read authorization has passed, so this is not a security issue.
+    - title: Instance-arm docs overclaim; test hygiene
+      id: vLTf
+      date: "2026-10-09"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:small
+        - plan/phase:type-grant-instance-semantics
+        - plan/slug:type-scoped-grants
+      text: 'Minor hygiene left after the instance-semantics list arm review (none blocking). (1) docs/architecture/type-level-authorization.md, Type entities paragraph, says "Entity-level Authorize and the list-side ... both apply the instance rule". mod-core ships only the list side; the single-row Authorize is a peer implementation (mod-users). Reword to "a conforming Authorize must apply the rule, and the list-side functions do", consistent with the warning bullet and authz.go. (2) api/authz/setup/grant_table_integration_test.go uses the probe type slug p9_instance_probe_type and description ''P9 probe'', where P9 is a phase number, and line 14 has a "tasks in this phase" comment; rename to type-descriptive names. (3) The probe-type test inserts with ON CONFLICT (slug) DO NOTHING and leaves a persistent probe type and instance, so reruns on a shared database can pass for the wrong reason (the typeID != probeEntity guard holds only because of the setval advance); make it idempotent or clean up, and assert the ids differ explicitly. (4) Optional hardening: pin mixed type-and-instance target group behaviour with a short test or doc sentence (mod-authz enforces separation; mod-core''s schema does not); add tests for a deprecated type''s entity and an archived instance (both single-row and list paths consult neither); the reference SQL in grant_table_symmetry_integration_test.go is a copy of mod-users'' checkGrantOrOwn and drifts silently if that changes (the production-side case in mod-users closes this).'
