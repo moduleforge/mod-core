@@ -13,6 +13,7 @@ phases:
           path: phase-01-type-entity-schema/001-type-entity-schema.md
           done: false
           tier: sonnet-high
+          digest: Every types row now has a unique sentinel-typed entity via AFTER INSERT SECURITY DEFINER trigger; sentinel type is types.id 6 (self-referential), app moved to 7, seeds 1-5 unchanged; entity_id settable once NULL->sentinel-typed entity; commit-time pairing invariants plus sentinel-deprecation and type-entity-archive guards added; Querier method set unchanged; 13 integration tests added.
           git:
             branch: null
             commit: []
