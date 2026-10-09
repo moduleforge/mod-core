@@ -60,3 +60,14 @@ Files in scope:
 - `mod-users/api/internal/authz/authz.go`: `checkGrantOrOwn`, the single-row source.
 - `mod-users/api/internal/authz/authz_integration_test.go`: `TestInteg_OwnerPredicate_ListSingleRowSymmetry`, the existing ownership-only symmetry test.
 - [`instance-semantics-list-arm`](./001-instance-semantics-list-arm.md): the arm and helpers this test builds on.
+
+## Status
+
+- Outcome: succeeded (2026-10-09).
+- Added `api/authz/setup/grant_table_symmetry_integration_test.go` with `TestGrantVerification_TypeGrantListSingleRowSymmetry`: 5 actor fixtures x 4 slugs x 8 candidates, asserting `listed iff (reference allows AND type_is_or_descends_from)`. Failure messages name fixture, slug, candidate, and which side allowed it.
+- Reference SQL ported verbatim from mod-users `checkGrantOrOwn` (plan branch `plan/type-scoped-grants`), mod-users commit `6d228fd`. It contains the Q1 instance seed and the type-entity exclusion; only parameter binding adapted. No stand-in schema extension was needed.
+- Integration run: `./authz/setup/...` passes with `-count=1` against a throwaway local Postgres 14 (initdb, port 58317, trust auth, removed afterwards); Docker was present but container creation returned HTTP 500. Log: `.flow/validation-logs/01-integration.log`.
+- Mutation 1 (delete the `NOT EXISTS` exclusion from `grant_table.go`): symmetry test fails for the sentinel fixture, slug `type` (3 candidates: the corporation, legal_entity, natural_person type entities; list allowed, reference did not). Log: `02-mutation-no-exclusion.log`.
+- Mutation 2 (delete the whole instance arm): fails for the `corporation` type-grant fixtures (8 mismatches, slugs `corporation` and `legal_entity`). Log: `03-mutation-no-arm.log`. Both reverted; `git diff -- api/authz/setup/grant_table.go` is empty.
+- `cd api && make lint` passes (`04-lint.log`); `go vet -tags=integration` clean.
+- Drift note: the test compares against a copy of mod-users' SQL; the production-side assertion remains requested of the manager for mod-users.
