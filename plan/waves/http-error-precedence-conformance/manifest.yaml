@@ -11,4 +11,12 @@ waves:
             core: PLACEHOLDER
             docs-mf-standards: PLACEHOLDER
     - name: wave-2-conformance
-      planGroups: []
+      planGroups:
+        - name: mod-core (and mod-audit) handler conformance
+          slug: core-handler-conformance
+          description: 'Depends on wave 1 helpers. (a) FIRST authenticate entity routes: set scope: authenticated explicitly on mod-core''s manifest route (mfgen treats empty scope as public; mfgen followup VFHF), mount RequireAuth on NewRouter and apps/field-crypto registrars, then replace ~26 inline ActorEntityID checks (sudo-unaware); never delete a check before its replacement is in place. (b) Existence leaks via AuthorizeResolve: apps.go 257-307, 390-403 (loadAppByUUIDParam 448-466; drop AllowNotFound("app")), service/corporation.go:204-213, natural_person.go:275, service_account.go:182,195; tests that missing and existing ids both give 403. (c) Decode UpdateApp body before authz (apps.go:294-325); swap decode blocks to DecodeJSON incl. field_crypto_keys helper; delete writeCoreServiceErr pass-throughs; audit state-dependent ErrInvalidInput for 409/422. (d) mod-audit: review read handler, RequireAuth, order test. Wire risks: 404->403 for non-admins on /v1/apps, unknown fields rejected, body cap, 401 instead of 400.'
+          dependencies:
+            - error-precedence-foundation
+          plans:
+            audit: PLACEHOLDER
+            core: PLACEHOLDER
