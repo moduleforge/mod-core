@@ -15,7 +15,7 @@ phases:
           tier: sonnet-med
           digest: Added ErrUnprocessable and Unprocessable (422, unprocessable_entity) wired into the existing classify and publicMessage mapping, plus the service alias and tests. Purely additive.
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-01-001
             commit: []
             merge: null
         - number: 2
