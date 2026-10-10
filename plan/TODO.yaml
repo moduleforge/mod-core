@@ -75,7 +75,7 @@ phases:
           tier: sonnet-med
           digest: Added exported apiresp/ordertest package with the frozen API (Identity, Anonymous, Actor, Sudo, SudoOnly, Late, Route, Run), importing only apiresp, opctx and stdlib. Self-tests pass three correctly-ordered routes and detect four deliberate violations.
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-01-006
             commit: []
             merge: null
     - number: 2
