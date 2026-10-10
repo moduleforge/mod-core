@@ -40,7 +40,8 @@ A client receiving `display_name: null` should fall back to rendering the raw UU
 `display_name: null` is a `200`, never an error, because the top-level `error.code` set is
 closed — no ModuleForge module may introduce a new top-level code — and "no renderer registered"
 is not any of the existing reserved codes (`unauthenticated`, `forbidden`, `not_found`,
-`invalid_input`, `conflict`). No code could have been minted for it even if one were wanted.
+`invalid_input`, `conflict`, `unprocessable_entity`). No code could have been minted for it even if
+one were wanted.
 
 Status codes:
 
@@ -63,6 +64,9 @@ classifies each as `403`. No bespoke rule and no bespoke error code exist for th
 reuses the module-wide resolve-then-authorize convention exactly. This masking is deliberate:
 without it, an endpoint that returned a different status for "doesn't exist" versus "exists but
 you can't read it" would let a caller enumerate valid UUIDs by their side effects alone.
+The check order here (`401`, then `400`, then the masked `403`) follows the ecosystem-wide error
+precedence rule in
+[http-error-precedence.md](../mf-standards/architecture/http-error-precedence.md).
 
 ## How the registry is wired in a composed app
 
