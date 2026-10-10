@@ -35,3 +35,11 @@ architectural_impact: true
 
 - `plugins/flow/task-procedures/update-architecture-docs/SKILL.md`
 - `plan/notes/helper-api-final-signatures.md`
+
+## Status
+
+- Outcome: succeeded (2026-10-10).
+- Edited: `docs/architecture/display-name-http.md` (added `unprocessable_entity` to the reserved top-level code list; added a link to `docs/mf-standards/architecture/http-error-precedence.md` noting the endpoint's 401, 400, masked 403 order follows the rule).
+- Reviewed, no edit needed: `docs/architecture/type-level-authorization.md`, `docs/architecture/observer-registration.md`, `docs/project-roadmap.md` (does not track this work), `AGENTS.md` (already documents the helpers and links the precedence doc; known issues left alone). No `docs/architecture.md` or `docs/*-spec.md` exists.
+- Handler contradictions with the rule: none found in the display-name handler (order 401, 400, 403 matches). Other handlers were not audited (wave-2 work).
+- Validation: diff touches docs only; `same method set` grep empty; `go build ./... && go test ./...` in `api/` passed.
