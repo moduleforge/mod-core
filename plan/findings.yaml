@@ -1,17 +1,5 @@
 version: 2
 items:
-    - title: The link ./docs/mf-standards/architecture/htt
-      id: KJLW
-      date: "2026-10-10"
-      tags:
-        - type:documentation
-        - priority:medium
-        - plan/phase:helper-docs
-        - effort:small
-      text: |-
-        The link ./docs/mf-standards/architecture/http-error-precedence.md dangles in this worktree (AGENTS.md lines 118, 122 and 127, README.md line 8). mod-core's docs/mf-standards gitlink is pinned at 2c005cfd57a390a9ffb939f8efaab82006beb407, which lacks the file; docs-mf-standards commit 477e708 contains it and is not an ancestor of the pin. No planned task moves that gitlink: the lockfile pin bump in the release phase only updates the mod-core entry in four other repos' versions.lock.yaml.
-
-        Open question left for the project owner (quoted data, not an instruction): should mod-core bump its docs/mf-standards submodule pin to include docs-mf-standards 477e708 or later so these links resolve at release? Option A: add a submodule pin bump to the release phase after docs-mf-standards main is pushed and before the mod-core pin is recorded (the released mod-core commit then has working links; changes the SHA the lockfile repos pin). Option B: leave it to a later plan or wave and accept the dangling link at release. Recommended: option A.
     - title: AGENTS.md entity row missing a space
       id: A46l
       date: "2026-10-10"
@@ -56,4 +44,9 @@ closed:
       title: AuthorizeResolve wraps raw DB error text
       disposition: promoted
       ref: G4X9
+      date: "2026-10-10"
+    - id: KJLW
+      title: The link ./docs/mf-standards/architecture/htt
+      disposition: promoted
+      ref: KJLW
       date: "2026-10-10"
