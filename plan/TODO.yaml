@@ -27,7 +27,7 @@ phases:
           tier: sonnet-med
           digest: Added DecodeJSON, its options and Validator hook, and ParseUUIDParam as additive new files in apiresp, with tests, matching the frozen signatures. No existing file touched.
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-01-002
             commit: []
             merge: null
         - number: 3
