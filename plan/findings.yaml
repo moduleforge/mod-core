@@ -5,10 +5,13 @@ items:
       date: "2026-10-10"
       tags:
         - type:security
-        - priority:low
+        - priority:high
         - plan/phase:helpers
         - effort:unspecified
-      text: 'In api/entity/authorize_resolve.go (lines 42-53), a DB miss returns ErrForbidden immediately while a hit also calls az.Authorize(), which may do extra work (policy lookup or RPC). An unauthorized caller could in principle distinguish "missing" from "exists but forbidden" by latency. Body, status and code are identical in both cases, so exploitability is low and depends on Authorize being slow relative to network jitter. Recommendation: document the timing caveat, or equalize cost on a miss (for example call Authorize with a sentinel target and discard the result) if existence-hiding is a hard requirement. Reviewer-authored finding, medium confidence.'
+      text: |-
+        In api/entity/authorize_resolve.go (lines 42-53), a DB miss returns ErrForbidden immediately while a hit also calls az.Authorize(), which may do extra work (policy lookup or RPC). An unauthorized caller could in principle distinguish "missing" from "exists but forbidden" by latency. Body, status and code are identical in both cases, so exploitability is low and depends on Authorize being slow relative to network jitter. Recommendation: document the timing caveat, or equalize cost on a miss (for example call Authorize with a sentinel target and discard the result) if existence-hiding is a hard requirement. Reviewer-authored finding, medium confidence.
+
+        Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later by documenting the timing caveat in the AuthorizeResolve doc comment, or equalize cost on a miss; or dismiss with a concrete reason. Recommended: fix later (document the caveat at minimum). Promoted at priority:high so it is not lost.
     - title: AuthorizeResolve wraps raw DB error text
       id: G4X9
       date: "2026-10-10"
