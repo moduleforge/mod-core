@@ -50,7 +50,8 @@ phases:
           digest: Added Resolver.AuthorizeResolve per the frozen signature. A DB miss is always masked to ErrForbidden, ignoring AllowNotFound. Authorizer error passes through unchanged. Nine tests cover every listed case plus nil-authorizer. No import cycle.
           git:
             branch: plan/error-precedence-foundation-01-004
-            commit: []
+            commit:
+                - 721538d
             merge: null
         - number: 5
           slug: gui-unprocessable-entity
