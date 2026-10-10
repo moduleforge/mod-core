@@ -4,7 +4,10 @@
 package httpapi
 
 import (
+	"time"
+
 	"github.com/moduleforge/core-api/service"
+	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
 )
 
@@ -36,6 +39,17 @@ func profileResponse(p service.Profile) map[string]any {
 	case "service_account":
 		if sa := p.ServiceAccount; sa != nil {
 			resp["label"] = sa.Label
+		}
+	case types.SentinelSlug:
+		// Internal ids (types.id, parent id, entity id) are never exposed.
+		if ti := p.Type; ti != nil {
+			resp["type_slug"] = ti.Slug
+			resp["type_name"] = ti.Name
+			resp["type_description"] = ti.Description
+			resp["concrete"] = ti.Concrete
+			if ti.DeprecatedAt != nil {
+				resp["deprecated_at"] = ti.DeprecatedAt.UTC().Format(time.RFC3339)
+			}
 		}
 	}
 

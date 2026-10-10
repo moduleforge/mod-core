@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
 )
 
@@ -18,12 +20,13 @@ import (
 // caller lacks authorization to view them.
 type Profile struct {
 	Entity         coredb.GetEntityByUUIDRow
-	Kind           string // "natural_person" | "corporation" | "service_account"
+	Kind           string // "natural_person" | "corporation" | "service_account" | "type"
 	NaturalPerson  *coredb.GetNaturalPersonByEntityIDRow
 	Corporation    *coredb.GetCorporationByEntityIDRow
 	ServiceAccount *coredb.ServiceAccount
-	TaxID          string // plaintext; "" if none or not decrypted
-	TaxIDType      string // "SSN" | "EIN" | ""
+	Type           *types.TypeInfo // populated when Kind is the type sentinel (types.SentinelSlug)
+	TaxID          string          // plaintext; "" if none or not decrypted
+	TaxIDType      string          // "SSN" | "EIN" | ""
 }
 
 // ResolveProfileByEntityID loads an entity's sub-type records from the database
@@ -96,6 +99,13 @@ func ResolveProfileByEntityID(ctx context.Context, q coredb.Querier, entityID in
 			return Profile{}, fmt.Errorf("resolve profile service_account: %w", err)
 		}
 		profile.ServiceAccount = &sa
+
+	case types.SentinelSlug:
+		info, err := types.EntityTypeInfo(ctx, q, entity.ID)
+		if err != nil {
+			return Profile{}, fmt.Errorf("resolve profile type: %w", err)
+		}
+		profile.Type = &info
 
 	default:
 		return Profile{}, fmt.Errorf("resolve profile: unknown fundamental_type_slug %q", entity.FundamentalTypeSlug)

@@ -187,7 +187,7 @@ func TestMain(m *testing.M) {
 	coreQ = coredb.New(pool)
 
 	// Type-level authorization suite (type_level_authz_integration_test.go):
-	// stand-in grant/group tables, then the deterministic ownership fixture.
+	// stand-in grant/group tables, then the id-collision fixture.
 	if err := authztest.SetupSchema(ctx, pool); err != nil {
 		fmt.Fprintf(os.Stderr, "integration: authz stand-in schema: %v\n", err)
 		pool.Close()

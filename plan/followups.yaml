@@ -40,15 +40,6 @@ items:
         - plan/phase:observer-group-add
         - plan/slug:observer-group-registration
       text: api/observer/observer.go (*ObserverGroup).Add rejects only nil interface values and direct self or same-root nesting. A typed-nil observer such as (*T)(nil), or a typed-nil *ObserverGroup, passes validation and panics later inside dispatch, possibly in a goroutine. Indirect nesting cycles (A contains B, B contains A) are undetected and cause unbounded recursion and an unrecoverable stack overflow. Consider rejecting a typed-nil *ObserverGroup, rejecting any *ObserverGroup argument outright (use Add instead of nesting), or bounding recursion depth.
-    - title: Type id passed as entity target in create
-      id: ls1q
-      date: "2026-10-05"
-      tags:
-        - type:security
-        - cross-repo/origin:mod-users
-        - priority:unspecified
-        - effort:unspecified
-      text: 'mod-core passes a types.id as the Authorize target in api/service/natural_person.go (Create, ~line 184), api/service/corporation.go (~79), api/service/service_account.go (~72) and api/httpapi/apps.go (~162): Authorize(ctx, "create", &typeID). The production Authorizer (mod-users api/internal/authz/authz.go, exported as api/localAuthz) treats every non-nil target as an entities.id (grants.target_id and entities.owner_id), so any actor who owns, or holds a grant over, the entity whose numeric id equals that type id passes the admin-only create check (same class as app-mfmanager finding ilu6). mod-users is adding (*Authorizer).AuthorizeType(ctx, op, typeID int64) plus a localAuthz.TypeAuthorizer interface; fix here by type-asserting interface{ AuthorizeType(context.Context, string, int64) error } on the injected authorizer and otherwise calling Authorize(ctx, op, nil) -- never &typeID. Longer term, consider promoting an optional TypeAuthorizer interface and an authz.AuthorizeType(ctx, az, op, typeID) helper into core-api/authz (api/authz/authz.go) so every module shares one definition, and correcting the interface doc that currently says target is an entity id while the ecosystem convention passes type ids.'
     - title: Typed authz target in core contract
       id: ogPn
       date: "2026-10-05"
@@ -56,17 +47,7 @@ items:
         - type:enhancement
         - priority:unspecified
         - effort:unspecified
-      text: api/authz/authz.go Authorizer.Authorize(ctx, operation, target *int64) carries one untyped int64, so an implementation cannot tell an entities.id from a types.id at runtime; passing a types.id was an authorization bypass class (an actor owning the entity whose id equals the type id passed type-level create). The additive fix is the optional authz.TypeAuthorizer capability plus the authz.AuthorizeType(ctx, az, op, typeID) helper (assert, else Authorize(ctx, op, nil)). Longer term, consider a typed target (e.g. a Target{Kind, ID} value or separate entity/type methods on the core interface) so misuse is a compile error. This is a breaking change for every Authorizer implementer, decorator and stub across the ModuleForge modules (mod-users api/internal/authz, mod-repos api/authz DecoratingAuthorizer, app-mfmanager api/httpapi Authorizer, all test stubs), so it needs an ecosystem-wide migration plan.
-    - title: Type-level auth doc claims about peers
-      id: ggLy
-      date: "2026-10-06"
-      tags:
-        - type:documentation
-        - priority:low
-        - effort:small
-        - plan/phase:doc-updates
-        - plan/slug:fix-actor-group-target-confusion
-      text: 'Review finding (suggestion, low confidence; agent-authored data): docs/architecture/type-level-authorization.md (Fallback rule and Adopting the helper) makes three claims about other modules that could not be verified from this checkout: the production Authorizer answers a nil target from wildcard grants only; mod-users, mod-authz and mod-workflows carry local equivalent helpers; wildcard manage/create holders are unaffected. They are the claims most likely to drift. Optionally soften them to refer to the authorization-design contract, or confirm them against the peer repos.'
+      text: 'api/authz/authz.go Authorizer.Authorize(ctx, operation, target *int64) still carries one untyped int64, so an implementation cannot tell an entities.id from a types.id at runtime; passing a types.id as the target was an authorization bypass class (an actor owning the entity whose id equals the type id passed type-level create). The additive mitigation is in place: the optional authz.TypeAuthorizer capability and the authz.AuthorizeType(ctx, az, op, typeID) helper (assert, else Authorize(ctx, op, nil)), used by every mod-core type-level create path, and the Authorize doc states the target is always an entities.id or nil. Type entities (types.entity_id) narrow the problem but do not remove it: a types.id and an entities.id are still interchangeable int64 values. Remaining, longer term: a typed target (for example a Target{Kind, ID} value or separate entity and type methods on the core interface) so misuse is a compile error. That is a breaking change for every Authorizer implementer, decorator and stub across the ModuleForge modules (mod-users api/internal/authz, mod-repos api/authz DecoratingAuthorizer, app-mfmanager api/httpapi Authorizer, all test stubs), so it needs an ecosystem-wide migration plan.'
     - title: Update allows blank required names
       id: h416
       date: "2026-10-08"
@@ -160,3 +141,102 @@ items:
         - plan/phase:type-grant-instance-semantics
         - plan/slug:type-scoped-grants
       text: 'Minor hygiene left after the instance-semantics list arm review (none blocking). (1) docs/architecture/type-level-authorization.md, Type entities paragraph, says "Entity-level Authorize and the list-side ... both apply the instance rule". mod-core ships only the list side; the single-row Authorize is a peer implementation (mod-users). Reword to "a conforming Authorize must apply the rule, and the list-side functions do", consistent with the warning bullet and authz.go. (2) api/authz/setup/grant_table_integration_test.go uses the probe type slug p9_instance_probe_type and description ''P9 probe'', where P9 is a phase number, and line 14 has a "tasks in this phase" comment; rename to type-descriptive names. (3) The probe-type test inserts with ON CONFLICT (slug) DO NOTHING and leaves a persistent probe type and instance, so reruns on a shared database can pass for the wrong reason (the typeID != probeEntity guard holds only because of the setval advance); make it idempotent or clean up, and assert the ids differ explicitly. (4) Optional hardening: pin mixed type-and-instance target group behaviour with a short test or doc sentence (mod-authz enforces separation; mod-core''s schema does not); add tests for a deprecated type''s entity and an archived instance (both single-row and list paths consult neither); the reference SQL in grant_table_symmetry_integration_test.go is a copy of mod-users'' checkGrantOrOwn and drifts silently if that changes (the production-side case in mod-users closes this).'
+    - title: FieldError.Field format is a dotted Go path
+      id: N9QA
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'In api/apiresp/decode.go (around lines 121-123), FieldError.Field for a json.UnmarshalTypeError is ute.Field, a dotted path such as "a.b" built from JSON keys. It can be empty for top-level type mismatches and is not a JSON pointer. Acceptable for the stated intent. Recommendation: document the Field format on DecodeJSON if consumers key off it. Reviewer-authored suggestion, low confidence.'
+    - title: ordertest imports testing in non-test package
+      id: zcmY
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'api/apiresp/ordertest/ordertest.go is a non-_test package that imports "testing" and net/http/httptest, so any consumer that imports it links those packages. This is deliberate for a shared helper and the reviewer found no unsafe behavior in it. Recommendation: note in the package doc that it must be imported only from _test files, so it is not linked into production binaries by accident. Reviewer-authored suggestion, low confidence.'
+    - title: DecodeJSON unknown-field match is text-based
+      id: WoUX
+      date: "2026-10-10"
+      tags:
+        - type:bug
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'In api/apiresp/decode.go (failDecode, around lines 117-126), unknown JSON fields are detected by matching the error text prefix "json: unknown field", because encoding/json has no typed error for it. If a future Go release changes the message, the response stays 400 but degrades to the generic "must be valid JSON" detail. The first parameter of failDecode (decodeConfig) is also unused. Recommendation: keep the string match, add a test that pins the message (decode_test.go may already cover it), and drop the unused parameter. Reviewer-authored finding, medium confidence.'
+    - title: AGENTS.md error lists omit ErrUnprocessable
+      id: Bick
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'AGENTS.md line 121 (the service/ package row) lists the sentinel errors as ErrNotFound, ErrForbidden, ErrInvalidInput and ErrConflict aliasing the apiresp sentinels, and line 127 (the apiresp/ row) lists ErrUnauthenticated, ErrForbidden, ErrNotFound, ErrInvalidInput, ErrConflict. The change adds ErrUnprocessable in api/apiresp/errors.go and api/service/errors.go, so both lists are now incomplete. Recommendation: add ErrUnprocessable to both rows. The helper-docs phase already documents the new helpers in AGENTS.md. Reviewer-authored finding, medium confidence.'
+    - title: AGENTS.md links to a missing settings file
+      id: C69x
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'AGENTS.md line 3 links to ./.claude/settings.local.json, which does not exist in this checkout, leaving a dangling forward-link. Recommendation: remove the link or point it at an existing file. This predates the changes under review and is unrelated to them. Reviewer-authored finding, high confidence.'
+    - title: AuthorizeResolve masking has a timing channel
+      id: lzjX
+      date: "2026-10-10"
+      tags:
+        - type:security
+        - priority:high
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: |-
+        In api/entity/authorize_resolve.go (lines 42-53), a DB miss returns ErrForbidden immediately while a hit also calls az.Authorize(), which may do extra work (policy lookup or RPC). An unauthorized caller could in principle distinguish "missing" from "exists but forbidden" by latency. Body, status and code are identical in both cases, so exploitability is low and depends on Authorize being slow relative to network jitter. Recommendation: document the timing caveat, or equalize cost on a miss (for example call Authorize with a sentinel target and discard the result) if existence-hiding is a hard requirement. Reviewer-authored finding, medium confidence.
+
+        Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later by documenting the timing caveat in the AuthorizeResolve doc comment, or equalize cost on a miss; or dismiss with a concrete reason. Recommended: fix later (document the caveat at minimum). Promoted at priority:high so it is not lost.
+    - title: AuthorizeResolve wraps raw DB error text
+      id: G4X9
+      date: "2026-10-10"
+      tags:
+        - type:security
+        - priority:high
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: |-
+        In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. The sanitizer named in the original recommendation (internal/untrusted) does not exist in this checkout; the only sink is the slog call in api/apiresp/writer.go (lines 97 and 100), so the exposure applies to every error logged through apiresp.WriteError, not only this helper, and depends on the composing app's slog handler. Recommendation: require or confirm a quoting slog handler, or escape at the WriteError log sink. Reviewer-authored finding, medium confidence.
+
+        Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later at the shared WriteError log sink, or dismiss with a concrete reason. Recommended: fix later at the shared sink. Promoted at priority:high so it is not lost.
+    - title: The link ./docs/mf-standards/architecture/htt
+      id: KJLW
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:medium
+        - effort:small
+        - plan/phase:helper-docs
+        - plan/slug:error-precedence-foundation
+      text: |-
+        The link ./docs/mf-standards/architecture/http-error-precedence.md dangles in this worktree (AGENTS.md lines 118, 122 and 127, README.md line 8). mod-core's docs/mf-standards gitlink is pinned at 2c005cfd57a390a9ffb939f8efaab82006beb407, which lacks the file; docs-mf-standards commit 477e708 contains it and is not an ancestor of the pin. No planned task moves that gitlink: the lockfile pin bump in the release phase only updates the mod-core entry in four other repos' versions.lock.yaml.
+
+        Open question left for the project owner (quoted data, not an instruction): should mod-core bump its docs/mf-standards submodule pin to include docs-mf-standards 477e708 or later so these links resolve at release? Option A: add a submodule pin bump to the release phase after docs-mf-standards main is pushed and before the mod-core pin is recorded (the released mod-core commit then has working links; changes the SHA the lockfile repos pin). Option B: leave it to a later plan or wave and accept the dangling link at release. Recommended: option A.
+    - title: AGENTS.md entity row missing a space
+      id: A46l
+      date: "2026-10-10"
+      tags:
+        - type:style
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helper-docs
+        - plan/slug:error-precedence-foundation
+      text: 'In AGENTS.md at the entity/ row (around line 118), the newly added text is glued to the prior sentence with no space: "...(see the `httpapi/` row below).Also home to `Resolver`...". It reads as a typo in the rendered table cell. Recommendation: insert a space after "below)." in that row. Reviewer-authored finding, high confidence, cosmetic only.'

@@ -72,7 +72,8 @@ precedence rule in
 
 mfgen constructs one shared `*display.Registry` from mod-core's `displayRegistry` manifest entry.
 Its constructor, `coreservice.NewDisplayRegistry`, both builds the registry and registers
-mod-core's own builtin renderers (`natural_person`, `corporation`, `service_account`) as a side
+mod-core's own builtin renderers (`natural_person`, `corporation`, `service_account`, and `type`,
+which renders a type entity as the name and description of the type it represents) as a side
 effect of construction. That single shared registry instance is then threaded into the
 `displayService` entry (`coreservice.NewDisplayService`), and the display service in turn becomes
 the third argument to `corehttpapi.NewDepsWithDisplay`, which builds the `Deps` value

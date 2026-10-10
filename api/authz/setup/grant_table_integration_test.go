@@ -193,6 +193,7 @@ func TestMain(m *testing.M) {
 	slugs := []string{
 		"natural_person", "corporation", "service_account",
 		"legal_entity", "authz_actor_group", "authz_target_group",
+		"type",
 	}
 	if err := setup.ApplyFuncs(ctx, pool, setup.NewGrantTableGenerator(), slugs); err != nil {
 		fmt.Fprintf(os.Stderr, "integration: apply grant functions: %v\n", err)
@@ -810,4 +811,264 @@ func TestGrantVerification_CrossTypeIsolation(t *testing.T) {
 	if containsID(npIDs, corpEntity) {
 		t.Errorf("cross-type isolation: corporation entity %d leaked into natural_person access; got %v", corpEntity, npIDs)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Instance semantics (a grant on a type's entity covers exactly that type's
+// instances, never type entities)
+// ---------------------------------------------------------------------------
+
+// typeEntityID returns the entity id that represents the type with the given
+// slug (types.entity_id). Raw SQL through pool; nothing is added to
+// coredb.Querier.
+func typeEntityID(t *testing.T, ctx context.Context, slug string) int64 {
+	t.Helper()
+	var id int64
+	if err := pool.QueryRow(ctx, `SELECT entity_id FROM types WHERE slug = $1`, slug).Scan(&id); err != nil {
+		t.Fatalf("typeEntityID(%s): %v", slug, err)
+	}
+	return id
+}
+
+// grantDirect inserts a grant of testOpID on target (an entity or a target
+// group) held directly by holder (an actor or an actor group).
+func grantDirect(t *testing.T, ctx context.Context, holder, target int64) {
+	t.Helper()
+	const q = `INSERT INTO grants (actor_id, operation_id, target_id) VALUES ($1, $2, $3)`
+	if _, err := pool.Exec(ctx, q, holder, testOpID, target); err != nil {
+		t.Fatalf("grantDirect: %v", err)
+	}
+}
+
+// seedTargetGroupOf creates a fresh authz_target_group holding exactly the
+// given members and returns its entity id. Callers keep groups kind-pure:
+// only type entities, or only instance entities (groups of groups included).
+func seedTargetGroupOf(t *testing.T, ctx context.Context, members ...int64) int64 {
+	t.Helper()
+	group := seedGroupEntity(t, ctx, "authz_target_group")
+	const q = `INSERT INTO authz_target_group_members (group_id, member_id) VALUES ($1, $2)`
+	for _, m := range members {
+		if _, err := pool.Exec(ctx, q, group, m); err != nil {
+			t.Fatalf("seedTargetGroupOf: add member %d: %v", m, err)
+		}
+	}
+	return group
+}
+
+// instanceIDsOfType returns every entity whose fundamental type is exactly the
+// given slug (including entities of other users' tests), ordered by id.
+func instanceIDsOfType(t *testing.T, ctx context.Context, slug string) []int64 {
+	t.Helper()
+	return queryIDs(t, ctx, `SELECT e.id FROM entities e JOIN types t ON t.id = e.fundamental_type_id WHERE t.slug = $1 ORDER BY e.id`, slug)
+}
+
+func queryIDs(t *testing.T, ctx context.Context, q string, args ...any) []int64 {
+	t.Helper()
+	rows, err := pool.Query(ctx, q, args...)
+	if err != nil {
+		t.Fatalf("queryIDs: %v", err)
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("queryIDs: scan: %v", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("queryIDs: rows: %v", err)
+	}
+	return ids
+}
+
+// sameIDSet reports whether a and b hold the same ids, ignoring order and
+// duplicates.
+func sameIDSet(a, b []int64) bool {
+	as, bs := map[int64]bool{}, map[int64]bool{}
+	for _, v := range a {
+		as[v] = true
+	}
+	for _, v := range b {
+		bs[v] = true
+	}
+	if len(as) != len(bs) {
+		return false
+	}
+	for v := range as {
+		if !bs[v] {
+			return false
+		}
+	}
+	return true
+}
+
+// assertIDSet fails unless got is exactly the set want.
+func assertIDSet(t *testing.T, label string, got, want []int64) {
+	t.Helper()
+	if !sameIDSet(got, want) {
+		t.Errorf("%s: got %v, want exactly %v", label, got, want)
+	}
+}
+
+func TestGrantVerification_TypeGrantInstanceSemantics(t *testing.T) {
+	ctx := context.Background()
+	corpType := typeEntityID(t, ctx, "corporation")
+	leType := typeEntityID(t, ctx, "legal_entity")
+	sentinel := typeEntityID(t, ctx, "type")
+
+	t.Run("direct grant on corporation type entity", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		otherNP := seedNaturalPerson(t, ctx)
+		seedCorporation(t, ctx, "Inst Corp 1")
+		grantDirect(t, ctx, actor, corpType)
+		// Created after the grant: still covered.
+		seedCorporation(t, ctx, "Inst Corp 2")
+
+		corps := instanceIDsOfType(t, ctx, "corporation")
+		assertIDSet(t, "corporation", accessibleIDs(t, ctx, "corporation", actor), corps)
+
+		np := accessibleIDs(t, ctx, "natural_person", actor)
+		assertIDSet(t, "natural_person (own row only)", np, []int64{actor})
+		if containsID(np, otherNP) {
+			t.Errorf("natural_person: must not list other natural_person %d", otherNP)
+		}
+
+		le := accessibleIDs(t, ctx, "legal_entity", actor)
+		assertIDSet(t, "legal_entity (corporations + own row)", le, append(append([]int64{}, corps...), actor))
+
+		// Direct arm: the granted type entity itself is listed under slug
+		// type, and no other type entity is.
+		assertIDSet(t, "type (direct arm only)", accessibleIDs(t, ctx, "type", actor), []int64{corpType})
+	})
+
+	t.Run("grant on legal_entity type entity is exact-type only", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		corp := seedCorporation(t, ctx, "Inst Corp LE")
+		grantDirect(t, ctx, actor, leType)
+		if ids := accessibleIDs(t, ctx, "corporation", actor); containsID(ids, corp) || len(ids) != 0 {
+			t.Errorf("corporation: legal_entity grant must list no corporation; got %v", ids)
+		}
+		// No concrete instance has fundamental type legal_entity.
+		assertIDSet(t, "legal_entity", accessibleIDs(t, ctx, "legal_entity", actor), []int64{actor})
+	})
+
+	t.Run("type-only target group", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		seedCorporation(t, ctx, "Inst Corp G")
+		group := seedTargetGroupOf(t, ctx, corpType)
+		grantDirect(t, ctx, actor, group)
+		assertIDSet(t, "corporation", accessibleIDs(t, ctx, "corporation", actor), instanceIDsOfType(t, ctx, "corporation"))
+	})
+
+	t.Run("nested type-only target group", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		seedCorporation(t, ctx, "Inst Corp N")
+		inner := seedTargetGroupOf(t, ctx, corpType)
+		outer := seedTargetGroupOf(t, ctx, inner)
+		grantDirect(t, ctx, actor, outer)
+		assertIDSet(t, "corporation", accessibleIDs(t, ctx, "corporation", actor), instanceIDsOfType(t, ctx, "corporation"))
+	})
+
+	t.Run("grant held by an actor group", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		seedCorporation(t, ctx, "Inst Corp AG")
+		actorGroup := seedGroupEntity(t, ctx, "authz_actor_group")
+		if _, err := pool.Exec(ctx, `INSERT INTO authz_actor_group_members (group_id, member_id) VALUES ($1, $2)`, actorGroup, actor); err != nil {
+			t.Fatalf("add actor to group: %v", err)
+		}
+		grantDirect(t, ctx, actorGroup, corpType)
+		assertIDSet(t, "corporation", accessibleIDs(t, ctx, "corporation", actor), instanceIDsOfType(t, ctx, "corporation"))
+	})
+
+	t.Run("operation not in queried op ids", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		corp := seedCorporation(t, ctx, "Inst Corp Op")
+		const q = `INSERT INTO grants (actor_id, operation_id, target_id) VALUES ($1, $2, $3)`
+		if _, err := pool.Exec(ctx, q, actor, testOpID+1, corpType); err != nil {
+			t.Fatalf("insert grant: %v", err)
+		}
+		if ids := accessibleIDs(t, ctx, "corporation", actor); containsID(ids, corp) || len(ids) != 0 {
+			t.Errorf("corporation: grant for another operation must list nothing; got %v", ids)
+		}
+	})
+
+	t.Run("grant on sentinel type entity never lists type entities", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		grantDirect(t, ctx, actor, sentinel)
+		got := accessibleIDs(t, ctx, "type", actor)
+		assertIDSet(t, "type (direct arm only)", got, []int64{sentinel})
+		if containsID(got, corpType) {
+			t.Errorf("type: sentinel grant leaked corporation's type entity %d", corpType)
+		}
+		// Every type entity is an instance of the sentinel type; none may be
+		// reachable through the instance arm.
+		var n int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM types`).Scan(&n); err != nil || n < 2 {
+			t.Fatalf("count types: n=%d err=%v", n, err)
+		}
+		if len(got) != 1 {
+			t.Errorf("type: expected exactly the sentinel entity among %d types; got %v", n, got)
+		}
+	})
+
+	t.Run("no grants", func(t *testing.T) {
+		actor := seedNaturalPerson(t, ctx)
+		seedCorporation(t, ctx, "Inst Corp None")
+		if ids := accessibleIDs(t, ctx, "corporation", actor); len(ids) != 0 {
+			t.Errorf("corporation: actor with no grants must list nothing; got %v", ids)
+		}
+	})
+
+	t.Run("join goes through types.entity_id, not types.id", func(t *testing.T) {
+		const slug = "p9_instance_probe_type"
+		// Advance the entities sequence so the new type's entity id differs
+		// from its types.id.
+		if _, err := pool.Exec(ctx, `SELECT setval(pg_get_serial_sequence('entities', 'id'), nextval(pg_get_serial_sequence('entities', 'id')) + 1000)`); err != nil {
+			t.Fatalf("advance entities sequence: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `INSERT INTO types (slug, parent_id, concrete, name, description)
+SELECT $1, id, true, 'P9 probe', 'test-only concrete type' FROM types WHERE slug = 'entity'
+ON CONFLICT (slug) DO NOTHING`, slug); err != nil {
+			t.Fatalf("register probe type: %v", err)
+		}
+		var typeID, probeEntity int64
+		if err := pool.QueryRow(ctx, `SELECT id, entity_id FROM types WHERE slug = $1`, slug).Scan(&typeID, &probeEntity); err != nil {
+			t.Fatalf("read probe type: %v", err)
+		}
+		if typeID == probeEntity {
+			t.Fatalf("test setup: types.id and types.entity_id must differ; both %d", typeID)
+		}
+		if err := setup.ApplyFuncs(ctx, pool, setup.NewGrantTableGenerator(), []string{slug}); err != nil {
+			t.Fatalf("apply probe function: %v", err)
+		}
+		typ, err := coreQ.GetTypeBySlug(ctx, slug)
+		if err != nil {
+			t.Fatalf("resolve probe type: %v", err)
+		}
+		inst, err := coreQ.CreateEntity(ctx, typ.ID)
+		if err != nil {
+			t.Fatalf("create probe instance: %v", err)
+		}
+
+		actor := seedNaturalPerson(t, ctx)
+		grantDirect(t, ctx, actor, probeEntity)
+		got := accessibleIDs(t, ctx, slug, actor)
+		assertIDSet(t, "probe type", got, []int64{inst.ID})
+		// An entity whose entities.id equals the probe's types.id exists and
+		// must not be listed.
+		if containsID(got, typeID) {
+			t.Errorf("probe type: entity %d (== types.id) must not be listed", typeID)
+		}
+
+		// A holder of a grant on the entity whose id equals the probe's
+		// types.id must not get the probe instance: a join on types.id would
+		// wrongly match it.
+		decoyHolder := seedNaturalPerson(t, ctx)
+		grantDirect(t, ctx, decoyHolder, typeID)
+		if ids := accessibleIDs(t, ctx, slug, decoyHolder); len(ids) != 0 {
+			t.Errorf("probe type: grant on entity %d (== types.id) must not list instances; got %v", typeID, ids)
+		}
+	})
 }

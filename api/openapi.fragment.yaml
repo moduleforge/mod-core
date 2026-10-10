@@ -657,8 +657,11 @@ components:
           description: Stable external identifier.
         kind:
           type: string
-          enum: [natural_person, corporation, service_account]
-          description: Discriminator indicating the concrete subtype.
+          enum: [natural_person, corporation, service_account, type]
+          description: |
+            Discriminator indicating the concrete subtype. `type` is the
+            sentinel kind of a type entity (the entity that represents one row
+            of the types table).
         created_at:
           type: string
           format: date-time
@@ -734,7 +737,10 @@ components:
         resolved subtype. The `kind` field on the Entity acts as a discriminator:
         when kind is `natural_person` the `natural_person` key is populated;
         when kind is `corporation` the `corporation` key is populated; when kind
-        is `service_account` the `service_account` key is populated.
+        is `service_account` the `service_account` key is populated. When kind
+        is `type` the response is the flat type-entity form: `type_slug`,
+        `type_name`, `type_description`, `concrete` and (when deprecated)
+        `deprecated_at` describe the represented type; no internal ids appear.
       required: [entity]
       properties:
         entity:
@@ -757,6 +763,22 @@ components:
           $ref: "#/components/schemas/ServiceAccount"
           description: Present only when kind is `service_account`.
           nullable: true
+        type_slug:
+          type: string
+          description: Present only when kind is `type`. Slug of the represented type.
+        type_name:
+          type: string
+          description: Present only when kind is `type`. Display name of the represented type.
+        type_description:
+          type: string
+          description: Present only when kind is `type`. Empty when the type has no description.
+        concrete:
+          type: boolean
+          description: Present only when kind is `type`. Whether entities may be created of the type.
+        deprecated_at:
+          type: string
+          format: date-time
+          description: Present only when kind is `type` and the type is deprecated.
         tax_id:
           type: string
           description: |

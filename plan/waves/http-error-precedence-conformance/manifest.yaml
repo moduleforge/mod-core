@@ -8,8 +8,8 @@ waves:
           slug: error-precedence-foundation
           description: 'Rule: 401 -> 400 (stateless shape) -> 403 -> 404; 409/422 after authz; late 400 fallback only. (1) docs-mf-standards: replace ''Helpers: TBD'' in architecture/http-error-precedence.md with helper APIs; allow masked entity resolve in authorize step; fix versions-lockfile.md (four lockfile carriers, not three). (2) mod-core docs/architecture/type-level-authorization.md: ''same method set'' -> ''same AuthorizeType signature''; alias bullet applies only to mod-users localAuthz.TypeAuthorizer (closes followup ggLy). (3) mod-core api helpers, additive: chi RequireAuth on authz.RequireAuthenticated (sudo-aware); apiresp.DecodeJSON(w,r,dst,opts...) with size cap, unknown-field rejection, Validator hook, WithMaxBytes/WithCodePrefix/WithAllowUnknownFields; ErrUnprocessable/Unprocessable(...FieldError) + classify/publicMessage; entity.Resolver.AuthorizeResolve; optional ParseUUIDParam; EXPORTED table-driven order-test helper (not internal/); core-gui useApiError routes unprocessable_entity. No handler framework, validation DSL, second mapper, or mod-authz additions. Final task is the release step: merge to main, push mod-core and docs-mf-standards to origin (needs user consent), confirm aggregate mod-core checkout is on new main.'
           plans:
-            core: PLACEHOLDER
-            docs-mf-standards: PLACEHOLDER
+            core: error-precedence-foundation
+            docs-mf-standards: error-precedence-foundation
     - name: wave-2-conformance
       planGroups:
         - name: mod-core (and mod-audit) handler conformance

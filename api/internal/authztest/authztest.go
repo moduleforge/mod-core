@@ -5,7 +5,8 @@
 // THIS IS NOT PRODUCTION CODE. Only _test.go files (behind the integration
 // build tag) may import it. The authorizers below MODEL the production
 // users-module Authorizer closely enough to reproduce its entity-semantic
-// treatment of a non-nil Authorize target; they are not that implementation
+// treatment of a non-nil Authorize target (EntitySemantic) and its post-change
+// exact-type AuthorizeType arm (TypeAware); they are not that implementation
 // and make no attempt to match its operation registry, caching, or error
 // surface. mod-core owns no grants or group tables and no operation registry
 // (those belong to peer modules), so the stand-ins here use one fixed
@@ -173,45 +174,65 @@ func AddActorGroupMember(ctx context.Context, pool *pgxpool.Pool, group, member 
 	return nil
 }
 
-// Fixture is the result of SeedOwnerFixture.
-type Fixture struct {
-	// OwnerID is the non-wildcard actor ("Uown") that owns every entity listed
-	// in TypeEntityIDs.
-	OwnerID int64
-	// TypeIDs maps a type slug to its types.id.
-	TypeIDs map[string]int64
-	// TypeEntityIDs maps a type slug to the id of the corporation-typed entity
-	// whose entities.id equals that slug's types.id, owned by OwnerID. With
-	// the bug present, an entity-semantic authorizer matches the type id
-	// against exactly this row.
-	TypeEntityIDs map[string]int64
+// CollisionType describes the test-only concrete type registered by
+// SeedCollisionFixture, whose types.id is NOT its type entity's id, plus an
+// ordinary instance entity inserted at entities.id == types.id.
+type CollisionType struct {
+	// Slug is the test-only type's slug.
+	Slug string
+	// TypeID is the type's types.id.
+	TypeID int64
+	// TypeEntityID is the type's own type entity (types.entity_id); it differs
+	// from TypeID.
+	TypeEntityID int64
+	// InstanceID is an unowned instance entity of the test-only type's sibling
+	// concrete type (corporation) whose entities.id equals TypeID.
+	InstanceID int64
 }
 
-// SeedOwnerFixture builds the deterministic ownership arm. A fresh mod-core
-// schema seeds no entities, so entities.id collides with types.id only by
-// accident of timing; this makes the collision deliberate. It:
+// Fixture is the result of SeedCollisionFixture.
+type Fixture struct {
+	// TypeIDs maps a requested type slug to its types.id.
+	TypeIDs map[string]int64
+	// TypeEntityIDs maps a requested type slug to that type's own type entity
+	// (types.entity_id).
+	TypeEntityIDs map[string]int64
+	// CollidingEntityIDs maps a requested type slug to the id of the entity
+	// whose entities.id equals that slug's types.id. It has no key for a slug
+	// when no such entity exists.
+	CollidingEntityIDs map[string]int64
+	// CollidingIsOwnTypeEntity records, per slug present in CollidingEntityIDs,
+	// whether that entity is the slug's own type entity (types.entity_id).
+	CollidingIsOwnTypeEntity map[string]bool
+	// Instance is the test-only type and its instance-at-type-id collision.
+	Instance CollisionType
+}
+
+// InstanceCollisionSlug is the slug of the test-only concrete type.
+const InstanceCollisionSlug = "authztest_collision"
+
+// SeedCollisionFixture builds the deterministic entity-id/type-id collisions.
+// Type entities occupy the low entity ids, so the ownership arm this fixture
+// once built (an owned entity inserted at id == types.id) is structurally
+// impossible: the id is taken, the occupant is a type entity, and type entities
+// are unowned with an immutable owner_id. It therefore:
 //
-//   - seeds a non-wildcard natural_person actor (the owner);
-//   - inserts raw entities rows, corporation-typed, whose explicit id equals
-//     each requested type's types.id, with owner_id set to the owner at INSERT
-//     (entities_owner_immutable forbids changing it later);
-//   - advances the entities id sequence past the highest id.
-//
-// It returns an error, never skips, when any required id is already taken
-// (including by the owner itself).
-func SeedOwnerFixture(ctx context.Context, pool *pgxpool.Pool, typeSlugs ...string) (Fixture, error) {
+//   - for each requested slug, resolves types.id and types.entity_id, and
+//     records the entity whose id equals types.id (the collision target) and
+//     whether it is that type's own type entity. It never inserts an entity at
+//     a type id for these slugs;
+//   - registers the test-only concrete type InstanceCollisionSlug after
+//     advancing the types id sequence beyond every entities.id, so its
+//     types.id is not its type entity's id, then inserts an unowned instance
+//     entity at id == that types.id and advances the entities id sequence past
+//     it. This is the instance-entity collision (the ilu6 regression).
+func SeedCollisionFixture(ctx context.Context, pool *pgxpool.Pool, typeSlugs ...string) (Fixture, error) {
 	q := coredb.New(pool)
-	fx := Fixture{TypeIDs: map[string]int64{}, TypeEntityIDs: map[string]int64{}}
-
-	owner, err := SeedNaturalPerson(ctx, pool, "Type", "Owner")
-	if err != nil {
-		return Fixture{}, fmt.Errorf("seed owner actor: %w", err)
-	}
-	fx.OwnerID = owner
-
-	corp, err := q.GetTypeBySlug(ctx, "corporation")
-	if err != nil {
-		return Fixture{}, fmt.Errorf("resolve corporation type: %w", err)
+	fx := Fixture{
+		TypeIDs:                  map[string]int64{},
+		TypeEntityIDs:            map[string]int64{},
+		CollidingEntityIDs:       map[string]int64{},
+		CollidingIsOwnTypeEntity: map[string]bool{},
 	}
 
 	for _, slug := range typeSlugs {
@@ -219,27 +240,74 @@ func SeedOwnerFixture(ctx context.Context, pool *pgxpool.Pool, typeSlugs ...stri
 		if err != nil {
 			return Fixture{}, fmt.Errorf("resolve type %q: %w", slug, err)
 		}
+		if !typ.EntityID.Valid {
+			return Fixture{}, fmt.Errorf("type %q has no type entity", slug)
+		}
+		fx.TypeIDs[slug] = typ.ID
+		fx.TypeEntityIDs[slug] = typ.EntityID.Int64
+
 		var taken bool
 		if err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM entities WHERE id = $1)`, typ.ID).Scan(&taken); err != nil {
 			return Fixture{}, fmt.Errorf("check entity id %d: %w", typ.ID, err)
 		}
 		if taken {
-			return Fixture{}, fmt.Errorf("entities.id %d (== types.id of %q) is already taken; the ownership arm cannot be set up deterministically", typ.ID, slug)
+			fx.CollidingEntityIDs[slug] = typ.ID
+			fx.CollidingIsOwnTypeEntity[slug] = typ.ID == typ.EntityID.Int64
 		}
-		if _, err := pool.Exec(ctx,
-			`INSERT INTO entities (id, fundamental_type_id, owner_id) VALUES ($1, $2, $3)`,
-			typ.ID, corp.ID, owner); err != nil {
-			return Fixture{}, fmt.Errorf("insert entity id %d for type %q: %w", typ.ID, slug, err)
-		}
-		fx.TypeIDs[slug] = typ.ID
-		fx.TypeEntityIDs[slug] = typ.ID
 	}
 
+	inst, err := seedInstanceCollision(ctx, pool)
+	if err != nil {
+		return Fixture{}, err
+	}
+	fx.Instance = inst
+	return fx, nil
+}
+
+func seedInstanceCollision(ctx context.Context, pool *pgxpool.Pool) (CollisionType, error) {
+	q := coredb.New(pool)
+	var maxEntity int64
+	if err := pool.QueryRow(ctx, `SELECT COALESCE(max(id), 0) FROM entities`).Scan(&maxEntity); err != nil {
+		return CollisionType{}, fmt.Errorf("read max entities.id: %w", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`SELECT setval(pg_get_serial_sequence('types','id'), GREATEST($1::bigint + 10, (SELECT max(id) FROM types)))`,
+		maxEntity); err != nil {
+		return CollisionType{}, fmt.Errorf("advance types id sequence: %w", err)
+	}
+	if _, err := pool.Exec(ctx, `
+INSERT INTO types (slug, parent_id, concrete, name, description)
+SELECT $1, id, true, 'Authztest Collision', 'Test-only type whose types.id is not its type entity id.'
+FROM types WHERE slug = 'entity'`, InstanceCollisionSlug); err != nil {
+		return CollisionType{}, fmt.Errorf("register %s type: %w", InstanceCollisionSlug, err)
+	}
+	typ, err := q.GetTypeBySlug(ctx, InstanceCollisionSlug)
+	if err != nil {
+		return CollisionType{}, fmt.Errorf("resolve %s type: %w", InstanceCollisionSlug, err)
+	}
+	if !typ.EntityID.Valid || typ.EntityID.Int64 == typ.ID {
+		return CollisionType{}, fmt.Errorf("%s type entity %+v must exist and differ from types.id %d", InstanceCollisionSlug, typ.EntityID, typ.ID)
+	}
+	corp, err := q.GetTypeBySlug(ctx, "corporation")
+	if err != nil {
+		return CollisionType{}, fmt.Errorf("resolve corporation type: %w", err)
+	}
+	var taken bool
+	if err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM entities WHERE id = $1)`, typ.ID).Scan(&taken); err != nil {
+		return CollisionType{}, fmt.Errorf("check entity id %d: %w", typ.ID, err)
+	}
+	if taken {
+		return CollisionType{}, fmt.Errorf("entities.id %d (== types.id of %q) is already taken", typ.ID, InstanceCollisionSlug)
+	}
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO entities (id, fundamental_type_id) VALUES ($1, $2)`, typ.ID, corp.ID); err != nil {
+		return CollisionType{}, fmt.Errorf("insert instance entity id %d: %w", typ.ID, err)
+	}
 	if _, err := pool.Exec(ctx,
 		`SELECT setval(pg_get_serial_sequence('entities','id'), (SELECT max(id) FROM entities))`); err != nil {
-		return Fixture{}, fmt.Errorf("advance entities id sequence: %w", err)
+		return CollisionType{}, fmt.Errorf("advance entities id sequence: %w", err)
 	}
-	return fx, nil
+	return CollisionType{Slug: InstanceCollisionSlug, TypeID: typ.ID, TypeEntityID: typ.EntityID.Int64, InstanceID: typ.ID}, nil
 }
 
 // EntitySemantic is a test Authorizer that mirrors the production
@@ -251,8 +319,8 @@ func SeedOwnerFixture(ctx context.Context, pool *pgxpool.Pool, typeSlugs ...stri
 //     or on a targeted grant through the target-group closure.
 //
 // Because it treats every non-nil target as an entities.id, it admits an actor
-// that owns, or holds a targeted grant over, the entity whose id happens to
-// equal a types.id passed as the target. That is the contract, not a defect in
+// that holds a targeted grant over the entity whose id happens to equal a
+// types.id passed as the target. That is the contract, not a defect in
 // this stand-in; it is why call sites must never pass a type id.
 type EntitySemantic struct {
 	Pool *pgxpool.Pool
@@ -335,10 +403,13 @@ SELECT EXISTS (
 }
 
 // TypeAware is an EntitySemantic that also implements authz.TypeAuthorizer,
-// mirroring the production AuthorizeType: typeID <= 0 is forbidden; a wildcard
-// grant allows; anything else is forbidden. It never compares typeID with
-// entities.id, entities.owner_id, or grants.target_id. It counts invocations
-// so tests can prove the type-aware branch actually ran.
+// modelling the post-change production AuthorizeType: allow when the actor
+// chain holds a wildcard grant, or a grant on the EXACT type's entity
+// (types.entity_id for typeID), directly or through a target group containing
+// it. typeID <= 0 is forbidden. It never consults ownership, never treats
+// typeID as an entities.id or a grants.target_id, and does not walk to parent
+// types (no inheritance). It counts invocations so tests can prove the
+// type-aware branch actually ran.
 type TypeAware struct {
 	*EntitySemantic
 	calls atomic.Int64
@@ -368,6 +439,27 @@ func (a *TypeAware) AuthorizeType(ctx context.Context, operation string, typeID 
 		return err
 	}
 	if wildcard {
+		return nil
+	}
+
+	var granted bool
+	if err := a.Pool.QueryRow(ctx, actorChainCTE+`,
+    TargetChain AS (
+        SELECT g.target_id AS tid
+        FROM grants g
+        JOIN ActorChain ac ON g.actor_id = ac.aid
+        WHERE g.operation_id = ANY($2) AND g.target_id IS NOT NULL
+        UNION
+        SELECT atgm.member_id
+        FROM authz_target_group_members atgm
+        JOIN TargetChain tc ON atgm.group_id = tc.tid
+    )
+SELECT EXISTS (
+    SELECT 1 FROM types t JOIN TargetChain tc ON tc.tid = t.entity_id WHERE t.id = $3
+)`, actor, ops, typeID).Scan(&granted); err != nil {
+		return fmt.Errorf("authztest: type grant check: %w", err)
+	}
+	if granted {
 		return nil
 	}
 	return apiresp.ErrForbidden

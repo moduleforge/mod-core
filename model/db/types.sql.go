@@ -10,7 +10,7 @@ import (
 )
 
 const getTypeByID = `-- name: GetTypeByID :one
-SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at
+SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at, entity_id
 FROM types
 WHERE id = $1
 `
@@ -27,12 +27,13 @@ func (q *Queries) GetTypeByID(ctx context.Context, id int64) (Type, error) {
 		&i.Description,
 		&i.CreatedAt,
 		&i.DeprecatedAt,
+		&i.EntityID,
 	)
 	return i, err
 }
 
 const getTypeBySlug = `-- name: GetTypeBySlug :one
-SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at
+SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at, entity_id
 FROM types
 WHERE slug = $1
 `
@@ -49,12 +50,13 @@ func (q *Queries) GetTypeBySlug(ctx context.Context, slug string) (Type, error) 
 		&i.Description,
 		&i.CreatedAt,
 		&i.DeprecatedAt,
+		&i.EntityID,
 	)
 	return i, err
 }
 
 const listAllTypes = `-- name: ListAllTypes :many
-SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at
+SELECT id, slug, parent_id, concrete, name, description, created_at, deprecated_at, entity_id
 FROM types
 `
 
@@ -76,6 +78,7 @@ func (q *Queries) ListAllTypes(ctx context.Context) ([]Type, error) {
 			&i.Description,
 			&i.CreatedAt,
 			&i.DeprecatedAt,
+			&i.EntityID,
 		); err != nil {
 			return nil, err
 		}
