@@ -1,0 +1,12 @@
+version: 2
+items:
+    - title: FieldError.Field format is a dotted Go path
+      id: N9QA
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:helpers
+        - effort:unspecified
+      text: 'In api/apiresp/decode.go (around lines 121-123), FieldError.Field for a json.UnmarshalTypeError is ute.Field, a dotted path such as "a.b" built from JSON keys. It can be empty for top-level type mismatches and is not a JSON pointer. Acceptable for the stated intent. Recommendation: document the Field format on DecodeJSON if consumers key off it. Reviewer-authored suggestion, low confidence.'
+closed: []
