@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: FieldError.Field format is a dotted Go path
-      id: N9QA
-      date: "2026-10-10"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:helpers
-        - effort:unspecified
-      text: 'In api/apiresp/decode.go (around lines 121-123), FieldError.Field for a json.UnmarshalTypeError is ute.Field, a dotted path such as "a.b" built from JSON keys. It can be empty for top-level type mismatches and is not a JSON pointer. Acceptable for the stated intent. Recommendation: document the Field format on DecodeJSON if consumers key off it. Reviewer-authored suggestion, low confidence.'
     - title: AuthorizeResolve masking has a timing channel
       id: lzjX
       date: "2026-10-10"
@@ -63,4 +54,9 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'AGENTS.md line 3 links to ./.claude/settings.local.json, which does not exist in this checkout, leaving a dangling forward-link. Recommendation: remove the link or point it at an existing file. This predates the changes under review and is unrelated to them. Reviewer-authored finding, high confidence.'
-closed: []
+closed:
+    - id: N9QA
+      title: FieldError.Field format is a dotted Go path
+      disposition: promoted
+      ref: N9QA
+      date: "2026-10-10"
