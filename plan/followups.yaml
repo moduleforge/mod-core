@@ -151,3 +151,13 @@ items:
         - plan/phase:helpers
         - plan/slug:error-precedence-foundation
       text: 'In api/apiresp/decode.go (around lines 121-123), FieldError.Field for a json.UnmarshalTypeError is ute.Field, a dotted path such as "a.b" built from JSON keys. It can be empty for top-level type mismatches and is not a JSON pointer. Acceptable for the stated intent. Recommendation: document the Field format on DecodeJSON if consumers key off it. Reviewer-authored suggestion, low confidence.'
+    - title: ordertest imports testing in non-test package
+      id: zcmY
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'api/apiresp/ordertest/ordertest.go is a non-_test package that imports "testing" and net/http/httptest, so any consumer that imports it links those packages. This is deliberate for a shared helper and the reviewer found no unsafe behavior in it. Recommendation: note in the package doc that it must be imported only from _test files, so it is not linked into production binaries by accident. Reviewer-authored suggestion, low confidence.'
