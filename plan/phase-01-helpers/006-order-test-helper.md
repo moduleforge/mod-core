@@ -78,3 +78,7 @@ architectural_impact: true
 - `.flow/error-order-helpers.md` (main checkout): "Enforcement (cheap)".
 - docs-mf-standards `architecture/http-error-precedence.md` checklist.
 - Tasks 001 to 004 in this phase (helpers it composes in its self-test).
+
+## Status
+
+Outcome: succeeded (2026-10-10). Added `api/apiresp/ordertest/ordertest.go` (exported API as frozen) and `api/apiresp/ordertest/ordertest_test.go` (positive self-tests for masked-miss, domain-404 and AuthzFirst routes; negative tests for 400-before-401, 404-before-403, 400-after-403, late 422 leaking). Validation: gofmt clean, build, vet, `go test ./...` pass; not under `internal/`; zero chi/testify deps.
