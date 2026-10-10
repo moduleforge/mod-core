@@ -82,6 +82,7 @@ phases:
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
+      diff_base: 61d97a9531aabbebbd4923496c99ced1e404c040
       tasks:
         - number: 1
           slug: fix-type-level-authorization-doc
@@ -97,11 +98,13 @@ phases:
           slug: document-helpers
           title: Document Error-Precedence Helpers in API Docs
           path: phase-02-helper-docs/002-document-helpers.md
-          done: false
+          done: true
           tier: sonnet-low
+          digest: Documented the new helpers in the AGENTS.md authz/, apiresp/, entity/ and gui useApiError entries and in the README Go API and GUI bullets, with links to the normative doc. Also added ErrUnprocessable to the service/ row.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-02-002
+            commit:
+                - 669bc23
             merge: null
     - number: 3
       slug: doc-updates
