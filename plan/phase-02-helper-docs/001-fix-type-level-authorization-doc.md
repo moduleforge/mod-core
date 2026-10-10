@@ -32,3 +32,11 @@ Acceptance: the greps behave as stated; the diff touches only `docs/architecture
 
 - `.flow/peer-auth-findings.md` (main checkout) section C, "Proposed wording".
 - Followup `ggLy` in the main checkout's `plan/followups.yaml` (removed by the manager post-merge).
+
+## Status
+
+- Outcome: succeeded
+- Date: 2026-10-10
+- Validation: all four greps behave as stated; `git diff --stat` touches only `docs/architecture/type-level-authorization.md`. Log: `.flow/validation-logs/01-doc-greps.log`.
+- Affected file: `docs/architecture/type-level-authorization.md`.
+- Decisions: the "does not reject a nil" note was kept as one unwrapped line so the `grep -n` expecting exactly one match passes (the sentence contains two occurrences of the phrase); the alias bullet's wording was reshaped to state the mod-users-only scope while keeping the required signature sentence.
