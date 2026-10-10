@@ -88,7 +88,7 @@ phases:
           slug: fix-type-level-authorization-doc
           title: Fix Type-Level Authorization Doc Claims
           path: phase-02-helper-docs/001-fix-type-level-authorization-doc.md
-          done: false
+          done: true
           tier: haiku-med
           digest: 'Fixed the type-level authorization architecture doc: replaced the ''same method set'' claim with same AuthorizeType signature wording, scoped the alias bullet to mod-users, added the nil-guard and non-positive type id caveats, and appended the fallback-rule proviso.'
           git:
