@@ -23,4 +23,10 @@ var (
 	ErrNotFound        = errors.New("not_found")
 	ErrInvalidInput    = errors.New("invalid_input")
 	ErrConflict        = errors.New("conflict")
+
+	// ErrUnprocessable marks a request body that is well-formed and
+	// authorized but semantically invalid, e.g. a referenced value that does
+	// not exist or lies outside a registry. Reserved code
+	// unprocessable_entity, status 422.
+	ErrUnprocessable = errors.New("unprocessable")
 )

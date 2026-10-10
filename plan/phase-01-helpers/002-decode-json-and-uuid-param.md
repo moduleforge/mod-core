@@ -52,3 +52,7 @@ architectural_impact: true
 - `.flow/error-order-helpers.md` (main checkout): findings 2 and 3, item 2.
 - Existing blocks to mirror semantics of: mod-tasks `tasks.go:165-172`, mod-workflows `response.go` (`maxJSONBodyBytes`), mod-users `internal/server/respond.go:50`.
 - `plan/notes/helper-api-final-signatures.md`.
+
+## Status
+
+Outcome: succeeded (2026-10-10). Added `api/apiresp/decode.go`, `api/apiresp/uuidparam.go` and tests. gofmt, build, vet, `go test ./...` green; no chi dependency in `apiresp`. Unknown-field name is deliberately not echoed in `Field` (client-safe message).

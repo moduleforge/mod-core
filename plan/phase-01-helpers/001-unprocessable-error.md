@@ -48,3 +48,7 @@ architectural_impact: true
 - `.flow/error-order-helpers.md` (main checkout): finding I, item 3.
 - `api/apiresp/conflict.go`, `api/apiresp/invalidinput.go` (`fieldDetailCarrier`), `api/apiresp/writer.go`.
 - `plan/notes/helper-api-final-signatures.md`.
+
+## Status
+
+succeeded (2026-10-10). All validation passed (gofmt clean, build, vet, tests). Files: api/apiresp/errors.go, api/apiresp/writer.go, api/apiresp/unprocessable.go, api/apiresp/unprocessable_test.go, api/service/errors.go. openapi.fragment.yaml does not enumerate error codes; left unchanged.
