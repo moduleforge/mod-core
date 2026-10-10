@@ -28,7 +28,8 @@ phases:
           digest: Added DecodeJSON, its options and Validator hook, and ParseUUIDParam as additive new files in apiresp, with tests, matching the frozen signatures. No existing file touched.
           git:
             branch: plan/error-precedence-foundation-01-002
-            commit: []
+            commit:
+                - 92ee8f3
             merge: null
         - number: 3
           slug: require-auth-middleware
