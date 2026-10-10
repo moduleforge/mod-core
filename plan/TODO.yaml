@@ -78,7 +78,7 @@ phases:
             branch: plan/error-precedence-foundation-01-006
             commit:
                 - "4722431"
-            merge: null
+            merge: 3aaf5a3c5f0e2e36ba312cd318d8036b33f549bf
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
