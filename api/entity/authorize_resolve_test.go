@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -180,5 +181,101 @@ func TestAuthorizeResolve_DBErrorWrappedNotMasked(t *testing.T) {
 	}
 	if az.calls != 0 {
 		t.Errorf("Authorize must not be called on DB error")
+	}
+}
+
+// The miss-delay tests mutate package-level tunables, so they are
+// deliberately not parallel (serial tests finish before parallel ones resume).
+
+func setMissDelay(t *testing.T, floor, jitter time.Duration) {
+	t.Helper()
+	t.Cleanup(entity.SetMissDelayForTest(floor, jitter))
+}
+
+func missQuerier() *countingQuerier {
+	return &countingQuerier{resolverStubQuerier: resolverStubQuerier{err: pgx.ErrNoRows}}
+}
+
+func TestAuthorizeResolve_MissWaitsAtLeastFloor(t *testing.T) {
+	const floor = 20 * time.Millisecond
+	setMissDelay(t, floor, 5*time.Millisecond)
+	start := time.Now()
+	id, err := entity.NewResolver().AuthorizeResolve(actorCtx(), missQuerier(), &stubAuthorizer{}, "read", uuid.New(), "s")
+	elapsed := time.Since(start)
+	if id != 0 || !errors.Is(err, entity.ErrForbidden) {
+		t.Fatalf("got (%d, %v); want (0, ErrForbidden)", id, err)
+	}
+	if elapsed < floor {
+		t.Errorf("elapsed %v < floor %v", elapsed, floor)
+	}
+}
+
+func TestAuthorizeResolve_MissHonorsContextCancel(t *testing.T) {
+	setMissDelay(t, 2*time.Second, 0)
+	ctx, cancel := context.WithCancel(actorCtx())
+	time.AfterFunc(20*time.Millisecond, cancel)
+	defer cancel()
+	start := time.Now()
+	id, err := entity.NewResolver().AuthorizeResolve(ctx, missQuerier(), &stubAuthorizer{}, "read", uuid.New(), "s")
+	elapsed := time.Since(start)
+	if id != 0 || err != entity.ErrForbidden {
+		t.Fatalf("got (%d, %v); want (0, ErrForbidden) unchanged", id, err)
+	}
+	if elapsed > time.Second {
+		t.Errorf("cancel not honored promptly; elapsed %v", elapsed)
+	}
+}
+
+func TestAuthorizeResolve_MissAlreadyCancelledCtx(t *testing.T) {
+	setMissDelay(t, 2*time.Second, 0)
+	ctx, cancel := context.WithCancel(actorCtx())
+	cancel()
+	start := time.Now()
+	_, err := entity.NewResolver().AuthorizeResolve(ctx, missQuerier(), &stubAuthorizer{}, "read", uuid.New(), "s")
+	if err != entity.ErrForbidden {
+		t.Fatalf("want ErrForbidden; got %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("elapsed %v; want prompt return", elapsed)
+	}
+}
+
+func TestAuthorizeResolve_HitNotDelayed(t *testing.T) {
+	setMissDelay(t, 2*time.Second, 0)
+	row := makeEntityRow(8)
+	start := time.Now()
+	id, err := entity.NewResolver().AuthorizeResolve(actorCtx(),
+		&countingQuerier{resolverStubQuerier: resolverStubQuerier{entity: row}}, &stubAuthorizer{}, "read", row.Uuid, "s")
+	if err != nil || id != 8 {
+		t.Fatalf("got (%d, %v); want (8, nil)", id, err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("hit delayed: %v", elapsed)
+	}
+}
+
+func TestAuthorizeResolve_DBErrorNotDelayed(t *testing.T) {
+	setMissDelay(t, 2*time.Second, 0)
+	dbErr := errors.New("connection reset")
+	start := time.Now()
+	_, err := entity.NewResolver().AuthorizeResolve(actorCtx(),
+		&countingQuerier{resolverStubQuerier: resolverStubQuerier{err: dbErr}}, &stubAuthorizer{}, "read", uuid.New(), "s")
+	if !errors.Is(err, dbErr) || errors.Is(err, entity.ErrForbidden) || err == dbErr {
+		t.Fatalf("want wrapped unmasked dbErr; got %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("DB error delayed: %v", elapsed)
+	}
+}
+
+func TestAuthorizeResolve_MissZeroTunablesNoWait(t *testing.T) {
+	setMissDelay(t, 0, 0)
+	start := time.Now()
+	_, err := entity.NewResolver().AuthorizeResolve(actorCtx(), missQuerier(), &stubAuthorizer{}, "read", uuid.New(), "s")
+	if !errors.Is(err, entity.ErrForbidden) {
+		t.Fatalf("want ErrForbidden; got %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Errorf("unexpected wait: %v", elapsed)
 	}
 }
