@@ -171,3 +171,13 @@ items:
         - plan/phase:helpers
         - plan/slug:error-precedence-foundation
       text: 'In api/apiresp/decode.go (failDecode, around lines 117-126), unknown JSON fields are detected by matching the error text prefix "json: unknown field", because encoding/json has no typed error for it. If a future Go release changes the message, the response stays 400 but degrades to the generic "must be valid JSON" detail. The first parameter of failDecode (decodeConfig) is also unused. Recommendation: keep the string match, add a test that pins the message (decode_test.go may already cover it), and drop the unused parameter. Reviewer-authored finding, medium confidence.'
+    - title: AGENTS.md error lists omit ErrUnprocessable
+      id: Bick
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: 'AGENTS.md line 121 (the service/ package row) lists the sentinel errors as ErrNotFound, ErrForbidden, ErrInvalidInput and ErrConflict aliasing the apiresp sentinels, and line 127 (the apiresp/ row) lists ErrUnauthenticated, ErrForbidden, ErrNotFound, ErrInvalidInput, ErrConflict. The change adds ErrUnprocessable in api/apiresp/errors.go and api/service/errors.go, so both lists are now incomplete. Recommendation: add ErrUnprocessable to both rows. The helper-docs phase already documents the new helpers in AGENTS.md. Reviewer-authored finding, medium confidence.'
