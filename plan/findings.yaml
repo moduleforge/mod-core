@@ -18,15 +18,6 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. Recommendation: route the wrapped text through internal/untrusted, or confirm the logging path escapes control characters. Reviewer-authored finding, medium confidence.'
-    - title: AGENTS.md error lists omit ErrUnprocessable
-      id: Bick
-      date: "2026-10-10"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:helpers
-        - effort:unspecified
-      text: 'AGENTS.md line 121 (the service/ package row) lists the sentinel errors as ErrNotFound, ErrForbidden, ErrInvalidInput and ErrConflict aliasing the apiresp sentinels, and line 127 (the apiresp/ row) lists ErrUnauthenticated, ErrForbidden, ErrNotFound, ErrInvalidInput, ErrConflict. The change adds ErrUnprocessable in api/apiresp/errors.go and api/service/errors.go, so both lists are now incomplete. Recommendation: add ErrUnprocessable to both rows. The helper-docs phase already documents the new helpers in AGENTS.md. Reviewer-authored finding, medium confidence.'
     - title: AGENTS.md links to a missing settings file
       id: C69x
       date: "2026-10-10"
@@ -51,4 +42,9 @@ closed:
       title: DecodeJSON unknown-field match is text-based
       disposition: promoted
       ref: WoUX
+      date: "2026-10-10"
+    - id: Bick
+      title: AGENTS.md error lists omit ErrUnprocessable
+      disposition: promoted
+      ref: Bick
       date: "2026-10-10"
