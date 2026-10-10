@@ -16,7 +16,7 @@ items:
       id: A46l
       date: "2026-10-10"
       tags:
-        - type:documentation
+        - type:style
         - priority:low
         - plan/phase:helper-docs
         - effort:unspecified
