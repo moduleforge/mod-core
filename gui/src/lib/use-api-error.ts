@@ -14,7 +14,13 @@ import { useToast } from './toast-context';
  * (`network_error`, `internal_error`, an unrecognized code, or a
  * caller-synthesized optimistic-rollback error) is toast-worthy.
  */
-const INLINE_CODES = new Set(['forbidden', 'not_found', 'conflict', 'invalid_input']);
+const INLINE_CODES = new Set([
+  'forbidden',
+  'not_found',
+  'conflict',
+  'invalid_input',
+  'unprocessable_entity',
+]);
 
 /** Options accepted by `useApiError`. */
 export interface UseApiErrorOptions {
@@ -80,7 +86,7 @@ function classifyInline(
     };
   }
   if (!hasFieldMatch) {
-    // Table row 1: top-level forbidden/not_found/conflict/invalid_input with
+    // Table row 1: top-level forbidden/not_found/conflict/invalid_input/unprocessable_entity with
     // no details at all is banner-level via the top-level message.
     return { fieldErrors, bannerError: { code: error.code, message: error.message } };
   }
@@ -100,7 +106,8 @@ function classifyInline(
  * - **`unauthenticated`** is handled by `request()`'s redirect and is never
  *   surfaced here — guarded explicitly in case it reaches the hook anyway
  *   (e.g. a caller set `skipAuthRedirect`).
- * - **`forbidden` / `not_found` / `conflict` / `invalid_input`** are inline:
+ * - **`forbidden` / `not_found` / `conflict` / `invalid_input` /
+ *   `unprocessable_entity`** are inline:
  *   a `details[]` entry whose `field` is in `options.fields` becomes a field
  *   error; every other entry, and the top-level error when nothing matched,
  *   becomes the banner error.

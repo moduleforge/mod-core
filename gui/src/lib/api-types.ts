@@ -21,7 +21,7 @@ export interface FieldErrorData {
 
 /** The `error` payload of a non-2xx API response. */
 export interface ApiError {
-  /** Reserved top-level code: "invalid_input", "forbidden", "not_found", "conflict", "unauthenticated", "internal_error", "network_error" (client-synthesized), or "origin_not_allowed" (client-synthesized). */
+  /** Reserved top-level code: "invalid_input", "unprocessable_entity", "forbidden", "not_found", "conflict", "unauthenticated", "internal_error", "network_error" (client-synthesized), or "origin_not_allowed" (client-synthesized). */
   code: string;
   message: string;
   /** Present only when there is per-field detail. */
