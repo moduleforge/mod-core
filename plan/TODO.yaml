@@ -55,6 +55,7 @@ phases:
           path: phase-01-helpers/005-gui-unprocessable-entity.md
           done: false
           tier: sonnet-low
+          digest: Added unprocessable_entity to INLINE_CODES, updated three doc comments, and added a four-test hook suite covering field routing, banner routing, unrecognized code still toasting, and unauthenticated never surfacing.
           git:
             branch: null
             commit: []
