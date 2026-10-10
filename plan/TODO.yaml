@@ -124,7 +124,7 @@ phases:
             branch: plan/error-precedence-foundation-03-001
             commit:
                 - b60a565
-            merge: null
+            merge: b1138e69829aba827055b3d5d3574dd553d2bcab
     - number: 4
       slug: release
       title: 'Release: Merge, Push, and Pin Bump'
