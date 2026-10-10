@@ -49,3 +49,7 @@ architectural_impact: true
 
 - `.flow/error-order-helpers.md` (main checkout): rows C, D, E, H; item 4; "Open decision" paragraph on the masked resolve being a necessary DB read.
 - `api/entity/resolver.go`, `api/entity/resolver_test.go`, `api/authz/authz.go`.
+
+## Status
+
+succeeded, 2026-10-10. All validation passed (gofmt clean, build, vet, tests; `go list -deps ./authz` shows 0 `core-api/entity` deps). Added `api/entity/authorize_resolve.go` and `api/entity/authorize_resolve_test.go`; `Resolve` untouched.
