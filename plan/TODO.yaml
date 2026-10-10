@@ -54,7 +54,7 @@ phases:
             branch: plan/error-precedence-foundation-01-004
             commit:
                 - 721538d
-            merge: null
+            merge: 46481aef9f98aea6717902c6eb0f347665c36b04
         - number: 5
           slug: gui-unprocessable-entity
           title: Route unprocessable_entity in core-gui useApiError
