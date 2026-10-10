@@ -52,6 +52,8 @@ func classify(err error) (code string, status int) {
 		return "invalid_input", http.StatusBadRequest
 	case errors.Is(err, ErrConflict):
 		return "conflict", http.StatusConflict
+	case errors.Is(err, ErrUnprocessable):
+		return "unprocessable_entity", http.StatusUnprocessableEntity
 	default:
 		return "internal_error", http.StatusInternalServerError
 	}
@@ -74,6 +76,8 @@ func publicMessage(err error, code string) string {
 		return "one or more fields are invalid"
 	case "conflict":
 		return "the request conflicts with the current state"
+	case "unprocessable_entity":
+		return "the request references a value that is not valid"
 	default:
 		// internal_error, or any future unmapped code: never echo err here.
 		return "an internal error occurred"
