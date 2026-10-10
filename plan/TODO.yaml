@@ -49,7 +49,7 @@ phases:
           tier: sonnet-med
           digest: Added Resolver.AuthorizeResolve per the frozen signature. A DB miss is always masked to ErrForbidden, ignoring AllowNotFound. Authorizer error passes through unchanged. Nine tests cover every listed case plus nil-authorizer. No import cycle.
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-01-004
             commit: []
             merge: null
         - number: 5
