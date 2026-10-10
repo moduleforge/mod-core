@@ -92,7 +92,7 @@ phases:
           tier: haiku-med
           digest: 'Fixed the type-level authorization architecture doc: replaced the ''same method set'' claim with same AuthorizeType signature wording, scoped the alias bullet to mod-users, added the nil-guard and non-positive type id caveats, and appended the fallback-rule proviso.'
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-02-001
             commit: []
             merge: null
         - number: 2
