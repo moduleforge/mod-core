@@ -204,3 +204,16 @@ items:
         In api/entity/authorize_resolve.go (lines 42-53), a DB miss returns ErrForbidden immediately while a hit also calls az.Authorize(), which may do extra work (policy lookup or RPC). An unauthorized caller could in principle distinguish "missing" from "exists but forbidden" by latency. Body, status and code are identical in both cases, so exploitability is low and depends on Authorize being slow relative to network jitter. Recommendation: document the timing caveat, or equalize cost on a miss (for example call Authorize with a sentinel target and discard the result) if existence-hiding is a hard requirement. Reviewer-authored finding, medium confidence.
 
         Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later by documenting the timing caveat in the AuthorizeResolve doc comment, or equalize cost on a miss; or dismiss with a concrete reason. Recommended: fix later (document the caveat at minimum). Promoted at priority:high so it is not lost.
+    - title: AuthorizeResolve wraps raw DB error text
+      id: G4X9
+      date: "2026-10-10"
+      tags:
+        - type:security
+        - priority:high
+        - effort:unspecified
+        - plan/phase:helpers
+        - plan/slug:error-precedence-foundation
+      text: |-
+        In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. The sanitizer named in the original recommendation (internal/untrusted) does not exist in this checkout; the only sink is the slog call in api/apiresp/writer.go (lines 97 and 100), so the exposure applies to every error logged through apiresp.WriteError, not only this helper, and depends on the composing app's slog handler. Recommendation: require or confirm a quoting slog handler, or escape at the WriteError log sink. Reviewer-authored finding, medium confidence.
+
+        Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later at the shared WriteError log sink, or dismiss with a concrete reason. Recommended: fix later at the shared sink. Promoted at priority:high so it is not lost.
