@@ -13,6 +13,7 @@ phases:
           path: phase-01-helpers/001-unprocessable-error.md
           done: false
           tier: sonnet-med
+          digest: Added ErrUnprocessable and Unprocessable (422, unprocessable_entity) wired into the existing classify and publicMessage mapping, plus the service alias and tests. Purely additive.
           git:
             branch: null
             commit: []
