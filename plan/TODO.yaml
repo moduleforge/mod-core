@@ -122,7 +122,8 @@ phases:
           digest: Only one doc needed an edit. The reserved error-code list in display-name-http.md now includes unprocessable_entity, and the file links the error-precedence rule. The other named files were reviewed and are consistent. Build and tests pass.
           git:
             branch: plan/error-precedence-foundation-03-001
-            commit: []
+            commit:
+                - b60a565
             merge: null
     - number: 4
       slug: release
