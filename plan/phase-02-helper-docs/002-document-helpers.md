@@ -29,3 +29,7 @@ Acceptance: every helper name from the frozen API table appears at least once in
 
 - `plan/notes/helper-api-final-signatures.md`
 - Existing `AGENTS.md` key-types table rows for `authz/` and `apiresp/`.
+
+## Status
+
+succeeded, 2026-10-10. Documented helpers in `AGENTS.md` (authz/, apiresp/, entity/ rows, gui useApiError line, service/ sentinel list) and `README.md` (Go API bullet, GUI bullet). Greps pass; only AGENTS.md and README.md changed. Caveat: the `./docs/mf-standards/architecture/http-error-precedence.md` link dangles until the submodule pin includes docs-mf-standards 477e708 or later.
