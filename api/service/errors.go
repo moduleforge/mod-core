@@ -14,3 +14,7 @@ var ErrInvalidInput = apiresp.ErrInvalidInput
 // ErrConflict is returned when the request conflicts with the current state
 // (e.g. a uniqueness violation or optimistic-concurrency clash).
 var ErrConflict = apiresp.ErrConflict
+
+// ErrUnprocessable is returned when the request is well-formed and authorized
+// but semantically invalid (e.g. a referenced value that does not exist).
+var ErrUnprocessable = apiresp.ErrUnprocessable

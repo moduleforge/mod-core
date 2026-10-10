@@ -48,9 +48,10 @@ The nil check detects only an untyped-nil `az`; a typed-nil pointer in the inter
 ## The fallback rule
 
 A nil target is the core contract's "no specific target exists yet". The authorization-design
-contract requires an `Authorizer` to answer it from wildcard grants only. So an `Authorizer` that
-lacks the capability, hides it behind a decorator, or is a test stub still fails closed rather than
-matching an unrelated entity.
+contract requires an `Authorizer` to answer it from wildcard grants only, which is the wildcard
+subset of what `TypeAuthorizer` answers. So an `Authorizer` that lacks the capability, hides it
+behind a decorator, or is a test stub still fails closed rather than matching an unrelated entity,
+provided the implementation honors that contract.
 
 The same rule has a fail-closed consequence for type grants. The nil-target fallback answers from
 wildcard grants only, so an `Authorizer` that lacks the capability, or hides it behind a decorator,
@@ -128,27 +129,33 @@ entity data model.
 
 ## Adopting the helper in a module
 
-A module that carries a local structural interface and helper for the same purpose can switch to
-the core definition once its build sees a mod-core commit that contains it:
+A module that carries a local structural interface and helper for the same purpose (for example
+mod-users, mod-authz, and mod-workflows) can switch to the core definition once its build sees a
+mod-core commit that contains it.
+Note the local helpers differ in edge-case guards (mod-authz does not reject a nil `az` or `typeID <= 0`; mod-users does not reject a nil `az`), so switching also adopts the core guards. The steps are:
 
 - Replace the local helper body with `authz.AuthorizeType(ctx, az, op, typeID)`.
 - Replace the local interface with an alias, `type TypeAuthorizer = authz.TypeAuthorizer`, keeping
-  any existing compile-time assertion. The method signatures must stay identical so structural
-  satisfaction holds.
+  the compile-time assertion. This applies only to mod-users' exported `localAuthz.TypeAuthorizer`,
+  which has one. The mod-authz and mod-workflows interfaces are unexported (`typeAuthorizer`), so for
+  them, delete the local interface and call `authz.AuthorizeType` directly. The method signatures must
+  stay identical so structural satisfaction holds.
 - Authorizer decorators should forward `AuthorizeType` to the wrapped authorizer. Until they do,
   callers take the nil fallback, which fails closed.
 
-Modules do not have to wait for each other: a local helper and the core helper must have the same
-method set, so that they interoperate.
+Modules do not have to wait for each other: the local helpers and the core helper
+share the same `AuthorizeType` method signature, so they interoperate.
 
 ## mod-core call sites
 
 mod-core's four type-level `create` paths use the helper: `NaturalPersonService.Create`,
 `CorporationService.Create`, `ServiceAccountService.Create`, and `AppsHandler.Create`
 (`POST /v1/apps`). These call sites never pass the type id as an entity target. A grant on an
-unrelated entity whose id happens to equal the type id confers nothing. A grant on the type's own
-entity is honoured only through `AuthorizeType`. mod-core has no type-scoped `list` call:
-`AppsHandler.List` authorizes with a nil target.
+unrelated entity whose id happens to equal the type id confers nothing: a non-wildcard actor who
+owns, or holds a targeted grant over, the entity whose id equals the type id is denied with
+`ErrForbidden`. A grant on the type's own entity is honoured only through `AuthorizeType`. Wildcard
+`manage` and `create` holders are unaffected (a non-positive type id is denied for everyone). mod-core
+has no type-scoped `list` call: `AppsHandler.List` authorizes with a nil target.
 
 The ecosystem call-shape table in `docs/mf-standards/architecture/authorization-design.md` still
 describes passing the type id as the target. That submodule is not edited from mod-core; the
