@@ -82,6 +82,7 @@ phases:
     - number: 2
       slug: helper-docs
       title: Helper Documentation and Type-Level Authorization Fix
+      diff_base: 61d97a9531aabbebbd4923496c99ced1e404c040
       tasks:
         - number: 1
           slug: fix-type-level-authorization-doc
