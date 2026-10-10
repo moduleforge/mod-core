@@ -103,7 +103,8 @@ phases:
           digest: Documented the new helpers in the AGENTS.md authz/, apiresp/, entity/ and gui useApiError entries and in the README Go API and GUI bullets, with links to the normative doc. Also added ErrUnprocessable to the service/ row.
           git:
             branch: plan/error-precedence-foundation-02-002
-            commit: []
+            commit:
+                - 669bc23
             merge: null
     - number: 3
       slug: doc-updates
