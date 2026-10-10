@@ -100,6 +100,7 @@ phases:
           path: phase-02-helper-docs/002-document-helpers.md
           done: false
           tier: sonnet-low
+          digest: Documented the new helpers in the AGENTS.md authz/, apiresp/, entity/ and gui useApiError entries and in the README Go API and GUI bullets, with links to the normative doc. Also added ErrUnprocessable to the service/ row.
           git:
             branch: null
             commit: []
