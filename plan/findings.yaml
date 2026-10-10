@@ -54,4 +54,13 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'AGENTS.md line 121 (the service/ package row) lists the sentinel errors as ErrNotFound, ErrForbidden, ErrInvalidInput and ErrConflict aliasing the apiresp sentinels, and line 127 (the apiresp/ row) lists ErrUnauthenticated, ErrForbidden, ErrNotFound, ErrInvalidInput, ErrConflict. The change adds ErrUnprocessable in api/apiresp/errors.go and api/service/errors.go, so both lists are now incomplete. Recommendation: add ErrUnprocessable to both rows. The helper-docs phase already documents the new helpers in AGENTS.md. Reviewer-authored finding, medium confidence.'
+    - title: AGENTS.md links to a missing settings file
+      id: C69x
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:helpers
+        - effort:unspecified
+      text: 'AGENTS.md line 3 links to ./.claude/settings.local.json, which does not exist in this checkout, leaving a dangling forward-link. Recommendation: remove the link or point it at an existing file. This predates the changes under review and is unrelated to them. Reviewer-authored finding, high confidence.'
 closed: []
