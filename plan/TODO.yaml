@@ -23,7 +23,7 @@ phases:
           slug: decode-json-and-uuid-param
           title: Add apiresp.DecodeJSON and ParseUUIDParam
           path: phase-01-helpers/002-decode-json-and-uuid-param.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Added DecodeJSON, its options and Validator hook, and ParseUUIDParam as additive new files in apiresp, with tests, matching the frozen signatures. No existing file touched.
           git:
