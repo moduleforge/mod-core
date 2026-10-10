@@ -1,5 +1,14 @@
 version: 2
-items: []
+items:
+    - title: The link ./docs/mf-standards/architecture/htt
+      id: KJLW
+      date: "2026-10-10"
+      tags:
+        - type:ambiguity
+        - plan/phase:helper-docs
+        - priority:unspecified
+        - effort:unspecified
+      text: The link ./docs/mf-standards/architecture/http-error-precedence.md dangles in this worktree; it resolves once the mf-standards submodule pin includes docs-mf-standards commit 477e708 or later.
 closed:
     - id: N9QA
       title: FieldError.Field format is a dotted Go path
