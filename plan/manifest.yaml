@@ -1,7 +1,2 @@
 version: 1
-plans:
-    - slug: error-precedence-foundation
-      status: working
-      wave:
-        slug: http-error-precedence-conformance
-        leadProject: core
+plans: []
