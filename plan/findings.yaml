@@ -9,4 +9,13 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'In api/apiresp/decode.go (around lines 121-123), FieldError.Field for a json.UnmarshalTypeError is ute.Field, a dotted path such as "a.b" built from JSON keys. It can be empty for top-level type mismatches and is not a JSON pointer. Acceptable for the stated intent. Recommendation: document the Field format on DecodeJSON if consumers key off it. Reviewer-authored suggestion, low confidence.'
+    - title: AuthorizeResolve masking has a timing channel
+      id: lzjX
+      date: "2026-10-10"
+      tags:
+        - type:security
+        - priority:low
+        - plan/phase:helpers
+        - effort:unspecified
+      text: 'In api/entity/authorize_resolve.go (lines 42-53), a DB miss returns ErrForbidden immediately while a hit also calls az.Authorize(), which may do extra work (policy lookup or RPC). An unauthorized caller could in principle distinguish "missing" from "exists but forbidden" by latency. Body, status and code are identical in both cases, so exploitability is low and depends on Authorize being slow relative to network jitter. Recommendation: document the timing caveat, or equalize cost on a miss (for example call Authorize with a sentinel target and discard the result) if existence-hiding is a hard requirement. Reviewer-authored finding, medium confidence.'
 closed: []
