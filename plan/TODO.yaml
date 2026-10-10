@@ -105,7 +105,7 @@ phases:
             branch: plan/error-precedence-foundation-02-002
             commit:
                 - 669bc23
-            merge: null
+            merge: 867ecf786fb4579accbd73584dfcf4929ca4abab
     - number: 3
       slug: doc-updates
       title: Documentation Updates
