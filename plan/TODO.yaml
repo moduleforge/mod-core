@@ -37,7 +37,7 @@ phases:
           tier: sonnet-med
           digest: Added authz.RequireAuth, a chi-free http.Handler middleware wrapping RequireAuthenticated and writing the 401 unauthenticated envelope via apiresp.WriteError. Updated authz package doc and added tests for all five required cases. Additive only.
           git:
-            branch: null
+            branch: plan/error-precedence-foundation-01-003
             commit: []
             merge: null
         - number: 4
