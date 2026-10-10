@@ -18,7 +18,7 @@ phases:
             branch: plan/error-precedence-foundation-01-001
             commit:
                 - dd166a8
-            merge: null
+            merge: 615664ed5ff70e7c16bcab53cb5450e36fe892d0
         - number: 2
           slug: decode-json-and-uuid-param
           title: Add apiresp.DecodeJSON and ParseUUIDParam
