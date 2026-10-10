@@ -119,6 +119,7 @@ phases:
           path: phase-03-doc-updates/001-update-architecture-docs.md
           done: false
           tier: sonnet-high
+          digest: Only one doc needed an edit. The reserved error-code list in display-name-http.md now includes unprocessable_entity, and the file links the error-precedence rule. The other named files were reviewed and are consistent. Build and tests pass.
           git:
             branch: null
             commit: []
