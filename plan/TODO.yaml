@@ -11,51 +11,61 @@ phases:
           slug: unprocessable-error
           title: Add ErrUnprocessable and Unprocessable for 422
           path: phase-01-helpers/001-unprocessable-error.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added ErrUnprocessable and Unprocessable (422, unprocessable_entity) wired into the existing classify and publicMessage mapping, plus the service alias and tests. Purely additive.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-01-001
+            commit:
+                - dd166a8
             merge: null
         - number: 2
           slug: decode-json-and-uuid-param
           title: Add apiresp.DecodeJSON and ParseUUIDParam
           path: phase-01-helpers/002-decode-json-and-uuid-param.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added DecodeJSON, its options and Validator hook, and ParseUUIDParam as additive new files in apiresp, with tests, matching the frozen signatures. No existing file touched.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-01-002
+            commit:
+                - 92ee8f3
             merge: null
         - number: 3
           slug: require-auth-middleware
           title: Add authz.RequireAuth chi Middleware
           path: phase-01-helpers/003-require-auth-middleware.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added authz.RequireAuth, a chi-free http.Handler middleware wrapping RequireAuthenticated and writing the 401 unauthenticated envelope via apiresp.WriteError. Updated authz package doc and added tests for all five required cases. Additive only.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-01-003
+            commit:
+                - 590d563
             merge: null
         - number: 4
           slug: authorize-resolve
           title: Add entity.Resolver.AuthorizeResolve
           path: phase-01-helpers/004-authorize-resolve.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Added Resolver.AuthorizeResolve per the frozen signature. A DB miss is always masked to ErrForbidden, ignoring AllowNotFound. Authorizer error passes through unchanged. Nine tests cover every listed case plus nil-authorizer. No import cycle.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-01-004
+            commit:
+                - 721538d
             merge: null
         - number: 5
           slug: gui-unprocessable-entity
           title: Route unprocessable_entity in core-gui useApiError
           path: phase-01-helpers/005-gui-unprocessable-entity.md
-          done: false
+          done: true
           tier: sonnet-low
+          digest: Added unprocessable_entity to INLINE_CODES, updated three doc comments, and added a four-test hook suite covering field routing, banner routing, unrecognized code still toasting, and unauthenticated never surfacing.
           git:
-            branch: null
-            commit: []
+            branch: plan/error-precedence-foundation-01-005
+            commit:
+                - bd62dbd
             merge: null
         - number: 6
           slug: order-test-helper
