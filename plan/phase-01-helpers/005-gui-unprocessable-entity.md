@@ -25,3 +25,7 @@ Acceptance: tests and typecheck pass; grep shows the set entry, doc-comment ment
 
 - `gui/src/lib/use-api-error.ts`, `gui/src/lib/api-types.ts`, `gui/src/lib/toast-context.tsx`.
 - docs-mf-standards `architecture/api-response-design.md` "Surface classification" table (the normative GUI routing rule; its update is in the docs-mf-standards plan).
+
+## Status
+
+Outcome: succeeded (2026-10-10). `unprocessable_entity` added to `INLINE_CODES` in `gui/src/lib/use-api-error.ts`; doc comments updated there, in `gui/src/lib/api-types.ts` and `gui/src/ErrorBanner.tsx`; new `gui/src/lib/use-api-error.test.tsx`. `bun run test` (128 pass) and `bun run typecheck` pass.

@@ -9,7 +9,7 @@ import { cn } from './lib/utils';
  *
  * - a plain `string` — rendered as the description, no title.
  * - an `ApiError` (or any `{ message: string }` shape) — the top-level
- *   `forbidden`/`not_found`/`conflict`/`invalid_input`-with-no-field-details
+ *   `forbidden`/`not_found`/`conflict`/`invalid_input`/`unprocessable_entity`-with-no-field-details
  *   case from the surface-classification table; `message` becomes the
  *   description.
  * - an explicit `{ title?, description }` pair for full control.
