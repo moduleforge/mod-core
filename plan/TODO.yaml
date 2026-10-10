@@ -30,7 +30,7 @@ phases:
             branch: plan/error-precedence-foundation-01-002
             commit:
                 - 92ee8f3
-            merge: null
+            merge: 01710b789f9a00b741284fe5b8e5244036c0bed5
         - number: 3
           slug: require-auth-middleware
           title: Add authz.RequireAuth chi Middleware
