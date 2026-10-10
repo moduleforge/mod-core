@@ -18,15 +18,6 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. Recommendation: route the wrapped text through internal/untrusted, or confirm the logging path escapes control characters. Reviewer-authored finding, medium confidence.'
-    - title: DecodeJSON unknown-field match is text-based
-      id: WoUX
-      date: "2026-10-10"
-      tags:
-        - type:bug
-        - priority:low
-        - plan/phase:helpers
-        - effort:unspecified
-      text: 'In api/apiresp/decode.go (failDecode, around lines 117-126), unknown JSON fields are detected by matching the error text prefix "json: unknown field", because encoding/json has no typed error for it. If a future Go release changes the message, the response stays 400 but degrades to the generic "must be valid JSON" detail. The first parameter of failDecode (decodeConfig) is also unused. Recommendation: keep the string match, add a test that pins the message (decode_test.go may already cover it), and drop the unused parameter. Reviewer-authored finding, medium confidence.'
     - title: AGENTS.md error lists omit ErrUnprocessable
       id: Bick
       date: "2026-10-10"
@@ -55,4 +46,9 @@ closed:
       title: ordertest imports testing in non-test package
       disposition: promoted
       ref: zcmY
+      date: "2026-10-10"
+    - id: WoUX
+      title: DecodeJSON unknown-field match is text-based
+      disposition: promoted
+      ref: WoUX
       date: "2026-10-10"
