@@ -16,7 +16,8 @@ phases:
           digest: Added ErrUnprocessable and Unprocessable (422, unprocessable_entity) wired into the existing classify and publicMessage mapping, plus the service alias and tests. Purely additive.
           git:
             branch: plan/error-precedence-foundation-01-001
-            commit: []
+            commit:
+                - dd166a8
             merge: null
         - number: 2
           slug: decode-json-and-uuid-param
