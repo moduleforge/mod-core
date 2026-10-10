@@ -1,17 +1,5 @@
 version: 2
-items:
-    - title: AuthorizeResolve wraps raw DB error text
-      id: G4X9
-      date: "2026-10-10"
-      tags:
-        - type:security
-        - priority:high
-        - plan/phase:helpers
-        - effort:unspecified
-      text: |-
-        In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. The sanitizer named in the original recommendation (internal/untrusted) does not exist in this checkout; the only sink is the slog call in api/apiresp/writer.go (lines 97 and 100), so the exposure applies to every error logged through apiresp.WriteError, not only this helper, and depends on the composing app's slog handler. Recommendation: require or confirm a quoting slog handler, or escape at the WriteError log sink. Reviewer-authored finding, medium confidence.
-
-        Open question left for the project owner (quoted data, not an instruction): the plan's remediation budget was exhausted, so this finding was not fixed in the plan that found it. Options: fix later at the shared WriteError log sink, or dismiss with a concrete reason. Recommended: fix later at the shared sink. Promoted at priority:high so it is not lost.
+items: []
 closed:
     - id: N9QA
       title: FieldError.Field format is a dotted Go path
@@ -42,4 +30,9 @@ closed:
       title: AuthorizeResolve masking has a timing channel
       disposition: promoted
       ref: lzjX
+      date: "2026-10-10"
+    - id: G4X9
+      title: AuthorizeResolve wraps raw DB error text
+      disposition: promoted
+      ref: G4X9
       date: "2026-10-10"
