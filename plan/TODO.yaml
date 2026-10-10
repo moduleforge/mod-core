@@ -45,7 +45,7 @@ phases:
           slug: authorize-resolve
           title: Add entity.Resolver.AuthorizeResolve
           path: phase-01-helpers/004-authorize-resolve.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Added Resolver.AuthorizeResolve per the frozen signature. A DB miss is always masked to ErrForbidden, ignoring AllowNotFound. Authorizer error passes through unchanged. Nine tests cover every listed case plus nil-authorizer. No import cycle.
           git:
