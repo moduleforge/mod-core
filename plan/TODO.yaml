@@ -42,7 +42,7 @@ phases:
             branch: plan/error-precedence-foundation-01-003
             commit:
                 - 590d563
-            merge: null
+            merge: 26dd742ad06d3d96ab3bc55ee954181daf030bc8
         - number: 4
           slug: authorize-resolve
           title: Add entity.Resolver.AuthorizeResolve
