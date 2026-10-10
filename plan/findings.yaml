@@ -18,15 +18,6 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. Recommendation: route the wrapped text through internal/untrusted, or confirm the logging path escapes control characters. Reviewer-authored finding, medium confidence.'
-    - title: AGENTS.md links to a missing settings file
-      id: C69x
-      date: "2026-10-10"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:helpers
-        - effort:unspecified
-      text: 'AGENTS.md line 3 links to ./.claude/settings.local.json, which does not exist in this checkout, leaving a dangling forward-link. Recommendation: remove the link or point it at an existing file. This predates the changes under review and is unrelated to them. Reviewer-authored finding, high confidence.'
 closed:
     - id: N9QA
       title: FieldError.Field format is a dotted Go path
@@ -47,4 +38,9 @@ closed:
       title: AGENTS.md error lists omit ErrUnprocessable
       disposition: promoted
       ref: Bick
+      date: "2026-10-10"
+    - id: C69x
+      title: AGENTS.md links to a missing settings file
+      disposition: promoted
+      ref: C69x
       date: "2026-10-10"
