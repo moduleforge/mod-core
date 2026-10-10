@@ -1,6 +1,8 @@
 // Package authz defines the Authorizer interface consumed by all service
 // methods in the system, plus RequireAuthenticated, a contract-adjacent
-// authentication-only helper that needs no implementation.
+// authentication-only helper that needs no implementation, and RequireAuth,
+// the HTTP middleware that applies it as stage 1 (401) of the error-precedence
+// rule.
 //
 // Authorizer is intentionally narrow: one method, called pre-op, on every
 // operation including reads. The implementation is consumer-supplied; this

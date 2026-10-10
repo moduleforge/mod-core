@@ -43,3 +43,7 @@ architectural_impact: true
 - `.flow/error-order-helpers.md` (main checkout): finding 1, item 1.
 - `api/authz/authz.go` (`RequireAuthenticated`), `api/opctx/opctx.go:62-84`.
 - mod-users `auth.RequireAuth` middleware is the existing pattern this generalizes.
+
+## Status
+
+succeeded (2026-10-10). Validation passed: gofmt clean, build, vet, `go test ./...` green, `go list -deps ./authz | grep -c go-chi` = 0. Files: `api/authz/middleware.go`, `api/authz/middleware_test.go`, `api/authz/authz.go` (package doc).
