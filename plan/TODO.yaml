@@ -95,7 +95,7 @@ phases:
             branch: plan/error-precedence-foundation-02-001
             commit:
                 - 00c3003
-            merge: null
+            merge: 81eb69a6824be3a0fdde6bf2265539c598d97cfe
         - number: 2
           slug: document-helpers
           title: Document Error-Precedence Helpers in API Docs
