@@ -27,4 +27,13 @@ items:
         - plan/phase:helpers
         - effort:unspecified
       text: 'In api/entity/authorize_resolve.go (line 47), a non-ErrNoRows DB error is wrapped as "entity.AuthorizeResolve <slug> <uuid>: %w" with the raw pgx error text, without going through the shared untrusted-text sanitizer that the Go role guidance calls for. The error is masked to a 500 for clients, so only log or line-sink injection is at issue. Recommendation: route the wrapped text through internal/untrusted, or confirm the logging path escapes control characters. Reviewer-authored finding, medium confidence.'
+    - title: ordertest imports testing in non-test package
+      id: zcmY
+      date: "2026-10-10"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:helpers
+        - effort:unspecified
+      text: 'api/apiresp/ordertest/ordertest.go is a non-_test package that imports "testing" and net/http/httptest, so any consumer that imports it links those packages. This is deliberate for a shared helper and the reviewer found no unsafe behavior in it. Recommendation: note in the package doc that it must be imported only from _test files, so it is not linked into production binaries by accident. Reviewer-authored suggestion, low confidence.'
 closed: []
