@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -11,6 +13,32 @@ import (
 	"github.com/moduleforge/core-api/authz"
 	coredb "github.com/moduleforge/core-model/db"
 )
+
+// missDelayFloor and missDelayJitter tune the randomized delay applied only on
+// the AuthorizeResolve miss path: the delay is uniform in
+// [missDelayFloor, missDelayFloor+missDelayJitter). Variables so tests can
+// override them; if both are <= 0 no wait occurs.
+var (
+	missDelayFloor  = 5 * time.Millisecond
+	missDelayJitter = 15 * time.Millisecond
+)
+
+// missDelay waits a randomized duration, returning early if ctx is done.
+func missDelay(ctx context.Context) {
+	d := missDelayFloor
+	if missDelayJitter > 0 {
+		d += rand.N(missDelayJitter)
+	}
+	if d <= 0 {
+		return
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+	case <-ctx.Done():
+	}
+}
 
 // AuthorizeResolve resolves u to its entities.id and authorizes op against
 // that id, in an order that leaks no existence information: a missing
@@ -25,8 +53,11 @@ import (
 //  3. q.GetEntityByUUID(ctx, u). On pgx.ErrNoRows it returns 0 and
 //     ErrForbidden ALWAYS, ignoring any AllowNotFound opt-in for slug: an
 //     opted-in slug is exactly the existence oracle this method closes.
-//     AllowNotFound still governs plain Resolve. Other DB errors are wrapped
-//     and not masked.
+//     AllowNotFound still governs plain Resolve. The miss path first adds a
+//     small randomized delay, which blunts (but does not eliminate) the
+//     timing difference versus the authorized-hit path; it honors ctx
+//     cancellation and still returns ErrForbidden. Other DB errors are
+//     wrapped, not masked, and not delayed.
 //  4. az.Authorize(ctx, op, &id). Its error is returned unchanged (no
 //     remapping) with a 0 id; on success the id is returned.
 //
@@ -42,6 +73,7 @@ func (r *Resolver) AuthorizeResolve(ctx context.Context, q coredb.Querier, az au
 	row, err := q.GetEntityByUUID(ctx, u)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			missDelay(ctx)
 			return 0, ErrForbidden
 		}
 		return 0, fmt.Errorf("entity.AuthorizeResolve %s %s: %w", slug, u, err)
