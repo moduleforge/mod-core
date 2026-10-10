@@ -38,7 +38,8 @@ phases:
           digest: Added authz.RequireAuth, a chi-free http.Handler middleware wrapping RequireAuthenticated and writing the 401 unauthenticated envelope via apiresp.WriteError. Updated authz package doc and added tests for all five required cases. Additive only.
           git:
             branch: plan/error-precedence-foundation-01-003
-            commit: []
+            commit:
+                - 590d563
             merge: null
         - number: 4
           slug: authorize-resolve
