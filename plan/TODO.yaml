@@ -274,7 +274,7 @@ phases:
           slug: phase9-10-followup-hardening
           title: Harden Entity Updates, Field-Crypto Read, Tests and Docs
           path: phase-11-remediation-04/001-phase9-10-followup-hardening.md
-          done: false
+          done: true
           tier: sonnet-high
           digest: 'Entity update routes hardened: blank names/labels are stateless 400s before authz in handlers and services; SA update gained a transaction and audit observers; field-crypto body read uses MaxBytesReader; test gaps closed; accepted AuthorizeResolve residual and stale docs fixed. gofmt/vet/test, Postgres integration and make test (GUI) all pass.'
           findings:
