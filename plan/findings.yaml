@@ -63,4 +63,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: Followup wXiC (field-crypto body cap stopgap) may now be resolved by this change since the cap is enforced via DecodeJSON; check and close or reword it after merge.
+    - title: 'Wire-risk docs (task 5.1) must record: 403->4'
+      id: o6u0
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:decode-and-shape
+        - priority:unspecified
+        - effort:unspecified
+      text: 'Wire-risk docs (task 5.1) must record: 403->400 for forbidden callers with bad body/version on field-crypto routes, new decode detail codes field_crypto_keys.invalid_json_body/body_too_large, trailing-data rejection.'
 closed: []
