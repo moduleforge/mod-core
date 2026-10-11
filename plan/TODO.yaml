@@ -91,7 +91,7 @@ phases:
           tier: sonnet-med
           digest: 'Apps Update parses UUID and decodes body (DecodeJSON) before masked authorize; Get/Delete use ParseUUIDParam; Create uses DecodeJSON; wire changes: 1 MiB cap, unknown fields rejected, empty body 400, invalid_uuid detail. New tests not verified red-before-green.'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-03-001
             commit: []
             merge: null
         - number: 2
