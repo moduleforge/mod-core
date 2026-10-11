@@ -64,6 +64,8 @@ type Querier interface {
 	// stored blob is still the one that was read, so a concurrent writer's
 	// change is never clobbered.
 	UpdateNaturalPersonSSNBlob(ctx context.Context, arg UpdateNaturalPersonSSNBlobParams) (int64, error)
+	// updated_at is maintained by the service_accounts_set_updated_at trigger.
+	UpdateServiceAccountLabel(ctx context.Context, arg UpdateServiceAccountLabelParams) (ServiceAccount, error)
 }
 
 var _ Querier = (*Queries)(nil)

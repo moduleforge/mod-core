@@ -123,6 +123,10 @@ func (s *resolverStubQuerier) UpdateNaturalPersonSSNBlob(_ context.Context, _ co
 	return 0, nil
 }
 
+func (s *resolverStubQuerier) UpdateServiceAccountLabel(_ context.Context, _ coredb.UpdateServiceAccountLabelParams) (coredb.ServiceAccount, error) {
+	return coredb.ServiceAccount{}, nil
+}
+
 var _ coredb.Querier = (*resolverStubQuerier)(nil)
 
 // --- helpers ---

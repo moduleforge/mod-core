@@ -431,6 +431,16 @@ func (m *mockQuerier) GetServiceAccountByEntityID(_ context.Context, entityID in
 	return coredb.ServiceAccount{}, pgx.ErrNoRows
 }
 
+func (m *mockQuerier) UpdateServiceAccountLabel(_ context.Context, arg coredb.UpdateServiceAccountLabelParams) (coredb.ServiceAccount, error) {
+	sa, ok := m.serviceAccts[arg.EntityID]
+	if !ok {
+		return coredb.ServiceAccount{}, pgx.ErrNoRows
+	}
+	sa.Label = arg.Label
+	m.serviceAccts[arg.EntityID] = sa
+	return sa, nil
+}
+
 func (m *mockQuerier) GetTypeBySlug(_ context.Context, slug string) (coredb.Type, error) {
 	if t, ok := m.types[slug]; ok {
 		return t, nil
