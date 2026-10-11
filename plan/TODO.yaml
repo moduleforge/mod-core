@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 3
-    tasks_added: 2
+    tasks_added: 3
 phases:
     - number: 1
       slug: authenticate-routes
@@ -246,4 +246,18 @@ phases:
       slug: blank-name-remediation
       title: Blank-Name Remediation
       kind: remediation
-      tasks: []
+      tasks_added: 1
+      tasks:
+        - number: 1
+          slug: blank-name-before-authz
+          title: Move Blank-Name Checks Before Authorization
+          path: phase-10-blank-name-remediation/001-blank-name-before-authz.md
+          done: false
+          tier: sonnet-med
+          findings:
+            - aJ4X
+            - cXx6
+          git:
+            branch: null
+            commit: []
+            merge: null
