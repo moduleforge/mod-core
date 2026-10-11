@@ -99,6 +99,15 @@ items:
         - plan/phase:conflicts-and-order-tests
         - effort:unspecified
       text: 'writeAppsMutationError in api/httpapi/apps.go maps any Postgres 23505 to 409 apps.slug_taken without checking ConstraintName, but the Create and Update transactions also run CreateEntity and observers whose unique violations would be misreported as a slug conflict instead of 500. Also require the constraint name apps_slug_key, update appsOrderQuerier in apps_order_test.go to set it, and add negative tests: a 23505 with another constraint stays 500 on Create and on UpdateApp.'
+    - title: Stale capability-gap text in type-level-authz
+      id: 2TIM
+      date: "2026-10-11"
+      tags:
+        - type:documentation
+        - priority:medium
+        - plan/phase:user-decisions-remediation
+        - effort:unspecified
+      text: docs/architecture/type-level-authorization.md lines ~194-199 still say the ErrInvalidInput capability gap in ServiceAccountService.UpdateByEntityUUID is 'unchanged and open'; phase 9 removed it. Update the paragraph. (Phase review, major doc-drift.)
 closed:
     - id: nK0x
       title: ServiceAccount UpdateByEntityUUID capability
