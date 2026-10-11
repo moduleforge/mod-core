@@ -20,3 +20,7 @@ Lock in the order for the entity subtype routes with `apiresp/ordertest` ([commo
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). Added `api/httpapi/entities_order_test.go`: `TestEntityRoutesErrorOrder` (one `ordertest.Route` per handler, 12 routes, 93 subtests; real `NewRouter` with `RequireAuth` over real services, a seeded stub querier, a recording owner/stranger/target-0-deny authorizer, and a refusing tx DB), `TestEntityRoutes_UnknownFieldIsStatelessBadRequest`, and `TestEntityRoutes_MaskedMissProbesAuthorizerOnceWithTargetZero` (a masked miss calls `Authorize` exactly once with target 0 and opens no transaction). Create routes do not set `AuthzFirst` (handlers `DecodeJSON` before the service's `AuthorizeType`); no `Late` entries (audit found no 409/422 on these routes). Red check: with `DELETE` reverted to fetch-then-authorize 3 tests failed; with `RequireAuth` unmounted 25 subtests failed. Validation: `go test ./...`, `go vet ./...`, `gofmt -l` clean in `api` and `model`; GUI/`make test` and Postgres integration not run (deps not installed in task worktree).
