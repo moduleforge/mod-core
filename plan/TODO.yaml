@@ -148,6 +148,7 @@ phases:
           path: phase-04-conflicts-and-order-tests/003-order-tests-apps-field-crypto.md
           done: false
           tier: sonnet-med
+          digest: Order-test suites (ordertest) for all /apps and /field-crypto-keys routes on a shared /v1 router with peer-route check; RED-verified by moving authorize ahead of decode in UpdateApp and Rotate; defines orderAdminOnlyAuthz in apps_order_test.go (also used by field-crypto file).
           git:
             branch: null
             commit: []
