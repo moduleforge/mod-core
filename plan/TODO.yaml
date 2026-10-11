@@ -39,7 +39,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-01-003
             commit: []
-            merge: null
+            merge: 329813cd598766cbc34499a9eb91eed286cc73da
         - number: 4
           slug: remove-inline-authn-checks
           title: Remove Superseded Inline Authentication Checks
