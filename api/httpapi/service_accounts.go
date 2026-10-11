@@ -83,6 +83,18 @@ func (h *handlers) updateServiceAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Stateless blank-label check on a present label runs before the service's
+	// AuthorizeResolve so an unauthorized caller sees the 400, not a 403
+	// (401 -> 400 -> 403 -> 404). An absent (null) label stays a no-op.
+	if req.Label != nil && strings.TrimSpace(*req.Label) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "label",
+			Code:    "service_accounts.label_required",
+			Message: "label is required",
+		}))
+		return
+	}
+
 	in := service.UpdateServiceAccountInput{Label: req.Label}
 
 	if err := h.d.Services.ServiceAccount.UpdateByEntityUUID(

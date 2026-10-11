@@ -51,11 +51,25 @@ info:
       valid JSON with no trailing data, reject unknown members, and must not
       be empty (an empty body is `400`). Detail codes: `invalid_json_body`,
       `invalid_uuid`, `body_too_large`.
+    - On the update routes, a present but blank (empty or whitespace-only)
+      `given_name`, `family_name` (`PUT /entities/natural-persons/{uuid}`),
+      `legal_name` (`PUT /entities/corporations/{uuid}`) or `label`
+      (`PUT /entities/service-accounts/{uuid}`) is a stateless `400`
+      (`natural_persons.given_name_required`, `natural_persons.family_name_required`,
+      `corporations.legal_name_required`, `service_accounts.label_required`)
+      checked before authorization, like the create routes; an absent or null
+      field is left unchanged. Accepted values are trimmed before storage.
+      `PUT /entities/service-accounts/{uuid}` updates the label.
     - The field-crypto key routes (rotate, grace, mark-compromised) validate
       the body before authorization, so a forbidden caller with a bad body
       gets `400`, not `403`. Bodies are limited to 4 KiB and reject trailing
       data. Detail codes: `field_crypto_keys.invalid_json_body`,
-      `field_crypto_keys.body_too_large`.
+      `field_crypto_keys.body_too_large`. A body over the cap is `400`
+      `field_crypto_keys.body_too_large` for forbidden and authorized callers
+      alike (unchanged); an empty rotate body is still the zero request.
+    - A caller already authorized on an existing entity of another type gets
+      `404` from a typed update route's subtype lookup, while a nonexistent id
+      gets `403`; this discloses nothing to an unauthorized caller (accepted).
     - `POST /apps` and `PUT /apps/{uuid}` answer `409` with detail code
       `apps.slug_taken` when the slug is already in use (previously `500`).
 
@@ -331,7 +345,9 @@ paths:
       summary: Update a service-account entity (admin)
       description: |
         Updates the mutable ServiceAccount field (label). Requires admin
-        privileges.
+        privileges. A present but blank (empty or whitespace-only) label is a
+        400 `service_accounts.label_required`, checked before authorization;
+        an absent or null label is a no-op. The label is stored trimmed.
         A nonexistent id answers 403 (not 404) for every caller, administrators
         included, so existence is not disclosed. An unknown JSON member, trailing
         data, or a body over 1 MiB is a 400 (checked before authorization).

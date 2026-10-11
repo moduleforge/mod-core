@@ -276,6 +276,23 @@ func (s *NaturalPersonService) UpdateByEntityUUID(
 		return err
 	}
 
+	// Blank given_name/family_name on a present field is rejected after
+	// authorization (non-HTTP callers; the handler checks statelessly first).
+	if in.GivenName != nil && strings.TrimSpace(*in.GivenName) == "" {
+		return apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "given_name",
+			Code:    "natural_persons.given_name_required",
+			Message: "given_name is required",
+		})
+	}
+	if in.FamilyName != nil && strings.TrimSpace(*in.FamilyName) == "" {
+		return apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "family_name",
+			Code:    "natural_persons.family_name_required",
+			Message: "family_name is required",
+		})
+	}
+
 	// 2. Mutate inside a transaction; observers participate in the same tx.
 	err = txhelper.Run(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		txQ := s.querier(tx)

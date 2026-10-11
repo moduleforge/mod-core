@@ -186,3 +186,47 @@ func bytesReaderOrNil(body string) io.Reader {
 	}
 	return strings.NewReader(body)
 }
+
+// TestFieldCryptoKeys_OversizedBodyIs400ForEveryCaller pins that the bounded
+// body read is a stateless check that runs before the "manage" authorize: a
+// body over maxFieldCryptoKeyBodyBytes is 400 field_crypto_keys.body_too_large
+// (never invalid_json_body, never 403) for the forbidden and the authorized
+// caller alike, on both body-accepting routes. An empty Rotate body still
+// behaves as the zero request.
+func TestFieldCryptoKeys_OversizedBodyIs400ForEveryCaller(t *testing.T) {
+	padding := strings.Repeat("a", maxFieldCryptoKeyBodyBytes+1)
+	routes := []struct{ name, method, path, body string }{
+		{"rotate", http.MethodPost, "/v1/field-crypto-keys/rotations", `{"key_hex":"` + padding + `"}`},
+		{"grace", http.MethodPut, "/v1/field-crypto-keys/1/grace", `{"grace_period_days":30,"padding":"` + padding + `"}`},
+	}
+	callers := []struct {
+		name string
+		id   ordertest.Identity
+	}{
+		{"forbidden", ordertest.Actor(orderStrangerID)},
+		{"authorized", ordertest.Actor(orderAdminID)},
+	}
+	for _, rt := range routes {
+		for _, c := range callers {
+			t.Run(rt.name+"/"+c.name, func(t *testing.T) {
+				rec := do(newFCKOrderRouter(t), c.id, rt.method, rt.path, rt.body)
+				if rec.Code != http.StatusBadRequest {
+					t.Fatalf("status: got %d, want 400 - %s", rec.Code, rec.Body.String())
+				}
+				if details := errorDetails(t, rec); len(details) != 1 || details[0].Code != "field_crypto_keys.body_too_large" {
+					t.Errorf("details: got %+v, want one field error coded field_crypto_keys.body_too_large", details)
+				}
+			})
+		}
+	}
+
+	t.Run("empty rotate body is the zero request", func(t *testing.T) {
+		router := newFCKOrderRouter(t)
+		if rec := do(router, ordertest.Actor(orderStrangerID), http.MethodPost, "/v1/field-crypto-keys/rotations", ""); rec.Code != http.StatusForbidden {
+			t.Errorf("forbidden+empty: got %d, want 403 - %s", rec.Code, rec.Body.String())
+		}
+		if rec := do(router, ordertest.Actor(orderAdminID), http.MethodPost, "/v1/field-crypto-keys/rotations", ""); rec.Code != http.StatusCreated {
+			t.Errorf("authorized+empty: got %d, want 201 - %s", rec.Code, rec.Body.String())
+		}
+	})
+}

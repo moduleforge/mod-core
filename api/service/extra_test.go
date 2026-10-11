@@ -154,8 +154,8 @@ func TestServiceAccountService_UpdateByEntityUUID_NilLabelLeavesLabel(t *testing
 	}
 }
 
-// vanishingUpdateQuerier simulates the row disappearing between the existence
-// check and the update.
+// vanishingUpdateQuerier simulates the row disappearing between the in-tx
+// before-state read and the update.
 type vanishingUpdateQuerier struct {
 	*mockQuerier
 }
@@ -173,8 +173,11 @@ func TestServiceAccountService_UpdateByEntityUUID_RowVanishes(t *testing.T) {
 		t.Fatalf("setup Create: %v", err)
 	}
 
+	// The mutation runs on the transaction-scoped querier, so inject the
+	// vanishing wrapper there (the pre-tx resolve still uses q).
+	svc.newQuerier = func(pgx.Tx) coredb.Querier { return vanishingUpdateQuerier{q} }
 	label := "y"
-	err = svc.UpdateByEntityUUID(authedCtx(), vanishingUpdateQuerier{q}, entityUUID, UpdateServiceAccountInput{Label: &label})
+	err = svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateServiceAccountInput{Label: &label})
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}

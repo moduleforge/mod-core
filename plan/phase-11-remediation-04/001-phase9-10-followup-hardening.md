@@ -34,4 +34,8 @@ Remediates findings C8JP, YvU6, 2TIM, 5BQZ, vqPd, aSRu, F5yI, ovGY and ferC in t
 
 ## Status
 
-pending
+succeeded (2026-10-11). All nine findings addressed. Validation: gofmt clean; `go vet ./...` and `go vet -tags integration ./...` clean in `api`; `go test ./...` passes in `api` and `model`; Postgres integration suite passes (throwaway postgres:16 container); `make test` passes (including GUI). The grep checks are clean.
+
+Decisions: `ServiceAccountService.UpdateByEntityUUID` reads the row inside the transaction (`GetServiceAccountByEntityID`) purely to supply the observer `before` state, matching the natural-person and corporation siblings; the outside-transaction pre-check is removed and a vanished row still maps `pgx.ErrNoRows` to `ErrNotFound`. Existing `TestServiceAccountService_UpdateByEntityUUID_RowVanishes` now injects the vanishing querier via `newQuerier` because the mutation runs on the transaction-scoped querier. `require_auth_mount_test.go` now uses the entity order fixture's router.
+
+Source: `api/service/service_account.go`, `api/service/natural_person.go`, `api/service/corporation.go`, `api/httpapi/natural_persons.go`, `api/httpapi/corporations.go`, `api/httpapi/service_accounts.go`, `api/httpapi/field_crypto_keys.go`, `api/entity/authorize_resolve.go`; tests in `api/httpapi` and `api/service`; docs in `docs/architecture/type-level-authorization.md`, `next-steps.md`, `README.md`, `AGENTS.md`, `api/openapi.fragment.yaml`.

@@ -13,7 +13,6 @@ This file tracks pending manual verification and deferred work for `mod-core`. A
 ## Pre-existing code-level gaps
 
 - `EntityService.GetByID` returns `ErrNotFound` unconditionally — no caller uses it today; sqlc query was never added. Add when needed.
-- `ServiceAccountService.UpdateByEntityUUID` returns `ErrInvalidInput` because no `UpdateServiceAccount` sqlc query exists. Wiring is in place; the sentinel is misleading (should be `ErrNotImplemented` → 501) until the query lands.
 - Entity forms (`<NaturalPersonForm>`, `<CorporationForm>`, `<ServiceAccountForm>`) exist in core-gui but the admin user-edit page in mod-users renders its own inline form. Consolidation deferred ("leave admin pages alone — we can consolidate later").
 
 ## Tax-id encryption — future hardening

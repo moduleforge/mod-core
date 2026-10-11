@@ -14,9 +14,12 @@ import (
 
 // mountedRouters builds the three real routers the way a composing app does:
 // NewRouter for /entities/*, and the two registrars onto one shared router.
-func mountedRouters(t *testing.T) (core, shared chi.Router) {
+func mountedRouters(t *testing.T) (core http.Handler, shared chi.Router) {
 	t.Helper()
-	core = NewRouter(buildTestDeps(nil, nil, nil, nil))
+	// The entity order fixture's router is the real NewRouter over real
+	// services and a seeded stub querier, so a request that clears the
+	// RequireAuth gate reaches a handler that does not panic.
+	core = newEntityOrderFixture().router
 
 	apps := newTestAppsHandler(newAppsFakeQuerier(), &appsFakeAuthorizer{})
 	fck := NewFieldCryptoKeyHandler(&fakeAppsDB{tx: &fakeAppsTx{}}, newFCKFakeQuerier(), &appsFakeAuthorizer{}, observer.NewObserverGroup(), nil)
@@ -97,15 +100,12 @@ func TestRequireAuthMounted_AnonymousIs401(t *testing.T) {
 // TestRequireAuthMounted_SudoOnlyPassesGate proves the gate is sudo-aware on
 // every route: a sudo-only identity is never rejected with 401 once the
 // sudo-unaware inline checks are gone. The status past the gate is
-// unconstrained here (400/403/404 from the stubbed deps are all fine).
+// unconstrained here (400/403/404 from the stubbed deps are all fine). There
+// is no panic guard: a handler panic fails the test rather than passing it.
 func TestRequireAuthMounted_SudoOnlyPassesGate(t *testing.T) {
 	core, shared := mountedRouters(t)
 	for _, rt := range allMountedRoutes(core, shared) {
 		t.Run(rt.name, func(t *testing.T) {
-			// The core router is built with nil services, so a request that
-			// clears the gate may panic in the handler. A panic proves the
-			// request got past the 401 gate, which is all this test asserts.
-			defer func() { _ = recover() }()
 			rec := do(rt.h, ordertest.SudoOnly(7), rt.method, rt.path, `{"slug":"a","name":"b"}`)
 			if rec.Code == http.StatusUnauthorized {
 				t.Fatalf("sudo-only identity got 401 - body: %s", rec.Body.String())

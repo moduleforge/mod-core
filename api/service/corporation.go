@@ -208,6 +208,16 @@ func (s *CorporationService) UpdateByEntityUUID(
 		return err
 	}
 
+	// Blank legal_name on a present field is rejected after authorization
+	// (non-HTTP callers; the handler checks statelessly first).
+	if in.LegalName != nil && strings.TrimSpace(*in.LegalName) == "" {
+		return apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		})
+	}
+
 	// 2. Mutate inside a transaction; observers participate in the same tx.
 	err = txhelper.Run(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		txQ := s.querier(tx)
