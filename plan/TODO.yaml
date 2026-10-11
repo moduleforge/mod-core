@@ -289,5 +289,6 @@ phases:
             - ferC
           git:
             branch: plan/core-handler-conformance-11-001
-            commit: []
+            commit:
+                - 3b93605
             merge: null
