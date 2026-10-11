@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,6 +21,17 @@ type createCorporationRequest struct {
 func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
 	var req createCorporationRequest
 	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// Stateless blank-name check runs before the service's AuthorizeType so an
+	// unauthorized caller sees the 400, not a 403 (401 -> 400 -> 403 -> 404).
+	if strings.TrimSpace(req.LegalName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		}))
 		return
 	}
 
