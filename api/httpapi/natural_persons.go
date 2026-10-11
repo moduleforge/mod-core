@@ -109,6 +109,26 @@ func (h *handlers) updateNaturalPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Stateless blank-name checks on present fields run before the service's
+	// AuthorizeResolve so an unauthorized caller sees the 400, not a 403
+	// (401 -> 400 -> 403 -> 404). Absent (null) fields stay no-ops.
+	if req.GivenName != nil && strings.TrimSpace(*req.GivenName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "given_name",
+			Code:    "natural_persons.given_name_required",
+			Message: "given_name is required",
+		}))
+		return
+	}
+	if req.FamilyName != nil && strings.TrimSpace(*req.FamilyName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "family_name",
+			Code:    "natural_persons.family_name_required",
+			Message: "family_name is required",
+		}))
+		return
+	}
+
 	in := service.UpdateNaturalPersonInput{
 		GivenName:  req.GivenName,
 		FamilyName: req.FamilyName,

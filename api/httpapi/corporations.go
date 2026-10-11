@@ -101,6 +101,18 @@ func (h *handlers) updateCorporation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Stateless blank-name check on a present field runs before the service's
+	// AuthorizeResolve so an unauthorized caller sees the 400, not a 403
+	// (401 -> 400 -> 403 -> 404). An absent (null) legal_name stays a no-op.
+	if req.LegalName != nil && strings.TrimSpace(*req.LegalName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		}))
+		return
+	}
+
 	in := service.UpdateCorporationInput{
 		LegalName:    req.LegalName,
 		Jurisdiction: req.Jurisdiction,

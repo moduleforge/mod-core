@@ -164,7 +164,9 @@ func newEntityOrderFixture() *entityOrderFixture {
 // TestEntityCreateRoutes_BlankNameIsStatelessBadRequest.
 //
 // No Late entries: the state-conflict audit found no 409/422 on these routes
-// (the service-account PUT 400 is a capability gap, not a state conflict).
+// (a blank label/name on the PUT routes is a stateless shape 400 checked
+// before authorization, not a state conflict; see
+// TestEntityUpdateRoutes_BlankNameIsStatelessBadRequest).
 func TestEntityRoutesErrorOrder(t *testing.T) {
 	f := newEntityOrderFixture()
 	missing := uuid.New().String()
@@ -326,6 +328,63 @@ func TestEntityCreateRoutes_BlankNameIsStatelessBadRequest(t *testing.T) {
 			}
 			if rec := do(c.path, c.blank, orderOwnerID); rec.Code != http.StatusBadRequest {
 				t.Errorf("authorized+blank: got %d, want 400 - %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+// TestEntityUpdateRoutes_BlankNameIsStatelessBadRequest pins the same contract
+// on the three PUT routes: a present-but-blank (or whitespace-only) name/label
+// is a 400 for an unauthorized caller with no Authorize call, an unauthorized
+// caller with a valid body still gets 403, an anonymous caller 401, and a
+// valid untrimmed value from the authorized caller clears the gates. An
+// absent or null field stays a no-op (never the blank-name 400).
+func TestEntityUpdateRoutes_BlankNameIsStatelessBadRequest(t *testing.T) {
+	f := newEntityOrderFixture()
+	cases := []struct{ name, path, blank, valid, code string }{
+		{"natural person given_name", "/entities/natural-persons/" + f.npUUID.String(), `{"given_name":"  "}`, `{"given_name":"Ada"}`, "natural_persons.given_name_required"},
+		{"natural person family_name", "/entities/natural-persons/" + f.npUUID.String(), `{"family_name":""}`, `{"family_name":"Lovelace"}`, "natural_persons.family_name_required"},
+		{"corporation legal_name", "/entities/corporations/" + f.corpUUID.String(), `{"legal_name":" "}`, `{"legal_name":"Acme"}`, "corporations.legal_name_required"},
+		{"service account label", "/entities/service-accounts/" + f.saUUID.String(), `{"label":"\t"}`, `{"label":"bot"}`, "service_accounts.label_required"},
+	}
+	do := func(path, body string, actor int64) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPut, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		if actor != 0 {
+			req = withActor(req, actor)
+		}
+		rec := httptest.NewRecorder()
+		f.router.ServeHTTP(rec, req)
+		return rec
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f.az.reset()
+			rec := do(c.path, c.blank, orderStrangerID)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("unauthorized+blank: got %d, want 400 - %s", rec.Code, rec.Body.String())
+			}
+			if !strings.Contains(rec.Body.String(), c.code) {
+				t.Errorf("body missing code %q: %s", c.code, rec.Body.String())
+			}
+			if n := len(f.az.snapshot()); n != 0 {
+				t.Errorf("Authorize calls before blank rejection: got %d, want 0", n)
+			}
+			if rec := do(c.path, c.valid, orderStrangerID); rec.Code != http.StatusForbidden {
+				t.Errorf("unauthorized+valid: got %d, want 403 - %s", rec.Code, rec.Body.String())
+			}
+			if rec := do(c.path, c.blank, 0); rec.Code != http.StatusUnauthorized {
+				t.Errorf("anonymous+blank: got %d, want 401 - %s", rec.Code, rec.Body.String())
+			}
+			if rec := do(c.path, c.blank, orderOwnerID); rec.Code != http.StatusBadRequest {
+				t.Errorf("authorized+blank: got %d, want 400 - %s", rec.Code, rec.Body.String())
+			}
+			// Absent/null is a no-op, not the blank-name 400: the authorized
+			// caller clears the stateless gate (refusingDB then stops the
+			// service-account/natural-person mutation at the persistence
+			// boundary or, for a no-op body, the update succeeds).
+			if rec := do(c.path, `{}`, orderOwnerID); rec.Code == http.StatusBadRequest {
+				t.Errorf("authorized+absent field: got 400, want a no-op - %s", rec.Body.String())
 			}
 		})
 	}

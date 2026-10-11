@@ -343,11 +343,28 @@ type appsFakeAuthorizer struct {
 	// the listed entity ids are authorized; every other target (including the
 	// target-0 call AuthorizeResolve makes on a masked miss) is denied.
 	allowIDs map[int64]bool
+
+	// calls records every Authorize invocation in order (action plus the
+	// target id, hasTarget false for a nil target), so tests can assert the
+	// exact number and shape of calls rather than only the most recent one.
+	calls []appsAuthorizeCall
+}
+
+// appsAuthorizeCall is one recorded appsFakeAuthorizer.Authorize invocation.
+type appsAuthorizeCall struct {
+	action    string
+	hasTarget bool
+	target    int64
 }
 
 func (a *appsFakeAuthorizer) Authorize(_ context.Context, action string, target *int64) error {
 	a.lastAction = action
 	a.lastTarget = target
+	c := appsAuthorizeCall{action: action}
+	if target != nil {
+		c.hasTarget, c.target = true, *target
+	}
+	a.calls = append(a.calls, c)
 	if a.allowIDs != nil {
 		if target != nil && a.allowIDs[*target] {
 			return nil
@@ -829,6 +846,35 @@ func TestApps_MissingAndForbiddenAreIndistinguishable(t *testing.T) {
 			}
 			if q.getAppByUUIDCalls != 0 {
 				t.Errorf("GetAppByUUID calls: got %d, want 0", q.getAppByUUIDCalls)
+			}
+		})
+	}
+}
+
+// A masked miss makes exactly one Authorize call, with a non-nil target of 0
+// (the probe AuthorizeResolve makes so a miss costs the same decision as a
+// forbidden hit), and answers 403 on GET, PUT and DELETE alike. A second call
+// or a non-zero target would mean the miss leaked past the masked path.
+func TestApps_MaskedMissProbesAuthorizerOnceWithTargetZero(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			q.seedApp("demo", "Demo App")
+			// Caller is authorized for the existing app, so only the miss
+			// probe (target 0) is denied.
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			rec := c.do(router, uuid.New())
+
+			if rec.Code != http.StatusForbidden {
+				t.Fatalf("status: got %d, want 403 - body: %s", rec.Code, rec.Body.String())
+			}
+			if len(az.calls) != 1 {
+				t.Fatalf("Authorize calls: got %d (%+v), want exactly 1", len(az.calls), az.calls)
+			}
+			if got := az.calls[0]; !got.hasTarget || got.target != 0 {
+				t.Errorf("Authorize target: got %+v, want a non-nil target of 0", got)
 			}
 		})
 	}

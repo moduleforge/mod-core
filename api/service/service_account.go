@@ -161,8 +161,12 @@ func (s *ServiceAccountService) GetByEntityUUID(ctx context.Context, q coredb.Qu
 }
 
 // UpdateByEntityUUID updates service_account fields for the given entity UUID.
-// Requires admin authorization. A nil Label is a no-op; ErrNotFound is returned
-// when the service_account row is missing or vanishes before the update.
+// Requires admin authorization. A nil Label is a no-op; a present Label is
+// trimmed and a blank one is rejected with InvalidInput (after authorization).
+// ErrNotFound is returned when the service_account row is missing. The
+// mutation runs in a transaction and dispatches 'update' observer events.
+// The caller-supplied q parameter is used for the pre-tx entity lookup; the
+// service opens its own transaction via s.db for the mutation.
 func (s *ServiceAccountService) UpdateByEntityUUID(
 	ctx context.Context,
 	q coredb.Querier,
@@ -183,24 +187,49 @@ func (s *ServiceAccountService) UpdateByEntityUUID(
 		return nil
 	}
 
-	_, err = q.GetServiceAccountByEntityID(ctx, eid)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("service_account.UpdateByEntityUUID service_account: %w", err)
+	label := strings.TrimSpace(*in.Label)
+	if label == "" {
+		return apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "label",
+			Code:    "service_accounts.label_required",
+			Message: "label is required",
+		})
 	}
 
-	_, err = q.UpdateServiceAccountLabel(ctx, coredb.UpdateServiceAccountLabelParams{
-		EntityID: eid,
-		Label:    *in.Label,
+	// 2. Mutate inside a transaction; observers participate in the same tx.
+	err = txhelper.Run(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		txQ := s.querier(tx)
+
+		// The before-state feeds the audit record (as the natural-person and
+		// corporation updates do). A missing row surfaces as ErrNotFound here
+		// or, if it vanishes before the update, from UpdateServiceAccountLabel.
+		cur, err := txQ.GetServiceAccountByEntityID(ctx, eid)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("service_account.UpdateByEntityUUID service_account: %w", err)
+		}
+		before := map[string]any{"label": cur.Label}
+
+		if _, err := txQ.UpdateServiceAccountLabel(ctx, coredb.UpdateServiceAccountLabelParams{
+			EntityID: eid,
+			Label:    label,
+		}); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("service_account.UpdateByEntityUUID update: %w", err)
+		}
+
+		after := map[string]any{"label": label}
+		return s.obs.Observe(ctx, tx, "update", "service_account", &eid, before, after)
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			// The row vanished between the existence check and the update.
-			return ErrNotFound
-		}
-		return fmt.Errorf("service_account.UpdateByEntityUUID update: %w", err)
+		return err
 	}
+
+	// 3. Post-commit observers.
+	s.obs.ObserveAfterCommit(ctx, "update", "service_account", &eid, nil)
 	return nil
 }

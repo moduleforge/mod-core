@@ -641,20 +641,32 @@ const maxFieldCryptoKeyBodyBytes = 4 << 10 // 4KB
 // same way every other detail code in this file is namespaced.
 const fieldCryptoKeyCodePrefix = "field_crypto_keys"
 
-// readFieldCryptoKeyBody reads the request body (bounded to
-// maxFieldCryptoKeyBodyBytes+1 bytes so an oversized body is still detected by
-// the decode that follows) and restores r.Body so apiresp.DecodeJSON can
-// consume it. It exists because both routes need to know whether the body was
-// empty (DecodeJSON rejects an empty body, but Rotate treats it as the zero
-// request and SetGrace gives it a dedicated code) and SetGrace needs the raw
-// bytes for key-presence detection. A transport read error writes the 400 and
-// reports false.
+// readFieldCryptoKeyBody reads the request body, bounded to
+// maxFieldCryptoKeyBodyBytes by http.MaxBytesReader, and restores r.Body so
+// apiresp.DecodeJSON can consume it. A body over the cap makes ReadAll return
+// a *http.MaxBytesError, which is answered here with the same 400
+// field_crypto_keys.body_too_large DecodeJSON produces (and MaxBytesReader
+// tells the server to close the connection); any other read error is the
+// 400 field_crypto_keys.invalid_json_body. All of this is stateless and runs
+// before the "manage" authorize, so the 400 wins over 403. It exists because
+// both routes need to know whether the body was empty (DecodeJSON rejects an
+// empty body, but Rotate treats it as the zero request and SetGrace gives it
+// a dedicated code) and SetGrace needs the raw bytes for key-presence
+// detection. A read error writes the 400 and reports false.
 func readFieldCryptoKeyBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 	if r.Body == nil || r.Body == http.NoBody {
 		return nil, true
 	}
-	raw, err := io.ReadAll(io.LimitReader(r.Body, maxFieldCryptoKeyBodyBytes+1))
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxFieldCryptoKeyBodyBytes))
 	if err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+				Code:    fieldCryptoKeyCodePrefix + ".body_too_large",
+				Message: "request body is too large",
+			}))
+			return nil, false
+		}
 		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
 			Code:    fieldCryptoKeyCodePrefix + ".invalid_json_body",
 			Message: "request body could not be read",

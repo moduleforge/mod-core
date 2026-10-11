@@ -181,6 +181,14 @@ service, so in-process callers see the same order as HTTP: `ErrForbidden` for a 
 `apps.id` is its `entities.id`), after the path UUID parse and, for `PUT`, the body decode. The
 real lookup follows authorization, so a 404 appears only when the row vanishes between the two.
 
+**Accepted residual: the resolve is not type-scoped.** The `slug` argument is an error label only;
+`AuthorizeResolve` looks the id up in `entities` regardless of its type and authorizes against it.
+A caller who is already authorized on an existing entity of another type therefore passes the
+resolve and gets a 404 from the subsequent subtype lookup (for example `PUT
+/entities/corporations/{uuid}` with a natural person's id), while a nonexistent id gets 403. This
+reveals only that an id the caller is already authorized on is not of the requested type, so no
+unauthorized caller gains an existence oracle. Accepted; do not add a type check to the resolve.
+
 **The target-0 authorizer rule.** The miss call passes target `0`, which is never a real
 `entities.id`. Every `Authorizer` reachable through `AuthorizeResolve` must deny target 0 (no grant
 can legitimately match it), must not panic or fail loudly on it, and must not treat it as misuse.
@@ -191,12 +199,15 @@ miss. Test fakes that count `Authorize` calls must allow it. This is distinct fr
 **Conflicts come after authorization.** `POST /v1/apps` and `PUT /v1/apps/{uuid}` return 409 with
 detail code `apps.slug_taken` on a duplicate slug (a Postgres unique violation on the
 `apps_slug_key` constraint; a unique violation on any other constraint stays a 500). Only an
-authorized caller can see it. Not every post-authorization 400 has been reclassified: the
-`ErrInvalidInput` that `ServiceAccountService.UpdateByEntityUUID` returns for a capability gap is
-unchanged and open. The blank-name checks on the natural person, corporation and service account
-create routes are stateless shape errors: the handlers run them right after decoding the body and
-before the service's `AuthorizeType`, so an unauthorized caller with a blank name gets 400, not 403.
-The services keep their own blank checks (after `AuthorizeType`) for non-HTTP callers.
+authorized caller can see it. `PUT /entities/service-accounts/{uuid}` now updates the label (inside
+a transaction, with the same `update` observer events as the other entity updates). The blank-name
+checks on the natural person, corporation and service account create routes are stateless shape
+errors: the handlers run them right after decoding the body and before the service's
+`AuthorizeType`, so an unauthorized caller with a blank name gets 400, not 403. The update routes
+follow the same rule: a present but blank (after trimming) `given_name`, `family_name`,
+`legal_name` or `label` is a stateless 400 before authorization, and an absent or null field stays a
+no-op. The services keep their own blank checks (after `AuthorizeType` on create, after
+`AuthorizeResolve` on update) for non-HTTP callers.
 
 **Order is tested.** `api/httpapi` carries one `apiresp/ordertest` route per handler for the apps,
 entity, and field-crypto routes (`apps_order_test.go`, `entities_order_test.go`,

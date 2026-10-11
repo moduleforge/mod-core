@@ -38,6 +38,13 @@ import (
 //
 // The masked lookup in step 3 is a necessary DB read: the authorizer needs
 // the entities.id as its target.
+//
+// Accepted residual: slug is an error label only; the resolve is not
+// type-scoped. A caller already authorized on an existing entity of another
+// type passes this call and gets a 404 from the caller's subsequent subtype
+// lookup, while a nonexistent id gets 403. That reveals only that an id the
+// caller is already authorized on is not of the requested type, so no
+// unauthorized caller gains an existence oracle. This is accepted.
 func (r *Resolver) AuthorizeResolve(ctx context.Context, q coredb.Querier, az authz.Authorizer, op string, u uuid.UUID, slug string) (int64, error) {
 	if err := authz.RequireAuthenticated(ctx); err != nil {
 		return 0, err
