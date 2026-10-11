@@ -18,3 +18,7 @@ phases:
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
       tasks: []
+    - number: 5
+      slug: wire-docs-and-validation
+      title: Wire Risk Docs and Validation
+      tasks: []
