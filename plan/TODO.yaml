@@ -13,6 +13,7 @@ phases:
           path: phase-01-authenticate-routes/001-audit-handlers.md
           done: false
           tier: sonnet-low
+          digest: Read-only audit of 21 mod-core routes and 4 service Update/Archive methods; table appended to plan/notes/handler-inventory.md; no source changes.
           git:
             branch: null
             commit: []
