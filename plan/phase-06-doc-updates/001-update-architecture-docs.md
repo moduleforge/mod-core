@@ -17,3 +17,9 @@ Update architecture and spec docs to reflect the handler-conformance changes mad
 ## Validation
 
 - Each named doc was reviewed and updated where behavior is described; no new link from a non-plan doc into `plan/`.
+
+## Status
+
+- Outcome: succeeded (2026-10-11).
+- Added section "Request order and the target-0 call" to `docs/architecture/type-level-authorization.md` (401/400/403/404-409 order, router-level and group-scoped `RequireAuth`, `AuthorizeResolve` masked resolve in handlers and services, stateless decode before authorization, field-crypto reordering, 409 `apps.slug_taken`, order tests, target-0 authorizer rule); cross-linked from `docs/architecture/type-entities.md`, `README.md`, and `AGENTS.md` (conventions, `httpapi/` row refined).
+- No `docs/architecture.md` or `docs/*-spec.md` exists; none created. Validation: no `plan/` links in the edited docs.

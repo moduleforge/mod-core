@@ -93,6 +93,9 @@ Deprecating a type only sets its `deprecated_at`. Three rules follow from it:
 
 - `GET /v1/entities/{uuid}` returns a profile of kind `type` for a type entity, carrying the type's
   slug, name and description. Internal ids are never exposed.
+  Like every entity read it follows the route order in
+  [type-level-authorization.md](./type-level-authorization.md#request-order-and-the-target-0-call):
+  401, then a malformed UUID as 400, then a masked 403 for a missing or unreadable id.
 - A builtin display renderer for `type` supplies the type's name and description to
   `GET /v1/entities/{uuid}/display-name` (see
   [display-name-http.md](./display-name-http.md)).

@@ -8,6 +8,9 @@ always an `entities.id`. Intended for a module author writing a service method o
 gates `create` or `list` by resource type, and for an `Authorizer` implementer deciding whether to
 answer type-level questions.
 
+Also records the order in which mod-core's routes and services apply authentication, request-shape
+validation, authorization, and lookup, and the target-0 call that the masked resolve makes.
+
 Not covered here: the `Authorizer` and `OpResolver` interfaces in general (see the `authz/` row of
 [AGENTS.md](../../AGENTS.md#key-types-and-packages) and the doc comments in `api/authz/authz.go`).
 
@@ -127,6 +130,81 @@ entity data model.
 >   the same rule as `GrantTableGenerator`, or single-row and list checks disagree for type-grant
 >   holders.
 
+## Request order and the target-0 call
+
+mod-core's HTTP routes and the service methods behind them reject a request at the first stage that
+applies, in this order. The ecosystem rule is in
+`docs/mf-standards/architecture/http-error-precedence.md`; this section records how mod-core
+realizes it.
+
+| # | Status | Stage | How mod-core does it |
+|---|---|---|---|
+| 1 | 401 | Unauthenticated | `authz.RequireAuth`, mounted at router level, not per handler (see below). Sudo-aware through the effective actor. |
+| 2 | 400 | Request shape | Stateless decode only: `apiresp.DecodeJSON` and `apiresp.ParseUUIDParam`. No database or service call. |
+| 3 | 403 | Authorization | `entity.Resolver.AuthorizeResolve` for an id-addressed target; `authz.AuthorizeType` or a nil-target `Authorize` otherwise. A missing id is 403. |
+| 4 | 404 / 409 | Lookup, then conflict | The real lookup after authorization (404 only if the row vanishes in a race), then state conflicts such as a duplicate app slug. |
+
+**Authentication is mounted at the router, not in handlers.** `httpapi.NewRouter` applies
+`authz.RequireAuth` with `r.Use`, so every route it serves, including unknown paths under the core
+`/v1` catch-all, answers an anonymous caller 401 before decode or authorization. The registrars that
+attach to a shared `/v1` router (`RegisterAppRoutes`, `RegisterFieldCryptoKeyRoutes`) cannot use
+`r.Use` on the shared router without gating peer modules' routes, so each applies `RequireAuth`
+inside its own `r.Group`; the gate covers only that registrar's routes. Handlers carry no inline 401
+check, and the old sudo-unaware `opctx.ActorEntityID` checks are gone, so a sudo-only identity now
+reaches authorization instead of getting 401. The module manifest entry for the `/v1` router
+declares `scope: authenticated` explicitly, because mfgen treats an empty scope as public.
+
+**Stateless decode comes before authorization.** Handlers parse path UUIDs and decode bodies first.
+An unauthorized caller sending a malformed body or UUID therefore gets 400, and an anonymous caller
+gets 401. Decode failures use detail codes `invalid_json_body`, `invalid_uuid`, and
+`body_too_large`; unknown members, trailing data, an empty body, and a body over 1 MiB are 400. The
+field-crypto key routes keep their 4 KiB cap and the `field_crypto_keys.` code prefix, and
+`Rotate`, `MarkCompromised`, and `SetGrace` now run every stateless check (body decode, grace
+checks, key-material parsing, the `{version}` parameter) before the nil-target `manage` authorize.
+None of these routes is authorize-first, and `Cipher.Reload` is reachable only after authorization.
+
+**A masked resolve gives 403 for a missing id.** For id-addressed targets the resolve and the
+authorize are one step, `Resolver.AuthorizeResolve`:
+
+1. It requires an authenticated effective actor (`ErrUnauthenticated`).
+2. A nil authorizer fails closed (`ErrForbidden`) before any database read.
+3. It looks the id up. On a hit it calls `Authorize(ctx, op, &entityID)` and returns that error
+   unchanged. On a miss it calls `Authorize(ctx, op, &0)`, discards the result, and always returns
+   `ErrForbidden`, so a missing id and an existing-but-forbidden id are indistinguishable, including
+   for an admin.
+
+The service methods that fetch then authorize (`EntityService.Archive` and the `UpdateByEntityUUID`
+methods of the natural person, corporation, and service account services) call it inside the
+service, so in-process callers see the same order as HTTP: `ErrForbidden` for a missing id and
+`ErrUnauthenticated` when no actor is in the context. The apps handler routes `GET`, `PUT`, and
+`DELETE /v1/apps/{uuid}` through it with operations `read`, `update`, and `delete` (an app's
+`apps.id` is its `entities.id`), after the path UUID parse and, for `PUT`, the body decode. The
+real lookup follows authorization, so a 404 appears only when the row vanishes between the two.
+
+**The target-0 authorizer rule.** The miss call passes target `0`, which is never a real
+`entities.id`. Every `Authorizer` reachable through `AuthorizeResolve` must deny target 0 (no grant
+can legitimately match it), must not panic or fail loudly on it, and must not treat it as misuse.
+Operators should expect audit logs to show one extra `Authorize` call with target 0 per masked
+miss. Test fakes that count `Authorize` calls must allow it. This is distinct from the nil target of
+`AuthorizeType`'s fallback and from the rule that a target is never a `types.id`.
+
+**Conflicts come after authorization.** `POST /v1/apps` and `PUT /v1/apps/{uuid}` return 409 with
+detail code `apps.slug_taken` on a duplicate slug (a Postgres unique violation on the
+`apps_slug_key` constraint; a unique violation on any other constraint stays a 500). Only an
+authorized caller can see it. Not every post-authorization 400 has been reclassified: the
+`ErrInvalidInput` that `ServiceAccountService.UpdateByEntityUUID` returns for a capability gap, and
+the blank-name checks in the `Create` methods that run after `AuthorizeType`, are unchanged and
+open.
+
+**Order is tested.** `api/httpapi` carries one `apiresp/ordertest` route per handler for the apps,
+entity, and field-crypto routes (`apps_order_test.go`, `entities_order_test.go`,
+`field_crypto_keys_order_test.go`), asserting 401, then 400, then 403 (identical envelopes for a
+missing and a forbidden id), then the late 409s. Apps routes set `AuthorizedMissingStatus: 403`
+because every miss is masked. No mod-core route sets `AuthzFirst`: the create routes decode before
+the service's `AuthorizeType`. Further tests assert that `RequireAuth` covers every route, that the
+group-scoped gate does not gate a peer route on a shared router, and that a masked miss calls
+`Authorize` once with target 0 and opens no transaction.
+
 ## Adopting the helper in a module
 
 A module that carries a local structural interface and helper for the same purpose (for example
@@ -150,7 +228,8 @@ share the same `AuthorizeType` method signature, so they interoperate.
 
 mod-core's four type-level `create` paths use the helper: `NaturalPersonService.Create`,
 `CorporationService.Create`, `ServiceAccountService.Create`, and `AppsHandler.Create`
-(`POST /v1/apps`). These call sites never pass the type id as an entity target. A grant on an
+(`POST /v1/apps`; the handler decodes the body before the `AuthorizeType` call, see
+[Request order and the target-0 call](#request-order-and-the-target-0-call)). These call sites never pass the type id as an entity target. A grant on an
 unrelated entity whose id happens to equal the type id confers nothing: a non-wildcard actor who
 owns, or holds a targeted grant over, the entity whose id equals the type id is denied with
 `ErrForbidden`. A grant on the type's own entity is honoured only through `AuthorizeType`. Wildcard
