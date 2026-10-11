@@ -54,15 +54,17 @@ phases:
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
+      diff_base: c6a4f08cce2956553d36e8a0fdf9a8edbc9065a2
       tasks:
         - number: 1
           slug: apps-masked-resolve
           title: Apps Handler Masked Resolve
           path: phase-02-existence-leaks/001-apps-masked-resolve.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Apps GET/PUT/DELETE use AuthorizeResolve; missing app is 403 for all callers incl. admins; AllowNotFound("app") removed; tests flipped to masked-equality 403.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-02-001
             commit: []
             merge: null
         - number: 2
