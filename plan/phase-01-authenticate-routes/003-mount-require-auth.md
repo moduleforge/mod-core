@@ -21,3 +21,10 @@ Put the sudo-aware 401 gate in front of every mod-core route so the inline check
 ## Metadata
 
 architectural_impact: true
+
+## Status
+
+- Outcome: succeeded (2026-10-11).
+- `authz.RequireAuth` mounted via `r.Use` in `NewRouter`, and inside `r.Group` in `RegisterAppRoutes` and `RegisterFieldCryptoKeyRoutes`. Signatures unchanged.
+- Tests: `api/httpapi/require_auth_mount_test.go` (anonymous 401 on every route with malformed body, good body, empty body, and malformed UUIDs; sudo-only not 401; peer route on shared router not gated).
+- Validation: `cd api && go test ./...` passes (GUI deps not installed, so `make test` was not run). The new anonymous tests also pass against the pre-change code because the inline checks still produce the same 401; they become the gate's regression coverage once the inline checks are removed. The sudo-only probe uses `POST /apps` only, since other handlers' sudo-unaware inline checks still 401 sudo-only identities until removed.
