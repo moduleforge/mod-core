@@ -72,15 +72,6 @@ items:
         - plan/phase:decode-and-shape
         - effort:unspecified
       text: DecodeJSON in the apps, natural person, corporation and service account handlers now rejects unknown members and caps bodies at 1 MiB; the old code had neither. Clients (GUI, other apps) sending extra members get 400. Confirm GUI/client payloads and record this as an intentional behavior change in the OpenAPI notes and wire-risk docs.
-    - title: 'Open decision: blank-name checks run after Au'
-      id: cXx6
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:conflicts-and-order-tests
-        - priority:unspecified
-        - effort:unspecified
-      text: 'Open decision: blank-name checks run after AuthorizeType in NaturalPerson/Corporation/ServiceAccount Create - move into handler/Validator (stateless before authz) or keep as type-level-authz exception.'
     - title: Wire-risk docs (task 5.1) must record new 409
       id: XnT4
       date: "2026-10-11"
@@ -121,6 +112,11 @@ closed:
       date: "2026-10-11"
     - id: aJ4X
       title: Decide whether stateless blank-name checks in
+      disposition: fixed
+      ref: phase-10-blank-name-remediation/001-blank-name-before-authz.md
+      date: "2026-10-11"
+    - id: cXx6
+      title: 'Open decision: blank-name checks run after Au'
       disposition: fixed
       ref: phase-10-blank-name-remediation/001-blank-name-before-authz.md
       date: "2026-10-11"
