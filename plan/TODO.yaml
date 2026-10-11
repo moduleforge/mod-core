@@ -179,6 +179,7 @@ phases:
           path: phase-05-wire-docs-and-validation/002-full-validation.md
           done: false
           tier: sonnet-low
+          digest: 'Full validation passed: make build, make test, api lint, GUI typecheck+tests, and Postgres integration suite (throwaway postgres:16 docker, go test -tags=integration) all exit 0; checklist greps clean; deferred inventory rows 9,10,12,13 tracked as plan findings.'
           git:
             branch: null
             commit: []
