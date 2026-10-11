@@ -18,4 +18,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: Decide whether stateless blank-name checks in natural person/corporation/service account Create go before the type-level authorize or stay after, consistently.
+    - title: docs/mf-standards submodule is uninitialized
+      id: dC0H
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:authenticate-routes
+        - priority:unspecified
+        - effort:unspecified
+      text: docs/mf-standards submodule is uninitialized in task worktrees, so the manifest-spec doc check in task 1.2 requirement 3 was not done; decide whether to defer to docs-mf-standards.
 closed: []
