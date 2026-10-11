@@ -102,7 +102,7 @@ phases:
           tier: sonnet-med
           digest: 'Natural-person, corporation, service-account, entities and display handlers converted to DecodeJSON and ParseUUIDParam with a 19-case table test; wire: unknown fields rejected, 1 MiB cap, empty body 400, invalid_json_body/invalid_uuid details. Blank-name check placement unchanged (open decision).'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-03-002
             commit: []
             merge: null
         - number: 3
