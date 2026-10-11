@@ -81,6 +81,15 @@ items:
         - plan/phase:user-decisions-remediation
         - effort:unspecified
       text: ServiceAccountService.UpdateByEntityUUID (api/service/service_account.go ~168-205) mutates the label through the caller-supplied querier with no txhelper.Run transaction and no s.obs.Observe / ObserveAfterCommit 'update' dispatch, unlike NaturalPersonService/CorporationService updates (natural_person.go ~339,346; corporation.go ~271,278) and SA Create. A service-account label change (reachable since phase 9) therefore produces no audit-log record. Wrap in a transaction and dispatch the same observer events as the sibling updates, with tests.
+    - title: NP/corp update accepts blank names
+      id: ferC
+      date: "2026-10-11"
+      tags:
+        - type:bug
+        - priority:medium
+        - plan/phase:blank-name-remediation
+        - effort:unspecified
+      text: NaturalPersonService.UpdateByEntityUUID (natural_person.go ~299-304) and CorporationService.UpdateByEntityUUID (corporation.go ~231-233) trim but do not reject a blank given_name, family_name or legal_name, so an update can store an empty name that Create forbids. Add the same stateless blank checks to the PUT handlers before authorization (consistent with phase 10) and to the services for non-HTTP callers, with order tests.
 closed:
     - id: nK0x
       title: ServiceAccount UpdateByEntityUUID capability
