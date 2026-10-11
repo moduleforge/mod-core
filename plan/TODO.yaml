@@ -166,7 +166,7 @@ phases:
           slug: wire-risk-docs
           title: Document Wire Risks and Helper Usage
           path: phase-05-wire-docs-and-validation/001-wire-risk-docs.md
-          done: false
+          done: true
           tier: sonnet-low
           digest: Documented all wire-visible changes in openapi fragment (Error precedence section, entity/field-crypto operation notes), README and AGENTS.md; fragment has no /apps paths so apps behavior is prose only.
           git:
