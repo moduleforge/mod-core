@@ -109,7 +109,7 @@ phases:
           slug: field-crypto-decode
           title: Field Crypto Keys Decode and Ordering
           path: phase-03-decode-and-shape/003-field-crypto-decode.md
-          done: false
+          done: true
           tier: sonnet-high
           digest: 'Field-crypto Rotate/SetGrace/MarkCompromised now run all stateless checks before the nil-target authorize (user decision); decode via DecodeJSON shim with 4 KiB cap and field_crypto_keys code prefix; empty Rotate body and SetGrace key presence preserved; wire: forbidden caller with bad body gets 400 not 403, new decode codes, trailing data rejected.'
           git:
