@@ -1,14 +1,5 @@
 version: 2
-items:
-    - title: Absent-field update test is vacuous
-      id: 3T6R
-      date: "2026-10-11"
-      tags:
-        - type:bug
-        - priority:low
-        - plan/phase:remediation-04
-        - effort:unspecified
-      text: 'api/httpapi/entities_order_test.go (~383-389): the absent-field case only checks that {} does not return 400. On the natural-person and corporation routes the fixture database refuses writes so the request returns 500 and the test still passes; the comment saying the update ''succeeds'' holds only for the service-account route. Assert the response body lacks the blank-name code or the exact per-route status, and fix the comment. (Phase 11 review; minor test-assertion.)'
+items: []
 closed:
     - id: nK0x
       title: ServiceAccount UpdateByEntityUUID capability
@@ -114,4 +105,9 @@ closed:
       title: OpenAPI omits NP/corp blank-name 400s
       disposition: promoted
       ref: C6w8
+      date: "2026-10-11"
+    - id: 3T6R
+      title: Absent-field update test is vacuous
+      disposition: promoted
+      ref: 3T6R
       date: "2026-10-11"
