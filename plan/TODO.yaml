@@ -54,6 +54,7 @@ phases:
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
+      diff_base: c6a4f08cce2956553d36e8a0fdf9a8edbc9065a2
       tasks:
         - number: 1
           slug: apps-masked-resolve
