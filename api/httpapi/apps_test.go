@@ -245,8 +245,8 @@ func (q *appsFakeQuerier) GetEntityByID(_ context.Context, _ int64) (coredb.GetE
 	return coredb.GetEntityByIDRow{}, nil
 }
 
-// GetEntityByUUID backs entity.Resolver.Resolve, which AppsHandler now calls
-// (via loadAppByUUIDParam) to authorize against the bare entity id before
+// GetEntityByUUID backs entity.Resolver.AuthorizeResolve, which AppsHandler now calls
+// (via authorizeAppByUUIDParam) to authorize against the bare entity id before
 // loading the full app row. It must actually resolve — a stub that always
 // succeeds would silently defeat the not-found test cases below.
 func (q *appsFakeQuerier) GetEntityByUUID(_ context.Context, argUuid uuid.UUID) (coredb.GetEntityByUUIDRow, error) {
@@ -333,11 +333,22 @@ type appsFakeAuthorizer struct {
 	// resolved entity id (not the full row) ahead of loading data.
 	lastAction string
 	lastTarget *int64
+
+	// allowIDs, when non-nil, switches the fake to target-aware mode: only
+	// the listed entity ids are authorized; every other target (including the
+	// target-0 call AuthorizeResolve makes on a masked miss) is denied.
+	allowIDs map[int64]bool
 }
 
 func (a *appsFakeAuthorizer) Authorize(_ context.Context, action string, target *int64) error {
 	a.lastAction = action
 	a.lastTarget = target
+	if a.allowIDs != nil {
+		if target != nil && a.allowIDs[*target] {
+			return nil
+		}
+		return apiresp.ErrForbidden
+	}
 	return a.err
 }
 
@@ -629,20 +640,6 @@ func TestAppsGetApp_403_AuthorizesBeforeLoad(t *testing.T) {
 	}
 }
 
-func TestAppsGetApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	req := adminReq(http.MethodGet, "/apps/"+uuid.New().String(), nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
-	}
-}
-
 func TestAppsGetApp_400_BadUUID(t *testing.T) {
 	q := newAppsFakeQuerier()
 	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
@@ -690,21 +687,6 @@ func TestAppsUpdateApp_200(t *testing.T) {
 	}
 	if az.lastTarget == nil || *az.lastTarget != 1 {
 		t.Errorf("authz target: got %v, want pointer to 1 (the resolved entity id)", az.lastTarget)
-	}
-}
-
-func TestAppsUpdateApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	body, _ := json.Marshal(updateAppRequest{Name: "Renamed App"})
-	req := adminReq(http.MethodPut, "/apps/"+uuid.New().String(), bytes.NewBuffer(body))
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }
 
@@ -769,20 +751,6 @@ func TestAppsDeleteApp_204_ArchivesAndDropsFromList(t *testing.T) {
 	}
 }
 
-func TestAppsDeleteApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	req := adminReq(http.MethodDelete, "/apps/"+uuid.New().String(), nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
-	}
-}
-
 // TestAppsDeleteApp_403_AuthorizesBeforeLoad asserts authorization runs
 // against the bare resolved entity id before DeleteApp loads the full row
 // (mirroring TestAppsGetApp_403_AuthorizesBeforeLoad).
@@ -801,5 +769,100 @@ func TestAppsDeleteApp_403_AuthorizesBeforeLoad(t *testing.T) {
 	}
 	if q.getAppByUUIDCalls != 0 {
 		t.Errorf("GetAppByUUID calls: got %d, want 0 (full row must not load before authz)", q.getAppByUUIDCalls)
+	}
+}
+
+// --- masked resolve: missing and forbidden are indistinguishable ---
+
+// appsMaskedCase drives one of GET/PUT/DELETE /apps/{uuid}.
+type appsMaskedCase struct {
+	name   string
+	method string
+	body   func() *bytes.Buffer
+}
+
+var appsMaskedCases = []appsMaskedCase{
+	{"GET", http.MethodGet, func() *bytes.Buffer { return nil }},
+	{"PUT", http.MethodPut, func() *bytes.Buffer {
+		b, _ := json.Marshal(updateAppRequest{Name: "Renamed"})
+		return bytes.NewBuffer(b)
+	}},
+	{"DELETE", http.MethodDelete, func() *bytes.Buffer { return nil }},
+}
+
+func (c appsMaskedCase) do(router chi.Router, id uuid.UUID) *httptest.ResponseRecorder {
+	var req *http.Request
+	if b := c.body(); b != nil {
+		req = adminReq(c.method, "/apps/"+id.String(), b)
+	} else {
+		req = adminReq(c.method, "/apps/"+id.String(), nil)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+// A missing id and an existing-but-forbidden id both yield 403 with an
+// identical envelope, and the full row is never loaded for either.
+func TestApps_MissingAndForbiddenAreIndistinguishable(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			existing := q.seedApp("demo", "Demo App")
+			// Caller is authorized for no entity at all.
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			forbidden := c.do(router, existing)
+			missing := c.do(router, uuid.New())
+
+			if forbidden.Code != http.StatusForbidden || missing.Code != http.StatusForbidden {
+				t.Fatalf("status: forbidden=%d missing=%d, want both 403", forbidden.Code, missing.Code)
+			}
+			if forbidden.Body.String() != missing.Body.String() {
+				t.Errorf("envelopes differ:\nforbidden: %s\nmissing:   %s", forbidden.Body.String(), missing.Body.String())
+			}
+			if q.getAppByUUIDCalls != 0 {
+				t.Errorf("GetAppByUUID calls: got %d, want 0", q.getAppByUUIDCalls)
+			}
+		})
+	}
+}
+
+// Documented consequence of the masked resolve: even a caller authorized for
+// existing apps gets 403 (not 404) on a missing id, because the miss call is
+// made with target 0, which no grant matches.
+func TestApps_AuthorizedCallerOnMissingIDGets403(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			q.seedApp("demo", "Demo App")
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			rec := c.do(router, uuid.New())
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("status: got %d, want 403 — body: %s", rec.Code, rec.Body.String())
+			}
+			if q.getAppByUUIDCalls != 0 {
+				t.Errorf("GetAppByUUID calls: got %d, want 0", q.getAppByUUIDCalls)
+			}
+		})
+	}
+}
+
+// The authorized caller on an existing app still succeeds (target-aware
+// authorizer sanity check), and a row vanishing after authorization is the
+// only path to 404.
+func TestApps_RowVanishesAfterAuthorizeIs404(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.getAppByUUIDErr = pgx.ErrNoRows
+	az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+	router := appsRouter(newTestAppsHandler(q, az))
+
+	rec := appsMaskedCases[0].do(router, appUUID)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status: got %d, want 404", rec.Code)
 	}
 }
