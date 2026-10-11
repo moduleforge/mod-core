@@ -197,7 +197,7 @@ phases:
           tier: sonnet-high
           digest: Added a durable 'Request order and the target-0 call' section to docs/architecture/type-level-authorization.md, cross-linked from README/AGENTS.md/type-entities.md; no docs/architecture.md exists in this repo.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-06-001
             commit: []
             merge: null
     - number: 8
