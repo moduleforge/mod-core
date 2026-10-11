@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -19,11 +18,6 @@ type createServiceAccountRequest struct {
 
 // createServiceAccount handles POST /entities/service-accounts (admin only).
 func (h *handlers) createServiceAccount(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	var req createServiceAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -47,11 +41,6 @@ func (h *handlers) createServiceAccount(w http.ResponseWriter, r *http.Request) 
 
 // getServiceAccount handles GET /entities/service-accounts/{uuid} (admin only).
 func (h *handlers) getServiceAccount(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -74,11 +63,6 @@ type updateServiceAccountRequest struct {
 
 // updateServiceAccount handles PUT /entities/service-accounts/{uuid} (admin only).
 func (h *handlers) updateServiceAccount(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)

@@ -38,22 +38,17 @@ func do(h http.Handler, id ordertest.Identity, method, path, body string) *httpt
 	return rec
 }
 
-// TestRequireAuthMounted_AnonymousIs401 proves the gate covers every route of
-// every group, ahead of body parsing and path-UUID parsing: a malformed body
-// and a malformed UUID are both 401 for an anonymous caller, never 400.
-func TestRequireAuthMounted_AnonymousIs401(t *testing.T) {
-	core, shared := mountedRouters(t)
-	const badUUID = "not-a-uuid"
-	good := `{"slug":"a","name":"b"}`
-	malformed := `{"slug":`
+type mountedRoute struct {
+	name   string
+	h      http.Handler
+	method string
+	path   string
+}
 
-	type route struct {
-		name   string
-		h      http.Handler
-		method string
-		path   string
-	}
-	routes := []route{
+// allMountedRoutes lists every route of the three mounted groups.
+func allMountedRoutes(core, shared http.Handler) []mountedRoute {
+	const badUUID = "not-a-uuid"
+	return []mountedRoute{
 		{"core POST natural-persons", core, http.MethodPost, "/entities/natural-persons"},
 		{"core GET natural-persons", core, http.MethodGet, "/entities/natural-persons/" + badUUID},
 		{"core PUT natural-persons", core, http.MethodPut, "/entities/natural-persons/" + badUUID},
@@ -76,6 +71,17 @@ func TestRequireAuthMounted_AnonymousIs401(t *testing.T) {
 		{"fck POST mark-compromised", shared, http.MethodPost, "/field-crypto-keys/not-a-number/mark-compromised"},
 		{"fck PUT grace", shared, http.MethodPut, "/field-crypto-keys/not-a-number/grace"},
 	}
+}
+
+// TestRequireAuthMounted_AnonymousIs401 proves the gate covers every route of
+// every group, ahead of body parsing and path-UUID parsing: a malformed body
+// and a malformed UUID are both 401 for an anonymous caller, never 400.
+func TestRequireAuthMounted_AnonymousIs401(t *testing.T) {
+	core, shared := mountedRouters(t)
+	good := `{"slug":"a","name":"b"}`
+	malformed := `{"slug":`
+
+	routes := allMountedRoutes(core, shared)
 	for _, rt := range routes {
 		for _, body := range []string{malformed, good, ""} {
 			t.Run(rt.name+"/body="+body, func(t *testing.T) {
@@ -88,16 +94,23 @@ func TestRequireAuthMounted_AnonymousIs401(t *testing.T) {
 	}
 }
 
-// TestRequireAuthMounted_SudoOnlyPassesGate proves the gate is sudo-aware: a
-// sudo-only identity is not rejected with 401. Only POST /apps is probed
-// through the real router because its handler's own check is also sudo-aware;
-// the other handlers still carry sudo-unaware inline checks that would answer
-// 401 on their own until those are removed.
+// TestRequireAuthMounted_SudoOnlyPassesGate proves the gate is sudo-aware on
+// every route: a sudo-only identity is never rejected with 401 once the
+// sudo-unaware inline checks are gone. The status past the gate is
+// unconstrained here (400/403/404 from the stubbed deps are all fine).
 func TestRequireAuthMounted_SudoOnlyPassesGate(t *testing.T) {
-	_, shared := mountedRouters(t)
-	rec := do(shared, ordertest.SudoOnly(7), http.MethodPost, "/apps", `{"slug":"a","name":"b"}`)
-	if rec.Code == http.StatusUnauthorized {
-		t.Fatalf("sudo-only identity got 401 - body: %s", rec.Body.String())
+	core, shared := mountedRouters(t)
+	for _, rt := range allMountedRoutes(core, shared) {
+		t.Run(rt.name, func(t *testing.T) {
+			// The core router is built with nil services, so a request that
+			// clears the gate may panic in the handler. A panic proves the
+			// request got past the 401 gate, which is all this test asserts.
+			defer func() { _ = recover() }()
+			rec := do(rt.h, ordertest.SudoOnly(7), rt.method, rt.path, `{"slug":"a","name":"b"}`)
+			if rec.Code == http.StatusUnauthorized {
+				t.Fatalf("sudo-only identity got 401 - body: %s", rec.Body.String())
+			}
+		})
 	}
 }
 

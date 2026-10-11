@@ -22,3 +22,9 @@ Delete the sudo-unaware inline `opctx.ActorEntityID` 401 checks now that `Requir
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). Removed the 20 sudo-unaware `opctx.ActorEntityID` 401 checks and apps `Create`'s redundant `authz.RequireAuthenticated` call from `api/httpapi/{apps,natural_persons,corporations,service_accounts,entities,display,field_crypto_keys}.go`, plus the unused `opctx` imports and the stale display comment. `service/entity.go` `GetSelf` untouched. `api/httpapi/require_auth_mount_test.go` now drives every route (anonymous 401 for each, unchanged) and the sudo-only test covers all 21 routes instead of POST /apps only. Validation: `go vet` and `go test ./...` pass in api and model; no handler gate remains in `grep -rn ActorEntityID api/httpapi`. Integration suite (needs Postgres) not run; it vets with `-tags=integration`. `make test` not run (GUI deps not installed).
+
+Wire-risk note: sudo-only identities now reach the authorize step on routes that previously returned 401.
