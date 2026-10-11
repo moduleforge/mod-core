@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: SA label update emits no audit observer event
-      id: ovGY
-      date: "2026-10-11"
-      tags:
-        - type:bug
-        - priority:medium
-        - plan/phase:user-decisions-remediation
-        - effort:unspecified
-      text: ServiceAccountService.UpdateByEntityUUID (api/service/service_account.go ~168-205) mutates the label through the caller-supplied querier with no txhelper.Run transaction and no s.obs.Observe / ObserveAfterCommit 'update' dispatch, unlike NaturalPersonService/CorporationService updates (natural_person.go ~339,346; corporation.go ~271,278) and SA Create. A service-account label change (reachable since phase 9) therefore produces no audit-log record. Wrap in a transaction and dispatch the same observer events as the sibling updates, with tests.
     - title: NP/corp update accepts blank names
       id: ferC
       date: "2026-10-11"
@@ -124,6 +115,11 @@ closed:
       date: "2026-10-11"
     - id: F5yI
       title: Non-app entity ids give 404 to authorized
+      disposition: fixed
+      ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
+      date: "2026-10-11"
+    - id: ovGY
+      title: SA label update emits no audit observer event
       disposition: fixed
       ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
       date: "2026-10-11"
