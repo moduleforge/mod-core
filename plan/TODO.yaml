@@ -77,7 +77,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-02-002
             commit: []
-            merge: null
+            merge: 0745a762d1eb3bc2543c8dda66a51081d322ff82
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
