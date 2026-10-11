@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 1
-    tasks_added: 0
+    tasks_added: 1
 phases:
     - number: 1
       slug: authenticate-routes
@@ -199,4 +199,18 @@ phases:
       slug: remediation-01
       title: Remediation Round 1
       kind: remediation
-      tasks: []
+      tasks_added: 1
+      tasks:
+        - number: 1
+          slug: fix-order-test-build-and-slug-constraint
+          title: Fix Order Test Build Break and Slug Constraint Match
+          path: phase-08-remediation-01/001-fix-order-test-build-and-slug-constraint.md
+          done: false
+          tier: sonnet-med
+          findings:
+            - u4LS
+            - QUsy
+          git:
+            branch: null
+            commit: []
+            merge: null
