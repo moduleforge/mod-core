@@ -108,4 +108,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'Open decision: blank-name checks run after AuthorizeType in NaturalPerson/Corporation/ServiceAccount Create - move into handler/Validator (stateless before authz) or keep as type-level-authz exception.'
+    - title: Wire-risk docs (task 5.1) must record new 409
+      id: XnT4
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:conflicts-and-order-tests
+        - priority:unspecified
+        - effort:unspecified
+      text: Wire-risk docs (task 5.1) must record new 409 apps.slug_taken on POST /apps and PUT /apps/{uuid}.
 closed: []
