@@ -320,6 +320,10 @@ func (q *appsFakeQuerier) UpdateNaturalPersonSSNBlob(_ context.Context, _ coredb
 	return 0, nil
 }
 
+func (q *appsFakeQuerier) UpdateServiceAccountLabel(_ context.Context, _ coredb.UpdateServiceAccountLabelParams) (coredb.ServiceAccount, error) {
+	return coredb.ServiceAccount{}, nil
+}
+
 var _ coredb.Querier = (*appsFakeQuerier)(nil)
 
 // --- fake authz.Authorizer for AppsHandler tests ---
