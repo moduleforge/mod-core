@@ -64,7 +64,7 @@ phases:
           tier: sonnet-med
           digest: Apps GET/PUT/DELETE use AuthorizeResolve; missing app is 403 for all callers incl. admins; AllowNotFound("app") removed; tests flipped to masked-equality 403.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-02-001
             commit: []
             merge: null
         - number: 2
