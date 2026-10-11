@@ -33,7 +33,17 @@ phases:
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
-      tasks: []
+      tasks:
+        - number: 1
+          slug: apps-decode-before-authz
+          title: Apps Decode and UUID Parse Before Authorization
+          path: phase-03-decode-and-shape/001-apps-decode-before-authz.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 4
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
