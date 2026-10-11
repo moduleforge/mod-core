@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -21,11 +20,6 @@ type createNaturalPersonRequest struct {
 
 // createNaturalPerson handles POST /entities/natural-persons (admin only).
 func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	var req createNaturalPersonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -61,11 +55,6 @@ func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
 
 // getNaturalPerson handles GET /entities/natural-persons/{uuid}.
 func (h *handlers) getNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -92,11 +81,6 @@ type updateNaturalPersonRequest struct {
 
 // updateNaturalPerson handles PUT /entities/natural-persons/{uuid}.
 func (h *handlers) updateNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)

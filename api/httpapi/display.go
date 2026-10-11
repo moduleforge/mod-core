@@ -8,7 +8,6 @@ import (
 
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/display"
-	"github.com/moduleforge/core-api/opctx"
 )
 
 // displayNameResponse is the response body for
@@ -33,14 +32,8 @@ type displayNameResponse struct {
 // deployment with no display service wired at all — it is not a missing
 // error case.
 func (h *handlers) getDisplayName(w http.ResponseWriter, r *http.Request) {
-	// Cheap short-circuit mirroring getEntity's convention; the real
-	// authorization gate is the service's az.Authorize call below, which
-	// also produces the 401 on its own when no effective actor is present.
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
+	// The 401 gate is the router-level authz.RequireAuth; the real
+	// authorization gate is the service's az.Authorize call below.
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)

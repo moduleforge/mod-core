@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -21,11 +20,6 @@ type createCorporationRequest struct {
 
 // createCorporation handles POST /entities/corporations (admin only).
 func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	var req createCorporationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -61,11 +55,6 @@ func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
 
 // getCorporation handles GET /entities/corporations/{uuid}.
 func (h *handlers) getCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -92,11 +81,6 @@ type updateCorporationRequest struct {
 
 // updateCorporation handles PUT /entities/corporations/{uuid} (admin only).
 func (h *handlers) updateCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)

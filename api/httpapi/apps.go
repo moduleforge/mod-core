@@ -17,7 +17,6 @@ import (
 	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/entity"
 	"github.com/moduleforge/core-api/observer"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/txhelper"
 	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
@@ -137,11 +136,6 @@ type createAppRequest struct {
 
 // Create handles POST /apps (admin).
 func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	if err := authz.RequireAuthenticated(r.Context()); err != nil {
-		apiresp.WriteError(w, r, err)
-		return
-	}
-
 	var req createAppRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
@@ -234,11 +228,6 @@ func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /apps (admin).
 func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: list is admin-only.
 	if err := h.az.Authorize(r.Context(), "list", nil); err != nil {
 		apiresp.WriteError(w, r, err)
@@ -260,11 +249,6 @@ func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetApp handles GET /apps/{uuid} (admin).
 func (h *AppsHandler) GetApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
 	if !ok {
 		return
@@ -297,11 +281,6 @@ type updateAppRequest struct {
 
 // UpdateApp handles PUT /apps/{uuid} (admin).
 func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
 	if !ok {
 		return
@@ -393,11 +372,6 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 // per-table archived_at of their own; archival is the generic entity
 // archive path shared by every entity subtype.
 func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
 	if !ok {
 		return

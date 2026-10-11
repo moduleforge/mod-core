@@ -24,7 +24,6 @@ import (
 	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/fieldcrypto"
 	"github.com/moduleforge/core-api/observer"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/txhelper"
 	coredb "github.com/moduleforge/core-model/db"
 )
@@ -187,11 +186,6 @@ func timestamptzOrNil(ts pgtype.Timestamptz) any {
 // List handles GET /field-crypto-keys (admin) — every key version and its
 // lifecycle timestamps.
 func (h *FieldCryptoKeyHandler) List(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: "manage" with a nil target — admin-only, exactly as the
 	// mutating routes below. The inventory returns no key material, but it
 	// does disclose the full rotation history and which keys are flagged
@@ -234,11 +228,6 @@ type rotateFieldCryptoKeyRequest struct {
 
 // Rotate handles POST /field-crypto-keys/rotations (admin).
 func (h *FieldCryptoKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize before the body is parsed and before any state-changing
 	// work: "manage" with a nil target is denied for every actor except one
 	// holding a wildcard grant, so this is mod-core's fail-closed admin-only
@@ -453,11 +442,6 @@ const pgerrcodeUniqueViolation = "23505"
 // MarkCompromised handles POST /field-crypto-keys/{version}/mark-compromised
 // (admin) — flagging an already-retired key after the fact.
 func (h *FieldCryptoKeyHandler) MarkCompromised(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: "manage" with a nil target — admin-only, as every route in
 	// this handler.
 	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
@@ -511,11 +495,6 @@ type setFieldCryptoKeyGraceRequest struct {
 // SetGrace handles PUT /field-crypto-keys/{version}/grace (admin) —
 // extending, shortening, or clearing a retired key's decrypt window.
 func (h *FieldCryptoKeyHandler) SetGrace(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: "manage" with a nil target — admin-only, as every route in
 	// this handler.
 	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
