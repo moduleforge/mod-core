@@ -153,7 +153,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-04-003
             commit: []
-            merge: null
+            merge: 70f38646b0ca304c8bf7acc389dae6f285df747a
     - number: 5
       slug: wire-docs-and-validation
       title: Wire Risk Docs and Validation
