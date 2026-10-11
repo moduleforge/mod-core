@@ -142,7 +142,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-04-002
             commit: []
-            merge: null
+            merge: efe1b35881ecf6c05f8a978eea341670306e3f79
         - number: 3
           slug: order-tests-apps-field-crypto
           title: Order Tests for Apps and Field Crypto Routes
