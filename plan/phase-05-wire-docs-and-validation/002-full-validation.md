@@ -20,3 +20,7 @@ Final gate for the mod-core share ([common section 6 item 8](../waves/http-error
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). `make build`, `make test`, `cd api && make lint`, integration suite (throwaway postgres:16 docker container, removed afterward; `go test -tags=integration -p 1 ./...` all ok), and `cd gui && bun run typecheck && bun run test` all exit 0. Logs in `.flow/validation-logs/`. Checklist: no non-test handler gate on `opctx.ActorEntityID` (only `EntityService.GetSelf` uses it, authorizing before load); no `AllowNotFound("app")`; no unmasked `GetEntityByUUID` before authorize in `api/service/`. Inventory rows 9, 10, 12, 13 are deferred, recorded as open decisions in the plan findings store. Order-test files: apps, entities, field_crypto_keys.
