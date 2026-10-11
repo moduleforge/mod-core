@@ -129,7 +129,7 @@ phases:
           tier: sonnet-med
           digest: Classified all ErrInvalidInput sites; apps duplicate slug now 409 apps.slug_taken (was 500) on Create/UpdateApp after authz, with tests; SA capability gap and blank-name check placement left as open manager decisions.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-04-001
             commit: []
             merge: null
         - number: 2
