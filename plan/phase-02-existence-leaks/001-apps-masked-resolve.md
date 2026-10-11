@@ -21,3 +21,10 @@ Close the existence oracle on `GET/PUT/DELETE /apps/{uuid}`: today `loadAppByUUI
 ## Metadata
 
 architectural_impact: true
+
+## Status
+
+- Outcome: succeeded (2026-10-11).
+- `api/httpapi/apps.go`: GetApp/UpdateApp/DeleteApp now use `authorizeAppByUUIDParam` (UUID parse, then `AuthorizeResolve` with ops read/update/delete); `AllowNotFound("app")` removed from `NewAppsHandler`; stale comments fixed. No peer relied on plain `Resolve` 404 for slug "app" (grep clean).
+- `api/httpapi/apps_test.go`: 404-on-missing tests replaced by masked-resolve tests (missing vs forbidden identical 403 envelopes; authorized caller on missing id gets 403; vanished-row race is 404); authorizer fake gained a target-aware mode that denies target 0.
+- Validation: `go test`, `go vet`, `gofmt` pass for api and model. GUI deps not installed, so `make test` was not run; Postgres integration deferred.

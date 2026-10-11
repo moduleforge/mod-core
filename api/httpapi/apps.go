@@ -53,11 +53,10 @@ type AppsHandler struct {
 	newQuerier func(pgx.Tx) coredb.Querier // factory for tx-scoped querier; defaults to coredb.New
 	az         authz.Authorizer
 	observers  *observer.ObserverGroup
-	// entityResolver resolves the {uuid} path param to the app's internal
-	// id (apps.id == entities.id, per the FK-anchor pattern) before any
-	// authorization decision is made — GetApp/UpdateApp/DeleteApp must not
-	// load the full row (which would let an unauthorized caller distinguish
-	// "app exists" from "app doesn't exist" ahead of the authz check).
+	// entityResolver masked-resolves and authorizes the {uuid} path param
+	// (AuthorizeResolve; apps.id == entities.id, per the FK-anchor pattern)
+	// before the full row is loaded, so an unauthorized caller cannot
+	// distinguish "app exists" from "app doesn't exist".
 	entityResolver *entity.Resolver
 	// typeResolver resolves the 'app' type slug to its internal type id so
 	// Create can make its type-level authorization check
@@ -72,10 +71,9 @@ type AppsHandler struct {
 // service:authorizer, service:observerGroup, service:entityResolver,
 // service:typeResolver.
 //
-// entityResolver.AllowNotFound("app") is set here so a resolve-miss on
-// {uuid} continues to surface as 404 (the resolver's default policy masks a
-// missing entity as 403), mirroring mod-users' own membership handler for
-// apps (api/internal/handlers/apps.go's NewAppsHandler).
+// The shared entityResolver is deliberately not mutated: GetApp/UpdateApp/
+// DeleteApp use AuthorizeResolve, which masks a missing app as 403 for every
+// caller (admins included) regardless of any AllowNotFound opt-in.
 func NewAppsHandler(
 	pool txhelper.DB,
 	q coredb.Querier,
@@ -84,7 +82,6 @@ func NewAppsHandler(
 	entityResolver *entity.Resolver,
 	typeResolver *types.Resolver,
 ) *AppsHandler {
-	entityResolver.AllowNotFound("app")
 	return &AppsHandler{
 		pool:           pool,
 		q:              q,
@@ -249,15 +246,8 @@ func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetApp handles GET /apps/{uuid} (admin).
 func (h *AppsHandler) GetApp(w http.ResponseWriter, r *http.Request) {
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "read")
 	if !ok {
-		return
-	}
-
-	// Authorize: read — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "read", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -281,15 +271,8 @@ type updateAppRequest struct {
 
 // UpdateApp handles PUT /apps/{uuid} (admin).
 func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "update")
 	if !ok {
-		return
-	}
-
-	// Authorize: update — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "update", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -372,15 +355,8 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 // per-table archived_at of their own; archival is the generic entity
 // archive path shared by every entity subtype.
 func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "delete")
 	if !ok {
-		return
-	}
-
-	// Authorize: delete — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "delete", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -416,32 +392,24 @@ func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// loadAppByUUIDParam extracts the {uuid} chi param and resolves it to the
-// app's internal id via entityResolver — apps.id == entities.id, per the
-// FK-anchor entity-subtype pattern for apps — without loading the full app
-// row. This lets GetApp/UpdateApp/DeleteApp authorize against the bare id
-// before any row data (and thus its existence) is revealed to an
-// unauthorized caller, matching EntityService.GetByUUID/
-// CorporationService.GetByEntityUUID in api/service/ and mod-users' own
-// membership handler for apps (api/internal/handlers/apps.go's
-// loadAppByUUIDParam).
+// authorizeAppByUUIDParam extracts the {uuid} chi param and authorizes op on
+// the app through the masked resolve (entity.Resolver.AuthorizeResolve):
+// authentication, then the entity lookup, then the authorizer. A missing app
+// and an existing-but-forbidden app are both 403, for every caller including
+// admins, so the response is not an existence oracle. The real
+// GetAppByUUID lookup that follows in each handler returns 404 only in the
+// narrow race where the row vanishes after authorization.
 //
-// An unknown app uuid surfaces as ErrNotFound (see NewAppsHandler's
-// entityResolver.AllowNotFound("app") call), matching the source mod-users
-// handler's behaviour — apps are an admin-only resource with no
-// existence-masking requirement.
-func (h *AppsHandler) loadAppByUUIDParam(w http.ResponseWriter, r *http.Request) (int64, uuid.UUID, bool) {
-	rawUUID := chi.URLParam(r, "uuid")
-	parsed, err := uuid.Parse(rawUUID)
+// A malformed uuid stays the pre-existing bare invalid-input error.
+func (h *AppsHandler) authorizeAppByUUIDParam(w http.ResponseWriter, r *http.Request, op string) (uuid.UUID, bool) {
+	parsed, err := uuid.Parse(chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
-		return 0, uuid.UUID{}, false
+		return uuid.UUID{}, false
 	}
-
-	appID, err := h.entityResolver.Resolve(r.Context(), h.q, parsed, "app")
-	if err != nil {
+	if _, err := h.entityResolver.AuthorizeResolve(r.Context(), h.q, h.az, op, parsed, "app"); err != nil {
 		apiresp.WriteError(w, r, err)
-		return 0, uuid.UUID{}, false
+		return uuid.UUID{}, false
 	}
-	return appID, parsed, true
+	return parsed, true
 }
