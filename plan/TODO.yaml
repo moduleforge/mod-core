@@ -215,4 +215,4 @@ phases:
           git:
             branch: plan/core-handler-conformance-08-001
             commit: []
-            merge: null
+            merge: 2052288976d1685e49212cbbc00dcc68eebdb4d0
