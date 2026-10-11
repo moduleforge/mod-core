@@ -125,7 +125,7 @@ phases:
           slug: state-conflict-audit
           title: State-Conflict Audit for 409 vs 422
           path: phase-04-conflicts-and-order-tests/001-state-conflict-audit.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Classified all ErrInvalidInput sites; apps duplicate slug now 409 apps.slug_taken (was 500) on Create/UpdateApp after authz, with tests; SA capability gap and blank-name check placement left as open manager decisions.
           git:
