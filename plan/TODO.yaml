@@ -81,25 +81,28 @@ phases:
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
+      diff_base: e7ce9ed957d7d1497469a87196581caf6005990d
       tasks:
         - number: 1
           slug: apps-decode-before-authz
           title: Apps Decode and UUID Parse Before Authorization
           path: phase-03-decode-and-shape/001-apps-decode-before-authz.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: 'Apps Update parses UUID and decodes body (DecodeJSON) before masked authorize; Get/Delete use ParseUUIDParam; Create uses DecodeJSON; wire changes: 1 MiB cap, unknown fields rejected, empty body 400, invalid_uuid detail. New tests not verified red-before-green.'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-03-001
             commit: []
-            merge: null
+            merge: 9f634fae901d4db98a7e7ed2bc7d3a19cf581cd5
         - number: 2
           slug: entity-handlers-decodejson
           title: Entity Handlers to DecodeJSON and ParseUUIDParam
           path: phase-03-decode-and-shape/002-entity-handlers-decodejson.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: 'Natural-person, corporation, service-account, entities and display handlers converted to DecodeJSON and ParseUUIDParam with a 19-case table test; wire: unknown fields rejected, 1 MiB cap, empty body 400, invalid_json_body/invalid_uuid details. Blank-name check placement unchanged (open decision).'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-03-002
             commit: []
             merge: null
         - number: 3
