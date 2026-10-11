@@ -93,7 +93,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-03-001
             commit: []
-            merge: null
+            merge: 9f634fae901d4db98a7e7ed2bc7d3a19cf581cd5
         - number: 2
           slug: entity-handlers-decodejson
           title: Entity Handlers to DecodeJSON and ParseUUIDParam
