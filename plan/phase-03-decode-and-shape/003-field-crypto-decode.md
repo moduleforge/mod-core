@@ -21,3 +21,12 @@
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). Source: `api/httpapi/field_crypto_keys.go`, tests in `api/httpapi/field_crypto_keys_test.go`.
+
+- Ordering decision (user-confirmed): Rotate, SetGrace and MarkCompromised now run every stateless check (body decode, grace checks, `resolveKeyMaterial`, `{version}` param) before the nil-target `manage` authorize. No route is kept authz-first. `Cipher.Reload` is still reachable only after the authorize. List is unchanged (authorize only).
+- `decodeFieldCryptoKeyBody` is replaced by `readFieldCryptoKeyBody` (bounded read, restores `r.Body`, supplies emptiness and raw bytes) plus `decodeFieldCryptoKeyJSON` (thin `DecodeJSON` shim: `WithMaxBytes(4 KiB)`, `WithCodePrefix("field_crypto_keys")`).
+- Wire changes: unauthorized caller with a bad body or bad `{version}` now gets 400 (was 403); decode failures now carry detail codes `field_crypto_keys.invalid_json_body` / `field_crypto_keys.body_too_large` (previously a code-less `invalid_input`); trailing data after the JSON value is now rejected.
+- Validation: `go test ./...` (api, model), `go vet`, `gofmt` clean; integration build tag vets clean (Postgres suite not run).
