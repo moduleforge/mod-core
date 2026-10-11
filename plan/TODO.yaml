@@ -252,12 +252,14 @@ phases:
           slug: blank-name-before-authz
           title: Move Blank-Name Checks Before Authorization
           path: phase-10-blank-name-remediation/001-blank-name-before-authz.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Blank-name checks for natural person, corporation and service account create now run in the handlers before AuthorizeType (service-layer checks kept for non-HTTP callers); order test and doc updated; vet/test pass.
           findings:
             - aJ4X
             - cXx6
           git:
-            branch: null
-            commit: []
+            branch: plan/core-handler-conformance-10-001
+            commit:
+                - 97eab2e
             merge: null
