@@ -45,15 +45,6 @@ items:
         - plan/phase:decode-and-shape
         - effort:unspecified
       text: readFieldCryptoKeyBody in api/httpapi/field_crypto_keys.go bounds the read with io.LimitReader rather than http.MaxBytesReader, so net/http gets no close-connection signal on an oversized body (it still drains at most 256 KiB then closes). Use http.MaxBytesReader(w, r.Body, max+1) for the read or accept the gap knowingly. Raw request bytes holding operator-supplied key hex are also not zeroed (not a regression).
-    - title: Wire-risk docs (task 5.1) must record new 409
-      id: XnT4
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:conflicts-and-order-tests
-        - priority:unspecified
-        - effort:unspecified
-      text: Wire-risk docs (task 5.1) must record new 409 apps.slug_taken on POST /apps and PUT /apps/{uuid}.
     - title: httpapi tests redeclare orderStrangerID
       id: u4LS
       date: "2026-10-11"
@@ -134,4 +125,9 @@ closed:
       title: Strict decode changes wire for entity clients
       disposition: dismissed
       reason: Already recorded as intentional in api/openapi.fragment.yaml (lines 49-53 and per route), README.md:8, AGENTS.md:128; GUI client payloads verified compatible.
+      date: "2026-10-11"
+    - id: XnT4
+      title: Wire-risk docs (task 5.1) must record new 409
+      disposition: dismissed
+      reason: 'Already recorded: api/openapi.fragment.yaml lines 59-60 and Conflict response, README.md:8, AGENTS.md:128, type-level-authorization.md:191-193.'
       date: "2026-10-11"
