@@ -108,6 +108,15 @@ items:
         - plan/phase:user-decisions-remediation
         - effort:unspecified
       text: docs/architecture/type-level-authorization.md lines ~194-199 still say the ErrInvalidInput capability gap in ServiceAccountService.UpdateByEntityUUID is 'unchanged and open'; phase 9 removed it. Update the paragraph. (Phase review, major doc-drift.)
+    - title: Stale UpdateServiceAccount gap in next-steps
+      id: 5BQZ
+      date: "2026-10-11"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:user-decisions-remediation
+        - effort:unspecified
+      text: plan/next-steps.md line ~16 still lists the missing UpdateServiceAccount query as a gap, and the comment at api/httpapi/entities_order_test.go lines ~166-167 still describes the service-account PUT 400 as a capability gap. Both are stale after phase 9. (Phase review, minor.)
 closed:
     - id: nK0x
       title: ServiceAccount UpdateByEntityUUID capability
