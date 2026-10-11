@@ -75,7 +75,7 @@ phases:
           tier: sonnet-med
           digest: Three UpdateByEntityUUID methods and EntityService.Archive use AuthorizeResolve; miss and forbidden both ErrForbidden; SA nil-label no-op now runs after authz; mod-users self.go:79 sees ErrForbidden on miss and needs authenticated actor; capability-gap ErrInvalidInput untouched.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-02-002
             commit: []
             merge: null
     - number: 3
