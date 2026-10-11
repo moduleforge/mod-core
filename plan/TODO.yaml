@@ -48,7 +48,7 @@ phases:
           tier: sonnet-med
           digest: Removed 20 inline ActorEntityID 401 checks plus apps Create RequireAuthenticated; sudo-only test now covers all 21 routes (recovers from nil-service panics); Go suites pass; integration suite not run (needs Postgres), deferred to phase 5 validation.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-01-004
             commit: []
             merge: null
     - number: 2
