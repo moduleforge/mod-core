@@ -199,7 +199,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-06-001
             commit: []
-            merge: null
+            merge: f1e69927640e595d9f7969371771b5fd71bd458d
     - number: 8
       slug: remediation-01
       title: Remediation Round 1
