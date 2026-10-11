@@ -259,6 +259,6 @@ phases:
             - aJ4X
             - cXx6
           git:
-            branch: null
+            branch: plan/core-handler-conformance-10-001
             commit: []
             merge: null
