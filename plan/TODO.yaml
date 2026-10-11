@@ -260,5 +260,6 @@ phases:
             - cXx6
           git:
             branch: plan/core-handler-conformance-10-001
-            commit: []
+            commit:
+                - 97eab2e
             merge: null
