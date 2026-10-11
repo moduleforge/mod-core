@@ -5,7 +5,17 @@ phases:
     - number: 1
       slug: authenticate-routes
       title: Authenticate Routes
-      tasks: []
+      tasks:
+        - number: 1
+          slug: audit-handlers
+          title: Audit Handlers Against the Precedence Rule
+          path: phase-01-authenticate-routes/001-audit-handlers.md
+          done: false
+          tier: sonnet-low
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
