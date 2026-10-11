@@ -171,9 +171,13 @@ provides:
     #   r.Route("/v1", func(r chi.Router) { r.Mount("/", corehttpapi.NewRouter(coreDeps)) })
     # instead of a top-level r.Mount("/v1", ...) which would conflict with the
     # mod-users /v1 route group and cause a chi duplicate-prefix panic (gap G14).
+    # scope: authenticated is set explicitly because mfgen treats an empty route
+    # scope as public (mfgen followup VFHF). Without it, the generated server
+    # would not mount requireAuth in front of /v1/entities/*.
     - prefix: /v1
       mountFromModule: corehttpapi.NewRouter
       innerMount: true
+      scope: authenticated
       args:
         - service:coreDeps
 

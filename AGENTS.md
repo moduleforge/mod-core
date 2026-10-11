@@ -191,9 +191,12 @@ routes:
   - prefix: /v1
     mountFromModule: corehttpapi.NewRouter
     innerMount: true
+    scope: authenticated
     args:
       - service:coreDeps
 ```
+
+`scope: authenticated` is set explicitly: mfgen treats an empty route `scope` as public (mfgen followup VFHF), so the generated server mounts `requireAuth` in front of `/v1/entities/*` only when the scope is stated. Keep it on this entry.
 
 With `innerMount: true`, mfgen emits:
 
