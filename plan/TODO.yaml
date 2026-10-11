@@ -140,7 +140,7 @@ phases:
           tier: sonnet-med
           digest: 'entities_order_test.go: ordertest coverage of all 12 entity routes over real router/services, unknown-field test, and recording-authorizer test proving masked miss calls Authorize once with target 0; RED-verified under two mutations; no production changes.'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-04-002
             commit: []
             merge: null
         - number: 3
