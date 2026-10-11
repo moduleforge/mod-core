@@ -1,11 +1,9 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/service"
@@ -21,8 +19,7 @@ type createCorporationRequest struct {
 // createCorporation handles POST /entities/corporations (admin only).
 func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
 	var req createCorporationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
@@ -55,9 +52,9 @@ func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
 
 // getCorporation handles GET /entities/corporations/{uuid}.
 func (h *handlers) getCorporation(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -81,15 +78,14 @@ type updateCorporationRequest struct {
 
 // updateCorporation handles PUT /entities/corporations/{uuid} (admin only).
 func (h *handlers) updateCorporation(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
 	var req updateCorporationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 

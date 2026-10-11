@@ -54,4 +54,22 @@ items:
         - plan/phase:existence-leaks
         - effort:unspecified
       text: In api/httpapi/apps.go the AuthorizeResolve slug is only an error label and GetEntityByUUID is not type-scoped, so a caller authorized on an existing non-app entity id gets 404 from GetAppByUUID while a nonexistent id gets 403. This leaks existence only to callers already authorized on that id; the same pattern applies to subtype ErrNotFound in the corporation, natural person and service account services. Accept and document, or scope the resolve by entity type.
+    - title: Followup wXiC (field-crypto body cap stopgap)
+      id: HFoq
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:decode-and-shape
+        - priority:unspecified
+        - effort:unspecified
+      text: Followup wXiC (field-crypto body cap stopgap) may now be resolved by this change since the cap is enforced via DecodeJSON; check and close or reword it after merge.
+    - title: 'Wire-risk docs (task 5.1) must record: 403->4'
+      id: o6u0
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:decode-and-shape
+        - priority:unspecified
+        - effort:unspecified
+      text: 'Wire-risk docs (task 5.1) must record: 403->400 for forbidden callers with bad body/version on field-crypto routes, new decode detail codes field_crypto_keys.invalid_json_body/body_too_large, trailing-data rejection.'
 closed: []
