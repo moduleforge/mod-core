@@ -187,15 +187,17 @@ phases:
     - number: 6
       slug: doc-updates
       title: Documentation Updates
+      diff_base: 379dc654e9c13a7633aa9aaedfc0db4d7b9f528a
       tasks:
         - number: 1
           slug: update-architecture-docs
           title: Update Architecture Docs
           path: phase-06-doc-updates/001-update-architecture-docs.md
-          done: false
+          done: true
           tier: sonnet-high
+          digest: Added a durable 'Request order and the target-0 call' section to docs/architecture/type-level-authorization.md, cross-linked from README/AGENTS.md/type-entities.md; no docs/architecture.md exists in this repo.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-06-001
             commit: []
             merge: null
     - number: 8
