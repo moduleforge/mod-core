@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: Non-app entity ids give 404 to authorized
-      id: F5yI
-      date: "2026-10-11"
-      tags:
-        - type:bug
-        - priority:low
-        - plan/phase:existence-leaks
-        - effort:unspecified
-      text: In api/httpapi/apps.go the AuthorizeResolve slug is only an error label and GetEntityByUUID is not type-scoped, so a caller authorized on an existing non-app entity id gets 404 from GetAppByUUID while a nonexistent id gets 403. This leaks existence only to callers already authorized on that id; the same pattern applies to subtype ErrNotFound in the corporation, natural person and service account services. Accept and document, or scope the resolve by entity type.
     - title: SA label update emits no audit observer event
       id: ovGY
       date: "2026-10-11"
@@ -128,6 +119,11 @@ closed:
       date: "2026-10-11"
     - id: aSRu
       title: No test asserts target-0 Authorize on miss
+      disposition: fixed
+      ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
+      date: "2026-10-11"
+    - id: F5yI
+      title: Non-app entity ids give 404 to authorized
       disposition: fixed
       ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
       date: "2026-10-11"
