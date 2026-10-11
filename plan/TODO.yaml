@@ -195,6 +195,7 @@ phases:
           path: phase-06-doc-updates/001-update-architecture-docs.md
           done: false
           tier: sonnet-high
+          digest: Added a durable 'Request order and the target-0 call' section to docs/architecture/type-level-authorization.md, cross-linked from README/AGENTS.md/type-entities.md; no docs/architecture.md exists in this repo.
           git:
             branch: null
             commit: []
