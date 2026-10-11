@@ -50,7 +50,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-01-004
             commit: []
-            merge: null
+            merge: 2bce700df360c2023d4a7359014d5af44e4a4508
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
