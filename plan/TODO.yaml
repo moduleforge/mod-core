@@ -17,7 +17,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-01-001
             commit: []
-            merge: null
+            merge: c82abd42325b79b4ce193c0b433d0d71e0db3058
         - number: 2
           slug: explicit-route-scope
           title: Set Explicit Authenticated Scope on Core Router Route
