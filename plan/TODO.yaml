@@ -98,7 +98,7 @@ phases:
           slug: entity-handlers-decodejson
           title: Entity Handlers to DecodeJSON and ParseUUIDParam
           path: phase-03-decode-and-shape/002-entity-handlers-decodejson.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: 'Natural-person, corporation, service-account, entities and display handlers converted to DecodeJSON and ParseUUIDParam with a 19-case table test; wire: unknown fields rejected, 1 MiB cap, empty body 400, invalid_json_body/invalid_uuid details. Blank-name check placement unchanged (open decision).'
           git:
