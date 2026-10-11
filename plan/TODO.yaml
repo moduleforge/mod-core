@@ -15,7 +15,7 @@ phases:
           tier: sonnet-low
           digest: Read-only audit of 21 mod-core routes and 4 service Update/Archive methods; table appended to plan/notes/handler-inventory.md; no source changes.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-01-001
             commit: []
             merge: null
         - number: 2
