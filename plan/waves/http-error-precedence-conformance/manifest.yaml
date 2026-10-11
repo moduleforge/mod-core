@@ -69,7 +69,7 @@ waves:
           dependencies:
             - error-precedence-foundation
           plans:
-            repos: PLACEHOLDER
+            repos: repos-conformance
         - name: mod-contacts and mod-notifications handler conformance
           slug: contacts-notifications-conformance
           description: 'Depends on wave 1 helpers. contacts: 2 handler files, 8 inline checks, decode sites, audit 47 InvalidInput uses. notifications: all gates live in the service layer so in-process callers stay gated; module-level RequireAuth may be added on top only, never replacing those checks; GET /channels/enabled stays authn-only; masked fetch-then-authorize reads fine for dependent data; PATCH /channels/{key} 404 after admin gate is fine. Order tests for both. No app composes either module.'
