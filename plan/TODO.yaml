@@ -119,6 +119,7 @@ phases:
     - number: 4
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
+      diff_base: b577d70cedab711c6dcb5f0355b1552318aaf88d
       tasks:
         - number: 1
           slug: state-conflict-audit
