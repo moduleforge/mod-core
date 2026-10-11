@@ -45,15 +45,6 @@ items:
         - plan/phase:decode-and-shape
         - effort:unspecified
       text: readFieldCryptoKeyBody in api/httpapi/field_crypto_keys.go bounds the read with io.LimitReader rather than http.MaxBytesReader, so net/http gets no close-connection signal on an oversized body (it still drains at most 256 KiB then closes). Use http.MaxBytesReader(w, r.Body, max+1) for the read or accept the gap knowingly. Raw request bytes holding operator-supplied key hex are also not zeroed (not a regression).
-    - title: Strict decode changes wire for entity clients
-      id: FQgc
-      date: "2026-10-11"
-      tags:
-        - type:documentation
-        - priority:medium
-        - plan/phase:decode-and-shape
-        - effort:unspecified
-      text: DecodeJSON in the apps, natural person, corporation and service account handlers now rejects unknown members and caps bodies at 1 MiB; the old code had neither. Clients (GUI, other apps) sending extra members get 400. Confirm GUI/client payloads and record this as an intentional behavior change in the OpenAPI notes and wire-risk docs.
     - title: Wire-risk docs (task 5.1) must record new 409
       id: XnT4
       date: "2026-10-11"
@@ -138,4 +129,9 @@ closed:
       title: 'Wire-risk docs (task 5.1) must record: 403->4'
       disposition: dismissed
       reason: 'Already recorded by task 5.1: api/openapi.fragment.yaml lines 54-58, README.md:8, AGENTS.md:128 (403->400, new detail codes, trailing data).'
+      date: "2026-10-11"
+    - id: FQgc
+      title: Strict decode changes wire for entity clients
+      disposition: dismissed
+      reason: Already recorded as intentional in api/openapi.fragment.yaml (lines 49-53 and per route), README.md:8, AGENTS.md:128; GUI client payloads verified compatible.
       date: "2026-10-11"
