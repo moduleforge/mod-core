@@ -198,6 +198,7 @@ phases:
     - number: 8
       slug: remediation-01
       title: Remediation Round 1
+      diff_base: 468d3de76d92a706f1b6483498696ae2eea28d36
       kind: remediation
       tasks_added: 1
       tasks:
