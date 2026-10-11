@@ -16,6 +16,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: explicit-route-scope
+          title: Set Explicit Authenticated Scope on Core Router Route
+          path: phase-01-authenticate-routes/002-explicit-route-scope.md
+          done: false
+          tier: haiku-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
