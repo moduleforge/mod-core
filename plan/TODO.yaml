@@ -160,6 +160,7 @@ phases:
     - number: 5
       slug: wire-docs-and-validation
       title: Wire Risk Docs and Validation
+      diff_base: 3ff4f2990f81c743a5d8a7ba4517b7e88c2132dc
       tasks:
         - number: 1
           slug: wire-risk-docs
