@@ -104,7 +104,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-03-002
             commit: []
-            merge: null
+            merge: 9cc882a6742b1add0a4ebb7546597eadeef56175
         - number: 3
           slug: field-crypto-decode
           title: Field Crypto Keys Decode and Ordering
