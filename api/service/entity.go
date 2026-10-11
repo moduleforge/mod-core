@@ -122,17 +122,10 @@ func (s *EntityService) ResolveProfile(ctx context.Context, q coredb.Querier, en
 // The caller-supplied q parameter is accepted for interface compatibility but
 // the service opens its own transaction via s.db.
 func (s *EntityService) Archive(ctx context.Context, q coredb.Querier, entityUUID uuid.UUID) error {
-	// 1. Authorize — fetch entity first to build a richer target.
-	ent, err := q.GetEntityByUUID(ctx, entityUUID)
+	// 1. Masked resolve + authorize: a missing id and an existing-but-forbidden
+	// id both yield ErrForbidden (no existence oracle).
+	eid, err := s.entityResolver.AuthorizeResolve(ctx, q, s.az, "delete", entityUUID, "entity")
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("entity.Archive: %w", err)
-	}
-
-	eid := ent.ID
-	if err := s.az.Authorize(ctx, "delete", &eid); err != nil {
 		return err
 	}
 

@@ -42,7 +42,7 @@ func TestEntityService_Archive_AuthzDenied(t *testing.T) {
 	}
 
 	entityUUID := q.seedNaturalPerson("Grace", "Hopper")
-	err := svc.Archive(context.Background(), q, entityUUID)
+	err := svc.Archive(authedCtx(), q, entityUUID)
 	if !errors.Is(err, authzErr) {
 		t.Errorf("expected authz error, got %v", err)
 	}
@@ -81,9 +81,9 @@ func TestEntityService_Archive_NotFound(t *testing.T) {
 	q := newMockQuerier()
 	svc := newEntityService(q)
 
-	err := svc.Archive(context.Background(), q, randomUUID(t))
-	if err == nil {
-		t.Error("expected error for missing entity")
+	err := svc.Archive(authedCtx(), q, randomUUID(t))
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden for missing entity, got %v", err)
 	}
 }
 

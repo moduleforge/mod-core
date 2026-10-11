@@ -69,7 +69,7 @@ func TestServiceAccountService_UpdateByEntityUUID_AuthzDenied(t *testing.T) {
 	_, entityUUID, _ := setupSvc.Create(context.Background(), q, CreateServiceAccountInput{Label: "x"})
 
 	label := "y"
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateServiceAccountInput{Label: &label})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateServiceAccountInput{Label: &label})
 	if !errors.Is(err, authzErr) {
 		t.Errorf("expected authz error, got %v", err)
 	}
@@ -79,8 +79,14 @@ func TestServiceAccountService_UpdateByEntityUUID_NilLabel(t *testing.T) {
 	q := newMockQuerier()
 	svc := newSAService(q)
 
-	// When label is nil, returns nil immediately (nothing to update).
-	err := svc.UpdateByEntityUUID(context.Background(), q, randomUUID(t), UpdateServiceAccountInput{Label: nil})
+	_, entityUUID, err := svc.Create(context.Background(), q, CreateServiceAccountInput{Label: "x"})
+	if err != nil {
+		t.Fatalf("setup Create: %v", err)
+	}
+
+	// When label is nil, an authorized caller on an existing target gets a
+	// no-op success (authorization runs first; see the masked-resolve tests).
+	err = svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateServiceAccountInput{Label: nil})
 	if err != nil {
 		t.Errorf("expected nil for no-op update, got %v", err)
 	}
@@ -91,9 +97,9 @@ func TestServiceAccountService_UpdateByEntityUUID_NotFound(t *testing.T) {
 	svc := newSAService(q)
 
 	label := "x"
-	err := svc.UpdateByEntityUUID(context.Background(), q, randomUUID(t), UpdateServiceAccountInput{Label: &label})
-	if err == nil {
-		t.Error("expected error for missing entity")
+	err := svc.UpdateByEntityUUID(authedCtx(), q, randomUUID(t), UpdateServiceAccountInput{Label: &label})
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden for missing entity, got %v", err)
 	}
 }
 

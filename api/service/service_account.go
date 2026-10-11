@@ -170,26 +170,21 @@ func (s *ServiceAccountService) UpdateByEntityUUID(
 	entityUUID uuid.UUID,
 	in UpdateServiceAccountInput,
 ) error {
+	// 1. Masked resolve + authorize, before the no-op shortcut so an
+	// unauthenticated or unauthorized caller never learns anything from a
+	// nil-Label request: a missing id and an existing-but-forbidden id both
+	// yield ErrForbidden.
+	eid, err := s.entityResolver.AuthorizeResolve(ctx, q, s.az, "update", entityUUID, "service_account")
+	if err != nil {
+		return err
+	}
+
 	if in.Label == nil {
 		// Nothing to update.
 		return nil
 	}
 
-	// 1. Authorize.
-	ent, err := q.GetEntityByUUID(ctx, entityUUID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("service_account.UpdateByEntityUUID entity: %w", err)
-	}
-
-	eid := ent.ID
-	if err := s.az.Authorize(ctx, "update", &eid); err != nil {
-		return err
-	}
-
-	_, err = q.GetServiceAccountByEntityID(ctx, ent.ID)
+	_, err = q.GetServiceAccountByEntityID(ctx, eid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound

@@ -12,6 +12,7 @@ import (
 
 	"github.com/moduleforge/core-api/entity"
 	"github.com/moduleforge/core-api/internal/fieldcrypto"
+	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/txhelper"
 	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
@@ -646,3 +647,9 @@ func testTypeResolver(q *mockQuerier) *types.Resolver {
 
 // Compile-time: mockQuerier must satisfy coredb.Querier.
 var _ coredb.Querier = (*mockQuerier)(nil)
+
+// authedCtx returns a context carrying an authenticated actor, as required by
+// entity.Resolver.AuthorizeResolve (which runs authz.RequireAuthenticated first).
+func authedCtx() context.Context {
+	return opctx.WithActor(context.Background(), 1)
+}
