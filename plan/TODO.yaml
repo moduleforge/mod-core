@@ -276,6 +276,7 @@ phases:
           path: phase-11-remediation-04/001-phase9-10-followup-hardening.md
           done: false
           tier: sonnet-high
+          digest: 'Entity update routes hardened: blank names/labels are stateless 400s before authz in handlers and services; SA update gained a transaction and audit observers; field-crypto body read uses MaxBytesReader; test gaps closed; accepted AuthorizeResolve residual and stale docs fixed. gofmt/vet/test, Postgres integration and make test (GUI) all pass.'
           findings:
             - C8JP
             - YvU6
