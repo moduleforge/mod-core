@@ -183,7 +183,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-05-002
             commit: []
-            merge: null
+            merge: be894ea63c63fc0c5a2b930505a9a7958f080e18
     - number: 6
       slug: doc-updates
       title: Documentation Updates
