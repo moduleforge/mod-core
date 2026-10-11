@@ -36,15 +36,6 @@ items:
         - plan/phase:existence-leaks
         - effort:unspecified
       text: In api/httpapi/apps.go the AuthorizeResolve slug is only an error label and GetEntityByUUID is not type-scoped, so a caller authorized on an existing non-app entity id gets 404 from GetAppByUUID while a nonexistent id gets 403. This leaks existence only to callers already authorized on that id; the same pattern applies to subtype ErrNotFound in the corporation, natural person and service account services. Accept and document, or scope the resolve by entity type.
-    - title: 'Wire-risk docs (task 5.1) must record: 403->4'
-      id: o6u0
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:decode-and-shape
-        - priority:unspecified
-        - effort:unspecified
-      text: 'Wire-risk docs (task 5.1) must record: 403->400 for forbidden callers with bad body/version on field-crypto routes, new decode detail codes field_crypto_keys.invalid_json_body/body_too_large, trailing-data rejection.'
     - title: Field-crypto body read lacks MaxBytesReader
       id: C8JP
       date: "2026-10-11"
@@ -142,4 +133,9 @@ closed:
       title: Followup wXiC (field-crypto body cap stopgap)
       disposition: dismissed
       reason: wXiC was already removed (commit fe3fa6e, 2026-08-14); package-wide cap now enforced by apiresp.DecodeJSON (api/apiresp/decode.go). Field-crypto read detail tracked by C8JP.
+      date: "2026-10-11"
+    - id: o6u0
+      title: 'Wire-risk docs (task 5.1) must record: 403->4'
+      disposition: dismissed
+      reason: 'Already recorded by task 5.1: api/openapi.fragment.yaml lines 54-58, README.md:8, AGENTS.md:128 (403->400, new detail codes, trailing data).'
       date: "2026-10-11"
