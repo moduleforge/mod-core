@@ -33,7 +33,7 @@ phases:
           slug: mount-require-auth
           title: Mount RequireAuth on Router and Registrars
           path: phase-01-authenticate-routes/003-mount-require-auth.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Mounted authz.RequireAuth on NewRouter and inside r.Group in both registrars; anonymous-401 tests via real routers (pass pre-change too since inline checks remain); sudo-only probe only for POST /apps until task 1.4 removes sudo-unaware inline checks.
           git:
