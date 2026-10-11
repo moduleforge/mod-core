@@ -47,8 +47,8 @@ waves:
           dependencies:
             - error-precedence-foundation
           plans:
-            mod-tasks: PLACEHOLDER
-            tags: PLACEHOLDER
+            mod-tasks: tasks-tags-conformance
+            tags: tasks-tags-conformance
         - name: mod-billing handler conformance (unaudited)
           slug: billing-conformance
           description: 'Depends on wave 1 helpers. Review all 12 handler files. Keep the 4 KiB RequireJSONBody guard via DecodeJSON with WithMaxBytes(4096) and existing codes. Public Paddle webhook (1 MiB, signature over raw bytes) must NOT get RequireAuth or DecodeJSON. USER DECISION: owner subscription routes (subscriptionIDFromUUID resolves/fetches before authorizing) must change to a masked resolve so unauthorized callers get 403 regardless of existence. Operator routes already pre-authorize. Audit guard conflicts 409 vs 422 (SeatOverflowError stays 409); order test. Wire risk falls on flow-accounts (followup Tpe2) and billing-gui.'
