@@ -20,3 +20,7 @@ Classify every post-authorization 400 / `ErrInvalidInput` in mod-core and conver
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). Classification list appended to `plan/notes/handler-inventory.md` ("State-conflict classification (task 4.1)"). Code change: `api/httpapi/apps.go` maps a Postgres unique violation on Create and UpdateApp to `apiresp.Conflict` (409, detail `apps.slug_taken`) instead of 500; tests in `api/httpapi/apps_test.go` (409 for authorized, 403 for unauthorized, other pg errors stay 500). Not changed, reported: service-account `UpdateByEntityUUID` capability-gap `ErrInvalidInput`; blank-name checks after `AuthorizeType` in the natural-person, corporation and service-account `Create` methods. Validation: `go test`, `go vet`, `gofmt` clean in `api` and `model`; `make test` not run (GUI deps not installed); Postgres integration suite deferred.

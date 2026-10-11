@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -864,5 +865,57 @@ func TestApps_RowVanishesAfterAuthorizeIs404(t *testing.T) {
 	rec := appsMaskedCases[0].do(router, appUUID)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status: got %d, want 404", rec.Code)
+	}
+}
+
+// --- slug uniqueness is a 409 (post-authorization), not a 500 ---
+
+func TestAppsCreate_DuplicateSlugIs409(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "apps_slug_key"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want 409 - %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "apps.slug_taken") || !strings.Contains(rec.Body.String(), `"conflict"`) {
+		t.Errorf("body missing conflict code/detail: %s", rec.Body.String())
+	}
+
+	// An unauthorized caller gets 403 for the same input, never the conflict.
+	rec = serveApps(t, q, &appsFakeAuthorizer{err: apiresp.ErrForbidden}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("unauthorized status: got %d, want 403", rec.Code)
+	}
+}
+
+func TestAppsUpdateApp_DuplicateSlugIs409(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.updateAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "apps_slug_key"}
+	body := `{"slug":"taken"}`
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(body)))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want 409 - %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body missing apps.slug_taken: %s", rec.Body.String())
+	}
+
+	rec = serveApps(t, q, &appsFakeAuthorizer{err: apiresp.ErrForbidden}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(body)))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("unauthorized status: got %d, want 403", rec.Code)
+	}
+}
+
+func TestAppsCreate_OtherInsertErrorStays500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23503"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500", rec.Code)
 	}
 }
