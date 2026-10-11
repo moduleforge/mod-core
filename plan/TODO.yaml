@@ -115,7 +115,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-03-003
             commit: []
-            merge: null
+            merge: b1a4b4e4046021a1b9a34417dd588cbf564472c8
     - number: 4
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
