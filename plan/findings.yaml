@@ -72,4 +72,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: 'Wire-risk docs (task 5.1) must record: 403->400 for forbidden callers with bad body/version on field-crypto routes, new decode detail codes field_crypto_keys.invalid_json_body/body_too_large, trailing-data rejection.'
+    - title: Field-crypto body read lacks MaxBytesReader
+      id: C8JP
+      date: "2026-10-11"
+      tags:
+        - type:security
+        - priority:low
+        - plan/phase:decode-and-shape
+        - effort:unspecified
+      text: readFieldCryptoKeyBody in api/httpapi/field_crypto_keys.go bounds the read with io.LimitReader rather than http.MaxBytesReader, so net/http gets no close-connection signal on an oversized body (it still drains at most 256 KiB then closes). Use http.MaxBytesReader(w, r.Body, max+1) for the read or accept the gap knowingly. Raw request bytes holding operator-supplied key hex are also not zeroed (not a regression).
 closed: []
