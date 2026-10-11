@@ -117,4 +117,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: Wire-risk docs (task 5.1) must record new 409 apps.slug_taken on POST /apps and PUT /apps/{uuid}.
+    - title: httpapi tests redeclare orderStrangerID
+      id: u4LS
+      date: "2026-10-11"
+      tags:
+        - type:bug
+        - priority:high
+        - plan/phase:conflicts-and-order-tests
+        - effort:unspecified
+      text: api/httpapi/entities_order_test.go line 32 and apps_order_test.go line 30 both declare orderStrangerID in package httpapi, so go vet and go test fail to compile the package and none of the new order suites or the apps 409 tests run. Define the shared identity constants once (for example in an order_helpers_test.go next to orderAdminOnlyAuthz) and delete the duplicate, then re-run go vet and go test ./httpapi/... to surface any further errors.
 closed: []
