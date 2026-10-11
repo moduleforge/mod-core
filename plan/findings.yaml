@@ -27,15 +27,6 @@ items:
         - plan/phase:existence-leaks
         - effort:unspecified
       text: In api/httpapi/apps.go the AuthorizeResolve slug is only an error label and GetEntityByUUID is not type-scoped, so a caller authorized on an existing non-app entity id gets 404 from GetAppByUUID while a nonexistent id gets 403. This leaks existence only to callers already authorized on that id; the same pattern applies to subtype ErrNotFound in the corporation, natural person and service account services. Accept and document, or scope the resolve by entity type.
-    - title: Stale UpdateServiceAccount gap in next-steps
-      id: 5BQZ
-      date: "2026-10-11"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:user-decisions-remediation
-        - effort:unspecified
-      text: plan/next-steps.md line ~16 still lists the missing UpdateServiceAccount query as a gap, and the comment at api/httpapi/entities_order_test.go lines ~166-167 still describes the service-account PUT 400 as a capability gap. Both are stale after phase 9. (Phase review, minor.)
     - title: SA label update emits no audit observer event
       id: ovGY
       date: "2026-10-11"
@@ -140,6 +131,11 @@ closed:
       date: "2026-10-11"
     - id: 2TIM
       title: Stale capability-gap text in type-level-authz
+      disposition: fixed
+      ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
+      date: "2026-10-11"
+    - id: 5BQZ
+      title: Stale UpdateServiceAccount gap in next-steps
       disposition: fixed
       ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
       date: "2026-10-11"
