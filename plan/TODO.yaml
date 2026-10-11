@@ -288,6 +288,6 @@ phases:
             - ovGY
             - ferC
           git:
-            branch: null
+            branch: plan/core-handler-conformance-11-001
             commit: []
             merge: null
