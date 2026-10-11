@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -134,8 +133,7 @@ type createAppRequest struct {
 // Create handles POST /apps (admin).
 func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createAppRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 	req.Slug = strings.TrimSpace(req.Slug)
@@ -246,8 +244,11 @@ func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetApp handles GET /apps/{uuid} (admin).
 func (h *AppsHandler) GetApp(w http.ResponseWriter, r *http.Request) {
-	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "read")
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
+		return
+	}
+	if !h.authorizeApp(w, r, "read", appUUID) {
 		return
 	}
 
@@ -271,8 +272,21 @@ type updateAppRequest struct {
 
 // UpdateApp handles PUT /apps/{uuid} (admin).
 func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
-	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "update")
+	// Stateless phase first (400): path UUID parse, then body decode and
+	// trim. Authorization (403, masked resolve) and the real lookup (404)
+	// follow, so a malformed request never depends on server state.
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
+		return
+	}
+	var req updateAppRequest
+	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+	reqSlug := strings.TrimSpace(req.Slug)
+	reqName := strings.TrimSpace(req.Name)
+
+	if !h.authorizeApp(w, r, "update", appUUID) {
 		return
 	}
 
@@ -286,19 +300,14 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req updateAppRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
-		return
-	}
-
+	// An empty (or blank) slug/name means "leave unchanged".
 	newSlug := app.Slug
-	if s := strings.TrimSpace(req.Slug); s != "" {
-		newSlug = s
+	if reqSlug != "" {
+		newSlug = reqSlug
 	}
 	newName := app.Name
-	if n := strings.TrimSpace(req.Name); n != "" {
-		newName = n
+	if reqName != "" {
+		newName = reqName
 	}
 
 	before := map[string]any{
@@ -355,8 +364,11 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 // per-table archived_at of their own; archival is the generic entity
 // archive path shared by every entity subtype.
 func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
-	appUUID, ok := h.authorizeAppByUUIDParam(w, r, "delete")
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
+		return
+	}
+	if !h.authorizeApp(w, r, "delete", appUUID) {
 		return
 	}
 
@@ -392,24 +404,28 @@ func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// authorizeAppByUUIDParam extracts the {uuid} chi param and authorizes op on
-// the app through the masked resolve (entity.Resolver.AuthorizeResolve):
-// authentication, then the entity lookup, then the authorizer. A missing app
-// and an existing-but-forbidden app are both 403, for every caller including
-// admins, so the response is not an existence oracle. The real
-// GetAppByUUID lookup that follows in each handler returns 404 only in the
-// narrow race where the row vanishes after authorization.
-//
-// A malformed uuid stays the pre-existing bare invalid-input error.
-func (h *AppsHandler) authorizeAppByUUIDParam(w http.ResponseWriter, r *http.Request, op string) (uuid.UUID, bool) {
-	parsed, err := uuid.Parse(chi.URLParam(r, "uuid"))
+// parseAppUUIDParam parses the {uuid} chi param (stateless, 400 with an
+// invalid_uuid detail on failure). It runs before authorization.
+func (h *AppsHandler) parseAppUUIDParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	parsed, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
-		return uuid.UUID{}, false
-	}
-	if _, err := h.entityResolver.AuthorizeResolve(r.Context(), h.q, h.az, op, parsed, "app"); err != nil {
 		apiresp.WriteError(w, r, err)
 		return uuid.UUID{}, false
 	}
 	return parsed, true
+}
+
+// authorizeApp authorizes op on the app through the masked resolve
+// (entity.Resolver.AuthorizeResolve): authentication, then the entity
+// lookup, then the authorizer. A missing app and an existing-but-forbidden
+// app are both 403, for every caller including admins, so the response is
+// not an existence oracle. The real GetAppByUUID lookup that follows in each
+// handler returns 404 only in the narrow race where the row vanishes after
+// authorization.
+func (h *AppsHandler) authorizeApp(w http.ResponseWriter, r *http.Request, op string, appUUID uuid.UUID) bool {
+	if _, err := h.entityResolver.AuthorizeResolve(r.Context(), h.q, h.az, op, appUUID, "app"); err != nil {
+		apiresp.WriteError(w, r, err)
+		return false
+	}
+	return true
 }
