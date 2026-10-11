@@ -89,6 +89,7 @@ phases:
           path: phase-03-decode-and-shape/001-apps-decode-before-authz.md
           done: false
           tier: sonnet-med
+          digest: 'Apps Update parses UUID and decodes body (DecodeJSON) before masked authorize; Get/Delete use ParseUUIDParam; Create uses DecodeJSON; wire changes: 1 MiB cap, unknown fields rejected, empty body 400, invalid_uuid detail. New tests not verified red-before-green.'
           git:
             branch: null
             commit: []
