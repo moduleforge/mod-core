@@ -84,6 +84,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: field-crypto-decode
+          title: Field Crypto Keys Decode and Ordering
+          path: phase-03-decode-and-shape/003-field-crypto-decode.md
+          done: false
+          tier: sonnet-high
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 4
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
