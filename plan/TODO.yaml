@@ -172,7 +172,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-05-001
             commit: []
-            merge: null
+            merge: ca41f3b0efdd3e7c8d9c1ff8af7cea2b5a47432f
         - number: 2
           slug: full-validation
           title: Full Validation Pass
