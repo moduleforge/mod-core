@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,13 +10,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/entity"
 	"github.com/moduleforge/core-api/observer"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/txhelper"
 	"github.com/moduleforge/core-api/types"
 	coredb "github.com/moduleforge/core-model/db"
@@ -54,11 +53,10 @@ type AppsHandler struct {
 	newQuerier func(pgx.Tx) coredb.Querier // factory for tx-scoped querier; defaults to coredb.New
 	az         authz.Authorizer
 	observers  *observer.ObserverGroup
-	// entityResolver resolves the {uuid} path param to the app's internal
-	// id (apps.id == entities.id, per the FK-anchor pattern) before any
-	// authorization decision is made — GetApp/UpdateApp/DeleteApp must not
-	// load the full row (which would let an unauthorized caller distinguish
-	// "app exists" from "app doesn't exist" ahead of the authz check).
+	// entityResolver masked-resolves and authorizes the {uuid} path param
+	// (AuthorizeResolve; apps.id == entities.id, per the FK-anchor pattern)
+	// before the full row is loaded, so an unauthorized caller cannot
+	// distinguish "app exists" from "app doesn't exist".
 	entityResolver *entity.Resolver
 	// typeResolver resolves the 'app' type slug to its internal type id so
 	// Create can make its type-level authorization check
@@ -73,10 +71,9 @@ type AppsHandler struct {
 // service:authorizer, service:observerGroup, service:entityResolver,
 // service:typeResolver.
 //
-// entityResolver.AllowNotFound("app") is set here so a resolve-miss on
-// {uuid} continues to surface as 404 (the resolver's default policy masks a
-// missing entity as 403), mirroring mod-users' own membership handler for
-// apps (api/internal/handlers/apps.go's NewAppsHandler).
+// The shared entityResolver is deliberately not mutated: GetApp/UpdateApp/
+// DeleteApp use AuthorizeResolve, which masks a missing app as 403 for every
+// caller (admins included) regardless of any AllowNotFound opt-in.
 func NewAppsHandler(
 	pool txhelper.DB,
 	q coredb.Querier,
@@ -85,7 +82,6 @@ func NewAppsHandler(
 	entityResolver *entity.Resolver,
 	typeResolver *types.Resolver,
 ) *AppsHandler {
-	entityResolver.AllowNotFound("app")
 	return &AppsHandler{
 		pool:           pool,
 		q:              q,
@@ -98,12 +94,18 @@ func NewAppsHandler(
 }
 
 // RegisterAppRoutes mounts the top-level /apps CRUD routes on r.
+//
+// The routes sit in their own group carrying authz.RequireAuth, so the 401
+// gate covers only /apps and never the peers' routes on the shared router.
 func RegisterAppRoutes(r chi.Router, h *AppsHandler) {
-	r.Post("/apps", h.Create)
-	r.Get("/apps", h.List)
-	r.Get("/apps/{uuid}", h.GetApp)
-	r.Put("/apps/{uuid}", h.UpdateApp)
-	r.Delete("/apps/{uuid}", h.DeleteApp)
+	r.Group(func(r chi.Router) {
+		r.Use(authz.RequireAuth)
+		r.Post("/apps", h.Create)
+		r.Get("/apps", h.List)
+		r.Get("/apps/{uuid}", h.GetApp)
+		r.Put("/apps/{uuid}", h.UpdateApp)
+		r.Delete("/apps/{uuid}", h.DeleteApp)
+	})
 }
 
 func (h *AppsHandler) querier(tx pgx.Tx) coredb.Querier {
@@ -131,14 +133,8 @@ type createAppRequest struct {
 
 // Create handles POST /apps (admin).
 func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	if err := authz.RequireAuthenticated(r.Context()); err != nil {
-		apiresp.WriteError(w, r, err)
-		return
-	}
-
 	var req createAppRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 	req.Slug = strings.TrimSpace(req.Slug)
@@ -212,7 +208,7 @@ func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return h.observers.Observe(ctx, tx, "create", "app", &entityID, nil, after)
 	})
 	if txErr != nil {
-		apiresp.WriteError(w, r, fmt.Errorf("apps.create: %w", txErr))
+		writeAppsMutationError(w, r, "apps.create", txErr)
 		return
 	}
 
@@ -228,11 +224,6 @@ func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /apps (admin).
 func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: list is admin-only.
 	if err := h.az.Authorize(r.Context(), "list", nil); err != nil {
 		apiresp.WriteError(w, r, err)
@@ -254,20 +245,11 @@ func (h *AppsHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetApp handles GET /apps/{uuid} (admin).
 func (h *AppsHandler) GetApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
 		return
 	}
-
-	// Authorize: read — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "read", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
+	if !h.authorizeApp(w, r, "read", appUUID) {
 		return
 	}
 
@@ -289,22 +271,46 @@ type updateAppRequest struct {
 	Name string `json:"name"`
 }
 
-// UpdateApp handles PUT /apps/{uuid} (admin).
-func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
+// appsSlugConstraint is the Postgres name of the inline UNIQUE constraint on
+// apps.slug (auto-named by 0015_apps.sql).
+const appsSlugConstraint = "apps_slug_key"
+
+// writeAppsMutationError maps a Create/UpdateApp transaction failure onto its
+// response. apps.slug is UNIQUE, so a Postgres unique violation (23505) on
+// that constraint is a post-authorization state conflict (409, code
+// apps.slug_taken), not a 500. Any other failure, including a 23505 on a
+// different constraint raised inside the same transaction, keeps the
+// wrapped-internal-error path.
+func writeAppsMutationError(w http.ResponseWriter, r *http.Request, op string, err error) {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcodeUniqueViolation && pgErr.ConstraintName == appsSlugConstraint {
+		apiresp.WriteError(w, r, apiresp.Conflict(apiresp.FieldError{
+			Field:   "slug",
+			Code:    "apps.slug_taken",
+			Message: "an app with that slug already exists",
+		}))
 		return
 	}
+	apiresp.WriteError(w, r, fmt.Errorf("%s: %w", op, err))
+}
 
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+// UpdateApp handles PUT /apps/{uuid} (admin).
+func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
+	// Stateless phase first (400): path UUID parse, then body decode and
+	// trim. Authorization (403, masked resolve) and the real lookup (404)
+	// follow, so a malformed request never depends on server state.
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
 		return
 	}
+	var req updateAppRequest
+	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+	reqSlug := strings.TrimSpace(req.Slug)
+	reqName := strings.TrimSpace(req.Name)
 
-	// Authorize: update — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "update", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
+	if !h.authorizeApp(w, r, "update", appUUID) {
 		return
 	}
 
@@ -318,19 +324,14 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req updateAppRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
-		return
-	}
-
+	// An empty (or blank) slug/name means "leave unchanged".
 	newSlug := app.Slug
-	if s := strings.TrimSpace(req.Slug); s != "" {
-		newSlug = s
+	if reqSlug != "" {
+		newSlug = reqSlug
 	}
 	newName := app.Name
-	if n := strings.TrimSpace(req.Name); n != "" {
-		newName = n
+	if reqName != "" {
+		newName = reqName
 	}
 
 	before := map[string]any{
@@ -368,7 +369,7 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 		return h.observers.Observe(ctx, tx, "update", "app", &app.ID, before, after)
 	})
 	if txErr != nil {
-		apiresp.WriteError(w, r, fmt.Errorf("apps.update: %w", txErr))
+		writeAppsMutationError(w, r, "apps.update", txErr)
 		return
 	}
 
@@ -387,20 +388,11 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 // per-table archived_at of their own; archival is the generic entity
 // archive path shared by every entity subtype.
 func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	appID, appUUID, ok := h.loadAppByUUIDParam(w, r)
+	appUUID, ok := h.parseAppUUIDParam(w, r)
 	if !ok {
 		return
 	}
-
-	// Authorize: delete — admin only for apps. Authorize against the bare
-	// entity id, resolved above, before loading the full row.
-	if err := h.az.Authorize(r.Context(), "delete", &appID); err != nil {
-		apiresp.WriteError(w, r, err)
+	if !h.authorizeApp(w, r, "delete", appUUID) {
 		return
 	}
 
@@ -436,32 +428,28 @@ func (h *AppsHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// loadAppByUUIDParam extracts the {uuid} chi param and resolves it to the
-// app's internal id via entityResolver — apps.id == entities.id, per the
-// FK-anchor entity-subtype pattern for apps — without loading the full app
-// row. This lets GetApp/UpdateApp/DeleteApp authorize against the bare id
-// before any row data (and thus its existence) is revealed to an
-// unauthorized caller, matching EntityService.GetByUUID/
-// CorporationService.GetByEntityUUID in api/service/ and mod-users' own
-// membership handler for apps (api/internal/handlers/apps.go's
-// loadAppByUUIDParam).
-//
-// An unknown app uuid surfaces as ErrNotFound (see NewAppsHandler's
-// entityResolver.AllowNotFound("app") call), matching the source mod-users
-// handler's behaviour — apps are an admin-only resource with no
-// existence-masking requirement.
-func (h *AppsHandler) loadAppByUUIDParam(w http.ResponseWriter, r *http.Request) (int64, uuid.UUID, bool) {
-	rawUUID := chi.URLParam(r, "uuid")
-	parsed, err := uuid.Parse(rawUUID)
-	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
-		return 0, uuid.UUID{}, false
-	}
-
-	appID, err := h.entityResolver.Resolve(r.Context(), h.q, parsed, "app")
+// parseAppUUIDParam parses the {uuid} chi param (stateless, 400 with an
+// invalid_uuid detail on failure). It runs before authorization.
+func (h *AppsHandler) parseAppUUIDParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	parsed, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
 		apiresp.WriteError(w, r, err)
-		return 0, uuid.UUID{}, false
+		return uuid.UUID{}, false
 	}
-	return appID, parsed, true
+	return parsed, true
+}
+
+// authorizeApp authorizes op on the app through the masked resolve
+// (entity.Resolver.AuthorizeResolve): authentication, then the entity
+// lookup, then the authorizer. A missing app and an existing-but-forbidden
+// app are both 403, for every caller including admins, so the response is
+// not an existence oracle. The real GetAppByUUID lookup that follows in each
+// handler returns 404 only in the narrow race where the row vanishes after
+// authorization.
+func (h *AppsHandler) authorizeApp(w http.ResponseWriter, r *http.Request, op string, appUUID uuid.UUID) bool {
+	if _, err := h.entityResolver.AuthorizeResolve(r.Context(), h.q, h.az, op, appUUID, "app"); err != nil {
+		apiresp.WriteError(w, r, err)
+		return false
+	}
+	return true
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -55,6 +56,10 @@ type handlers struct {
 func NewRouter(d Deps) chi.Router {
 	r := chi.NewRouter()
 	h := &handlers{d: d}
+
+	// 401 gate for every route, before any handler: sudo-aware, so an
+	// identity carrying only a sudo actor still passes.
+	r.Use(authz.RequireAuth)
 
 	r.Route("/entities", func(r chi.Router) {
 		r.Post("/natural-persons", h.createNaturalPerson)

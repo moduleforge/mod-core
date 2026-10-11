@@ -1,14 +1,12 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -21,14 +19,27 @@ type createNaturalPersonRequest struct {
 
 // createNaturalPerson handles POST /entities/natural-persons (admin only).
 func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
+	var req createNaturalPersonRequest
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
-	var req createNaturalPersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	// Stateless blank-name checks run before the service's AuthorizeType so an
+	// unauthorized caller sees the 400, not a 403 (401 -> 400 -> 403 -> 404).
+	if strings.TrimSpace(req.GivenName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "given_name",
+			Code:    "natural_persons.given_name_required",
+			Message: "given_name is required",
+		}))
+		return
+	}
+	if strings.TrimSpace(req.FamilyName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "family_name",
+			Code:    "natural_persons.family_name_required",
+			Message: "family_name is required",
+		}))
 		return
 	}
 
@@ -61,14 +72,9 @@ func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
 
 // getNaturalPerson handles GET /entities/natural-persons/{uuid}.
 func (h *handlers) getNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -92,20 +98,34 @@ type updateNaturalPersonRequest struct {
 
 // updateNaturalPerson handles PUT /entities/natural-persons/{uuid}.
 func (h *handlers) updateNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
 	var req updateNaturalPersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// Stateless blank-name checks on present fields run before the service's
+	// AuthorizeResolve so an unauthorized caller sees the 400, not a 403
+	// (401 -> 400 -> 403 -> 404). Absent (null) fields stay no-ops.
+	if req.GivenName != nil && strings.TrimSpace(*req.GivenName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "given_name",
+			Code:    "natural_persons.given_name_required",
+			Message: "given_name is required",
+		}))
+		return
+	}
+	if req.FamilyName != nil && strings.TrimSpace(*req.FamilyName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "family_name",
+			Code:    "natural_persons.family_name_required",
+			Message: "family_name is required",
+		}))
 		return
 	}
 

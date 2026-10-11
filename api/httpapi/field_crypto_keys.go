@@ -24,7 +24,6 @@ import (
 	"github.com/moduleforge/core-api/authz"
 	"github.com/moduleforge/core-api/fieldcrypto"
 	"github.com/moduleforge/core-api/observer"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/txhelper"
 	coredb "github.com/moduleforge/core-model/db"
 )
@@ -111,11 +110,18 @@ func NewFieldCryptoKeyHandler(
 // Registered onto the shared /v1 group exactly as RegisterAppRoutes is, so
 // the paths resolve under /v1 without a second Mount — a top-level mount
 // would reintroduce the duplicate-prefix panic the module manifest documents.
+//
+// The routes sit in their own group carrying authz.RequireAuth, so the 401
+// gate covers only these routes and never the peers' routes on the shared
+// router.
 func RegisterFieldCryptoKeyRoutes(r chi.Router, h *FieldCryptoKeyHandler) {
-	r.Get("/field-crypto-keys", h.List)
-	r.Post("/field-crypto-keys/rotations", h.Rotate)
-	r.Post("/field-crypto-keys/{version}/mark-compromised", h.MarkCompromised)
-	r.Put("/field-crypto-keys/{version}/grace", h.SetGrace)
+	r.Group(func(r chi.Router) {
+		r.Use(authz.RequireAuth)
+		r.Get("/field-crypto-keys", h.List)
+		r.Post("/field-crypto-keys/rotations", h.Rotate)
+		r.Post("/field-crypto-keys/{version}/mark-compromised", h.MarkCompromised)
+		r.Put("/field-crypto-keys/{version}/grace", h.SetGrace)
+	})
 }
 
 func (h *FieldCryptoKeyHandler) querier(tx pgx.Tx) coredb.Querier {
@@ -180,11 +186,6 @@ func timestamptzOrNil(ts pgtype.Timestamptz) any {
 // List handles GET /field-crypto-keys (admin) — every key version and its
 // lifecycle timestamps.
 func (h *FieldCryptoKeyHandler) List(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
 	// Authorize: "manage" with a nil target — admin-only, exactly as the
 	// mutating routes below. The inventory returns no key material, but it
 	// does disclose the full rotation history and which keys are flagged
@@ -226,31 +227,25 @@ type rotateFieldCryptoKeyRequest struct {
 }
 
 // Rotate handles POST /field-crypto-keys/rotations (admin).
+//
+// Order (http-error-precedence): 401 (RequireAuth, mounted by
+// RegisterFieldCryptoKeyRoutes), then every stateless shape check (body
+// decode, grace/key_hex validation) as 400, then the "manage" authorize as
+// 403, then the transaction (409). A nil-target "manage" authorize is not the
+// spec's AuthorizeType exception, so it does not run ahead of shape checks.
 func (h *FieldCryptoKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	// Authorize before the body is parsed and before any state-changing
-	// work: "manage" with a nil target is denied for every actor except one
-	// holding a wildcard grant, so this is mod-core's fail-closed admin-only
-	// idiom. It is also the sole gate on the post-commit Cipher.Reload
-	// below, which no other path in this handler can reach.
-	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
-		apiresp.WriteError(w, r, err)
-		return
-	}
-
 	var req rotateFieldCryptoKeyRequest
 	// An empty body is the recommended invocation (server-generated key,
 	// standard rotation, no deadline), so it decodes as the zero request
-	// rather than as a malformed one. Rotate does not distinguish an absent
-	// grace_period_days key from an explicit null — both mean "no
-	// deadline" — so the raw body decodeFieldCryptoKeyBody returns is
-	// unused here.
-	if _, _, err := decodeFieldCryptoKeyBody(w, r, &req); err != nil {
-		apiresp.WriteError(w, r, err)
+	// rather than as a malformed one (DecodeJSON alone rejects an empty
+	// body). Rotate does not distinguish an absent grace_period_days key from
+	// an explicit null — both mean "no deadline" — so the raw bytes are only
+	// used to detect emptiness here.
+	raw, ok := readFieldCryptoKeyBody(w, r)
+	if !ok {
+		return
+	}
+	if len(raw) > 0 && !decodeFieldCryptoKeyJSON(w, r, &req) {
 		return
 	}
 
@@ -308,6 +303,18 @@ func (h *FieldCryptoKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 	}
 	// Held no longer than the insert needs it: the row is the durable copy.
 	defer clear(keyMaterial)
+
+	// Authorize after the stateless shape checks and before any state-changing
+	// work: "manage" with a nil target is denied for every actor except one
+	// holding a wildcard grant, so this is mod-core's fail-closed admin-only
+	// idiom. It remains the sole gate on the post-commit Cipher.Reload below,
+	// which no other path in this handler can reach; the shape checks above
+	// have no side effects (the only artifact is key material held in a local
+	// that is zeroed on return), so running them first does not weaken it.
+	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
+		apiresp.WriteError(w, r, err)
+		return
+	}
 
 	retireParams := coredb.RetireActiveFieldCryptoKeyParams{
 		GraceDays:   graceDays,
@@ -446,8 +453,10 @@ const pgerrcodeUniqueViolation = "23505"
 // MarkCompromised handles POST /field-crypto-keys/{version}/mark-compromised
 // (admin) — flagging an already-retired key after the fact.
 func (h *FieldCryptoKeyHandler) MarkCompromised(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
+	// Stateless {version} shape check (400) precedes the authorize (403).
+	version, ferr := fieldCryptoKeyVersionParam(r)
+	if ferr != nil {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(*ferr))
 		return
 	}
 
@@ -455,12 +464,6 @@ func (h *FieldCryptoKeyHandler) MarkCompromised(w http.ResponseWriter, r *http.R
 	// this handler.
 	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
 		apiresp.WriteError(w, r, err)
-		return
-	}
-
-	version, ferr := fieldCryptoKeyVersionParam(r)
-	if ferr != nil {
-		apiresp.WriteError(w, r, apiresp.InvalidInput(*ferr))
 		return
 	}
 
@@ -504,18 +507,8 @@ type setFieldCryptoKeyGraceRequest struct {
 // SetGrace handles PUT /field-crypto-keys/{version}/grace (admin) —
 // extending, shortening, or clearing a retired key's decrypt window.
 func (h *FieldCryptoKeyHandler) SetGrace(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	// Authorize: "manage" with a nil target — admin-only, as every route in
-	// this handler.
-	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
-		apiresp.WriteError(w, r, err)
-		return
-	}
-
+	// Every stateless shape check (version param, body decode, key presence,
+	// grace range) is a 400 and runs before the authorize (403).
 	version, ferr := fieldCryptoKeyVersionParam(r)
 	if ferr != nil {
 		apiresp.WriteError(w, r, apiresp.InvalidInput(*ferr))
@@ -523,23 +516,23 @@ func (h *FieldCryptoKeyHandler) SetGrace(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req setFieldCryptoKeyGraceRequest
-	raw, empty, err := decodeFieldCryptoKeyBody(w, r, &req)
-	if err != nil {
-		apiresp.WriteError(w, r, err)
+	// The raw bytes are read once (and r.Body restored) because the
+	// absent-key vs explicit-null distinction needs them: a present-but-
+	// key-omitted body ("{}") decodes to the same zero value as an explicit
+	// {"grace_period_days": null} — Go's json package does not distinguish
+	// "absent" from "present and null" on a pointer field. Left unchecked,
+	// that collapse would silently clear the deadline on a truncated request,
+	// which is what setFieldCryptoKeyGraceRequest's doc comment says never
+	// happens. An empty body keeps its dedicated grace_period_days_required
+	// code (DecodeJSON alone would report invalid_json_body).
+	raw, ok := readFieldCryptoKeyBody(w, r)
+	if !ok {
 		return
 	}
-	// A present-but-key-omitted body ("{}") decodes to the same zero value
-	// as an explicit {"grace_period_days": null} — Go's json package does
-	// not distinguish "absent" from "present and null" on a pointer field.
-	// Left unchecked, that collapse would silently clear the deadline on a
-	// truncated request exactly as the byte-empty-body case would, which is
-	// what setFieldCryptoKeyGraceRequest's doc comment says never happens.
-	// Inspecting the raw body's own key set (fieldCryptoKeyBodyHasKey)
-	// recovers the distinction the struct decode alone cannot make.
-	if !empty && !fieldCryptoKeyBodyHasKey(raw, "grace_period_days") {
-		empty = true
+	if len(raw) > 0 && !decodeFieldCryptoKeyJSON(w, r, &req) {
+		return
 	}
-	if empty {
+	if len(raw) == 0 || !fieldCryptoKeyBodyHasKey(raw, "grace_period_days") {
 		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
 			Field:   "grace_period_days",
 			Code:    "field_crypto_keys.grace_period_days_required",
@@ -551,6 +544,13 @@ func (h *FieldCryptoKeyHandler) SetGrace(w http.ResponseWriter, r *http.Request)
 	graceDays, ferr := graceDaysParam(req.GracePeriodDays)
 	if ferr != nil {
 		apiresp.WriteError(w, r, apiresp.InvalidInput(*ferr))
+		return
+	}
+
+	// Authorize: "manage" with a nil target — admin-only, as every route in
+	// this handler.
+	if err := h.az.Authorize(r.Context(), "manage", nil); err != nil {
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -634,49 +634,66 @@ func (h *FieldCryptoKeyHandler) writeKeyUpdateError(w http.ResponseWriter, r *ht
 // compromised is a bool, grace_period_days is a small integer), so 4KB is
 // generous headroom while still refusing an oversized/abusive payload before
 // it is buffered into memory.
-//
-// This is a narrow, per-route stopgap: every other api/httpapi handler has
-// the same unbounded-body gap, and a package-wide middleware fix is tracked
-// separately (followup wXiC). Do not treat this as the pattern to copy
-// elsewhere — the middleware fix should replace this once it lands.
 const maxFieldCryptoKeyBodyBytes = 4 << 10 // 4KB
 
-// decodeFieldCryptoKeyBody decodes r's body into dst, reporting whether the
-// body was empty (zero bytes) so each route can decide what an absent body
-// means, and returning the raw body bytes so a caller that must distinguish
-// "key absent" from "key explicitly null" — a distinction encoding/json
-// collapses to the same zero value on a pointer field — can inspect the raw
-// JSON itself (see fieldCryptoKeyBodyHasKey). Unknown members are rejected:
-// silently ignoring a misspelled "compromised" would perform a standard
-// rotation while the operator believed they had flagged a leaked key.
-//
-// The body reader is wrapped in http.MaxBytesReader (see
-// maxFieldCryptoKeyBodyBytes) before anything is read, so an oversized body
-// fails here — surfaced as invalid_input like any other malformed body —
-// rather than being buffered in full.
-func decodeFieldCryptoKeyBody(w http.ResponseWriter, r *http.Request, dst any) (raw []byte, empty bool, err error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxFieldCryptoKeyBodyBytes)
-	body, rerr := io.ReadAll(r.Body)
-	if rerr != nil {
-		return nil, false, apiresp.ErrInvalidInput
-	}
-	if len(body) == 0 {
-		return nil, true, nil
-	}
+// fieldCryptoKeyCodePrefix namespaces the decode failure detail codes
+// (field_crypto_keys.invalid_json_body / field_crypto_keys.body_too_large) the
+// same way every other detail code in this file is namespaced.
+const fieldCryptoKeyCodePrefix = "field_crypto_keys"
 
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.DisallowUnknownFields()
-	if derr := dec.Decode(dst); derr != nil {
-		return nil, false, apiresp.ErrInvalidInput
+// readFieldCryptoKeyBody reads the request body, bounded to
+// maxFieldCryptoKeyBodyBytes by http.MaxBytesReader, and restores r.Body so
+// apiresp.DecodeJSON can consume it. A body over the cap makes ReadAll return
+// a *http.MaxBytesError, which is answered here with the same 400
+// field_crypto_keys.body_too_large DecodeJSON produces (and MaxBytesReader
+// tells the server to close the connection); any other read error is the
+// 400 field_crypto_keys.invalid_json_body. All of this is stateless and runs
+// before the "manage" authorize, so the 400 wins over 403. It exists because
+// both routes need to know whether the body was empty (DecodeJSON rejects an
+// empty body, but Rotate treats it as the zero request and SetGrace gives it
+// a dedicated code) and SetGrace needs the raw bytes for key-presence
+// detection. A read error writes the 400 and reports false.
+func readFieldCryptoKeyBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	if r.Body == nil || r.Body == http.NoBody {
+		return nil, true
 	}
-	return body, false, nil
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxFieldCryptoKeyBodyBytes))
+	if err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+				Code:    fieldCryptoKeyCodePrefix + ".body_too_large",
+				Message: "request body is too large",
+			}))
+			return nil, false
+		}
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Code:    fieldCryptoKeyCodePrefix + ".invalid_json_body",
+			Message: "request body could not be read",
+		}))
+		return nil, false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	return raw, true
+}
+
+// decodeFieldCryptoKeyJSON is the thin DecodeJSON shim for this handler's
+// bodies: strict (unknown members rejected, so a misspelled "compromised"
+// cannot silently perform a standard rotation while the operator believed
+// they had flagged a leaked key), capped at maxFieldCryptoKeyBodyBytes, with
+// the module's code namespace. It follows DecodeJSON's contract: false means
+// the 400 is already written.
+func decodeFieldCryptoKeyJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return apiresp.DecodeJSON(w, r, dst,
+		apiresp.WithMaxBytes(maxFieldCryptoKeyBodyBytes),
+		apiresp.WithCodePrefix(fieldCryptoKeyCodePrefix))
 }
 
 // fieldCryptoKeyBodyHasKey reports whether raw's top-level JSON object
-// contains key. raw is decodeFieldCryptoKeyBody's returned bytes, already
-// proven to unmarshal (that function's postcondition), so the unmarshal here
-// is not expected to fail; a failure is treated as "absent" rather than
-// panicking or propagating a second error path this deep into validation.
+// contains key. raw has already been proven to decode (decodeFieldCryptoKeyJSON
+// ran first), so the unmarshal here is not expected to fail; a failure is
+// treated as "absent" rather than panicking or propagating a second error path
+// this deep into validation.
 func fieldCryptoKeyBodyHasKey(raw []byte, key string) bool {
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &probe); err != nil {

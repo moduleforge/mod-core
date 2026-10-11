@@ -120,6 +120,10 @@ func (s *stubQuerier) UpdateNaturalPersonSSNBlob(_ context.Context, _ coredb.Upd
 	return 0, nil
 }
 
+func (s *stubQuerier) UpdateServiceAccountLabel(_ context.Context, _ coredb.UpdateServiceAccountLabelParams) (coredb.ServiceAccount, error) {
+	return coredb.ServiceAccount{}, nil
+}
+
 var _ coredb.Querier = (*stubQuerier)(nil)
 
 // --- test fixtures ---

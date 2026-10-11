@@ -200,25 +200,29 @@ func (s *CorporationService) UpdateByEntityUUID(
 	entityUUID uuid.UUID,
 	in UpdateCorporationInput,
 ) error {
-	// 1. Authorize — fetch entity first to build a richer target.
-	ent, err := q.GetEntityByUUID(ctx, entityUUID)
+	// 1. Masked resolve + authorize: a missing id and an existing-but-forbidden
+	// id both yield ErrForbidden (no existence oracle); ErrNotFound below is
+	// only reachable by an authorized caller.
+	eid, err := s.entityResolver.AuthorizeResolve(ctx, q, s.az, "update", entityUUID, "corporation")
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("corporation.UpdateByEntityUUID entity: %w", err)
+		return err
 	}
 
-	eid := ent.ID
-	if err := s.az.Authorize(ctx, "update", &eid); err != nil {
-		return err
+	// Blank legal_name on a present field is rejected after authorization
+	// (non-HTTP callers; the handler checks statelessly first).
+	if in.LegalName != nil && strings.TrimSpace(*in.LegalName) == "" {
+		return apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		})
 	}
 
 	// 2. Mutate inside a transaction; observers participate in the same tx.
 	err = txhelper.Run(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		txQ := s.querier(tx)
 
-		corp, err := txQ.GetCorporationByEntityID(ctx, ent.ID)
+		corp, err := txQ.GetCorporationByEntityID(ctx, eid)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
@@ -260,7 +264,7 @@ func (s *CorporationService) UpdateByEntityUUID(
 		}
 
 		if err := txQ.UpdateCorporation(ctx, coredb.UpdateCorporationParams{
-			EntityID:     ent.ID,
+			EntityID:     eid,
 			LegalName:    legalName,
 			Jurisdiction: jurisdiction,
 			Ein:          einParam,

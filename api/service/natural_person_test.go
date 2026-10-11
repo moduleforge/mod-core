@@ -153,7 +153,7 @@ func TestNaturalPersonService_Update_AuthzDenied(t *testing.T) {
 
 	entityUUID := q.seedNaturalPerson("Charlie", "Brown")
 	gn := "Changed"
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateNaturalPersonInput{GivenName: &gn})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateNaturalPersonInput{GivenName: &gn})
 	if !errors.Is(err, authzErr) {
 		t.Errorf("expected authz error, got %v", err)
 	}
@@ -172,7 +172,7 @@ func TestNaturalPersonService_Update_Success(t *testing.T) {
 
 	entityUUID := q.seedNaturalPerson("Eve", "Foster")
 	fn := "Forster"
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateNaturalPersonInput{FamilyName: &fn})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateNaturalPersonInput{FamilyName: &fn})
 	if err != nil {
 		t.Fatalf("expected success for update, got %v", err)
 	}
@@ -189,9 +189,9 @@ func TestNaturalPersonService_Update_NotFound(t *testing.T) {
 	svc := newNPService(t, q)
 
 	name := "Bob"
-	err := svc.UpdateByEntityUUID(context.Background(), q, randomUUID(t), UpdateNaturalPersonInput{GivenName: &name})
-	if err == nil {
-		t.Error("expected error for missing entity")
+	err := svc.UpdateByEntityUUID(authedCtx(), q, randomUUID(t), UpdateNaturalPersonInput{GivenName: &name})
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden for missing entity, got %v", err)
 	}
 }
 

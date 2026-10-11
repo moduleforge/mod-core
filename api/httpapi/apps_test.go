@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -245,8 +246,8 @@ func (q *appsFakeQuerier) GetEntityByID(_ context.Context, _ int64) (coredb.GetE
 	return coredb.GetEntityByIDRow{}, nil
 }
 
-// GetEntityByUUID backs entity.Resolver.Resolve, which AppsHandler now calls
-// (via loadAppByUUIDParam) to authorize against the bare entity id before
+// GetEntityByUUID backs entity.Resolver.AuthorizeResolve, which AppsHandler now calls
+// (via authorizeApp) to authorize against the bare entity id before
 // loading the full app row. It must actually resolve — a stub that always
 // succeeds would silently defeat the not-found test cases below.
 func (q *appsFakeQuerier) GetEntityByUUID(_ context.Context, argUuid uuid.UUID) (coredb.GetEntityByUUIDRow, error) {
@@ -319,6 +320,10 @@ func (q *appsFakeQuerier) UpdateNaturalPersonSSNBlob(_ context.Context, _ coredb
 	return 0, nil
 }
 
+func (q *appsFakeQuerier) UpdateServiceAccountLabel(_ context.Context, _ coredb.UpdateServiceAccountLabelParams) (coredb.ServiceAccount, error) {
+	return coredb.ServiceAccount{}, nil
+}
+
 var _ coredb.Querier = (*appsFakeQuerier)(nil)
 
 // --- fake authz.Authorizer for AppsHandler tests ---
@@ -333,11 +338,39 @@ type appsFakeAuthorizer struct {
 	// resolved entity id (not the full row) ahead of loading data.
 	lastAction string
 	lastTarget *int64
+
+	// allowIDs, when non-nil, switches the fake to target-aware mode: only
+	// the listed entity ids are authorized; every other target (including the
+	// target-0 call AuthorizeResolve makes on a masked miss) is denied.
+	allowIDs map[int64]bool
+
+	// calls records every Authorize invocation in order (action plus the
+	// target id, hasTarget false for a nil target), so tests can assert the
+	// exact number and shape of calls rather than only the most recent one.
+	calls []appsAuthorizeCall
+}
+
+// appsAuthorizeCall is one recorded appsFakeAuthorizer.Authorize invocation.
+type appsAuthorizeCall struct {
+	action    string
+	hasTarget bool
+	target    int64
 }
 
 func (a *appsFakeAuthorizer) Authorize(_ context.Context, action string, target *int64) error {
 	a.lastAction = action
 	a.lastTarget = target
+	c := appsAuthorizeCall{action: action}
+	if target != nil {
+		c.hasTarget, c.target = true, *target
+	}
+	a.calls = append(a.calls, c)
+	if a.allowIDs != nil {
+		if target != nil && a.allowIDs[*target] {
+			return nil
+		}
+		return apiresp.ErrForbidden
+	}
 	return a.err
 }
 
@@ -629,20 +662,6 @@ func TestAppsGetApp_403_AuthorizesBeforeLoad(t *testing.T) {
 	}
 }
 
-func TestAppsGetApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	req := adminReq(http.MethodGet, "/apps/"+uuid.New().String(), nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
-	}
-}
-
 func TestAppsGetApp_400_BadUUID(t *testing.T) {
 	q := newAppsFakeQuerier()
 	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
@@ -690,21 +709,6 @@ func TestAppsUpdateApp_200(t *testing.T) {
 	}
 	if az.lastTarget == nil || *az.lastTarget != 1 {
 		t.Errorf("authz target: got %v, want pointer to 1 (the resolved entity id)", az.lastTarget)
-	}
-}
-
-func TestAppsUpdateApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	body, _ := json.Marshal(updateAppRequest{Name: "Renamed App"})
-	req := adminReq(http.MethodPut, "/apps/"+uuid.New().String(), bytes.NewBuffer(body))
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }
 
@@ -769,20 +773,6 @@ func TestAppsDeleteApp_204_ArchivesAndDropsFromList(t *testing.T) {
 	}
 }
 
-func TestAppsDeleteApp_404_NotFound(t *testing.T) {
-	q := newAppsFakeQuerier()
-	h := newTestAppsHandler(q, &appsFakeAuthorizer{})
-	router := appsRouter(h)
-
-	req := adminReq(http.MethodDelete, "/apps/"+uuid.New().String(), nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusNotFound)
-	}
-}
-
 // TestAppsDeleteApp_403_AuthorizesBeforeLoad asserts authorization runs
 // against the bare resolved entity id before DeleteApp loads the full row
 // (mirroring TestAppsGetApp_403_AuthorizesBeforeLoad).
@@ -801,5 +791,211 @@ func TestAppsDeleteApp_403_AuthorizesBeforeLoad(t *testing.T) {
 	}
 	if q.getAppByUUIDCalls != 0 {
 		t.Errorf("GetAppByUUID calls: got %d, want 0 (full row must not load before authz)", q.getAppByUUIDCalls)
+	}
+}
+
+// --- masked resolve: missing and forbidden are indistinguishable ---
+
+// appsMaskedCase drives one of GET/PUT/DELETE /apps/{uuid}.
+type appsMaskedCase struct {
+	name   string
+	method string
+	body   func() *bytes.Buffer
+}
+
+var appsMaskedCases = []appsMaskedCase{
+	{"GET", http.MethodGet, func() *bytes.Buffer { return nil }},
+	{"PUT", http.MethodPut, func() *bytes.Buffer {
+		b, _ := json.Marshal(updateAppRequest{Name: "Renamed"})
+		return bytes.NewBuffer(b)
+	}},
+	{"DELETE", http.MethodDelete, func() *bytes.Buffer { return nil }},
+}
+
+func (c appsMaskedCase) do(router chi.Router, id uuid.UUID) *httptest.ResponseRecorder {
+	var req *http.Request
+	if b := c.body(); b != nil {
+		req = adminReq(c.method, "/apps/"+id.String(), b)
+	} else {
+		req = adminReq(c.method, "/apps/"+id.String(), nil)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+// A missing id and an existing-but-forbidden id both yield 403 with an
+// identical envelope, and the full row is never loaded for either.
+func TestApps_MissingAndForbiddenAreIndistinguishable(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			existing := q.seedApp("demo", "Demo App")
+			// Caller is authorized for no entity at all.
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			forbidden := c.do(router, existing)
+			missing := c.do(router, uuid.New())
+
+			if forbidden.Code != http.StatusForbidden || missing.Code != http.StatusForbidden {
+				t.Fatalf("status: forbidden=%d missing=%d, want both 403", forbidden.Code, missing.Code)
+			}
+			if forbidden.Body.String() != missing.Body.String() {
+				t.Errorf("envelopes differ:\nforbidden: %s\nmissing:   %s", forbidden.Body.String(), missing.Body.String())
+			}
+			if q.getAppByUUIDCalls != 0 {
+				t.Errorf("GetAppByUUID calls: got %d, want 0", q.getAppByUUIDCalls)
+			}
+		})
+	}
+}
+
+// A masked miss makes exactly one Authorize call, with a non-nil target of 0
+// (the probe AuthorizeResolve makes so a miss costs the same decision as a
+// forbidden hit), and answers 403 on GET, PUT and DELETE alike. A second call
+// or a non-zero target would mean the miss leaked past the masked path.
+func TestApps_MaskedMissProbesAuthorizerOnceWithTargetZero(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			q.seedApp("demo", "Demo App")
+			// Caller is authorized for the existing app, so only the miss
+			// probe (target 0) is denied.
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			rec := c.do(router, uuid.New())
+
+			if rec.Code != http.StatusForbidden {
+				t.Fatalf("status: got %d, want 403 - body: %s", rec.Code, rec.Body.String())
+			}
+			if len(az.calls) != 1 {
+				t.Fatalf("Authorize calls: got %d (%+v), want exactly 1", len(az.calls), az.calls)
+			}
+			if got := az.calls[0]; !got.hasTarget || got.target != 0 {
+				t.Errorf("Authorize target: got %+v, want a non-nil target of 0", got)
+			}
+		})
+	}
+}
+
+// Documented consequence of the masked resolve: even a caller authorized for
+// existing apps gets 403 (not 404) on a missing id, because the miss call is
+// made with target 0, which no grant matches.
+func TestApps_AuthorizedCallerOnMissingIDGets403(t *testing.T) {
+	for _, c := range appsMaskedCases {
+		t.Run(c.name, func(t *testing.T) {
+			q := newAppsFakeQuerier()
+			q.seedApp("demo", "Demo App")
+			az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+			router := appsRouter(newTestAppsHandler(q, az))
+
+			rec := c.do(router, uuid.New())
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("status: got %d, want 403 — body: %s", rec.Code, rec.Body.String())
+			}
+			if q.getAppByUUIDCalls != 0 {
+				t.Errorf("GetAppByUUID calls: got %d, want 0", q.getAppByUUIDCalls)
+			}
+		})
+	}
+}
+
+// The authorized caller on an existing app still succeeds (target-aware
+// authorizer sanity check), and a row vanishing after authorization is the
+// only path to 404.
+func TestApps_RowVanishesAfterAuthorizeIs404(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.getAppByUUIDErr = pgx.ErrNoRows
+	az := &appsFakeAuthorizer{allowIDs: map[int64]bool{1: true}}
+	router := appsRouter(newTestAppsHandler(q, az))
+
+	rec := appsMaskedCases[0].do(router, appUUID)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status: got %d, want 404", rec.Code)
+	}
+}
+
+// --- slug uniqueness is a 409 (post-authorization), not a 500 ---
+
+func TestAppsCreate_DuplicateSlugIs409(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "apps_slug_key"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want 409 - %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "apps.slug_taken") || !strings.Contains(rec.Body.String(), `"conflict"`) {
+		t.Errorf("body missing conflict code/detail: %s", rec.Body.String())
+	}
+
+	// An unauthorized caller gets 403 for the same input, never the conflict.
+	rec = serveApps(t, q, &appsFakeAuthorizer{err: apiresp.ErrForbidden}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("unauthorized status: got %d, want 403", rec.Code)
+	}
+}
+
+func TestAppsUpdateApp_DuplicateSlugIs409(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.updateAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "apps_slug_key"}
+	body := `{"slug":"taken"}`
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(body)))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want 409 - %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body missing apps.slug_taken: %s", rec.Body.String())
+	}
+
+	rec = serveApps(t, q, &appsFakeAuthorizer{err: apiresp.ErrForbidden}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(body)))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("unauthorized status: got %d, want 403", rec.Code)
+	}
+}
+
+func TestAppsCreate_OtherInsertErrorStays500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23503"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500", rec.Code)
+	}
+}
+
+// A unique violation on some other constraint (raised by CreateEntity or an
+// observer in the same transaction) must not be reported as a slug conflict.
+func TestAppsCreate_OtherUniqueViolationIs500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "entities_uuid_key"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500 - %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body must not report apps.slug_taken: %s", rec.Body.String())
+	}
+}
+
+func TestAppsUpdateApp_OtherUniqueViolationIs500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.updateAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "entities_uuid_key"}
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(`{"slug":"taken"}`)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500 - %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body must not report apps.slug_taken: %s", rec.Body.String())
 	}
 }

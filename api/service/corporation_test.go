@@ -137,7 +137,7 @@ func TestCorporationService_Update_AuthzDenied(t *testing.T) {
 		typeResolver:   testTypeResolver(q),
 	}
 	ln := "Delta Inc"
-	err = svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateCorporationInput{LegalName: &ln})
+	err = svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateCorporationInput{LegalName: &ln})
 	if !errors.Is(err, authzErr) {
 		t.Errorf("expected authz error, got %v", err)
 	}
@@ -165,7 +165,7 @@ func TestCorporationService_Update_AdminSucceeds(t *testing.T) {
 	rec.observeAfterCommitCalls = nil
 
 	ln := "Epsilon Corporation"
-	err = svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateCorporationInput{LegalName: &ln})
+	err = svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateCorporationInput{LegalName: &ln})
 	if err != nil {
 		t.Fatalf("Update: unexpected error: %v", err)
 	}
@@ -183,9 +183,9 @@ func TestCorporationService_UpdateByEntityUUID_NotFound(t *testing.T) {
 	svc := newCorpService(t, q)
 
 	ln := "X"
-	err := svc.UpdateByEntityUUID(context.Background(), q, randomUUID(t), UpdateCorporationInput{LegalName: &ln})
-	if err == nil {
-		t.Error("expected error for missing entity")
+	err := svc.UpdateByEntityUUID(authedCtx(), q, randomUUID(t), UpdateCorporationInput{LegalName: &ln})
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden for missing entity, got %v", err)
 	}
 }
 

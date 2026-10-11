@@ -51,3 +51,29 @@ func (q *Queries) GetServiceAccountByEntityID(ctx context.Context, entityID int6
 	)
 	return i, err
 }
+
+const updateServiceAccountLabel = `-- name: UpdateServiceAccountLabel :one
+UPDATE service_accounts
+SET label = $2
+WHERE entity_id = $1
+RETURNING id, entity_id, label, created_at, updated_at
+`
+
+type UpdateServiceAccountLabelParams struct {
+	EntityID int64  `json:"entity_id"`
+	Label    string `json:"label"`
+}
+
+// updated_at is maintained by the service_accounts_set_updated_at trigger.
+func (q *Queries) UpdateServiceAccountLabel(ctx context.Context, arg UpdateServiceAccountLabelParams) (ServiceAccount, error) {
+	row := q.db.QueryRow(ctx, updateServiceAccountLabel, arg.EntityID, arg.Label)
+	var i ServiceAccount
+	err := row.Scan(
+		&i.ID,
+		&i.EntityID,
+		&i.Label,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

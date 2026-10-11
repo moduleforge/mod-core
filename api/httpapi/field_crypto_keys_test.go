@@ -496,11 +496,10 @@ func TestFieldCryptoKeyRoutes_403_Forbidden(t *testing.T) {
 }
 
 // fckInvalidPayloadRoutes pairs each fckRoutes entry that accepts a body or a
-// {version} path segment with a deliberately invalid variant of that input:
-// malformed JSON for the two body-accepting routes (rotate, grace) and a
-// non-numeric version for the two version-scoped routes (mark-compromised,
-// grace). Unlike fckRoutes, these bodies/paths would themselves be rejected
-// with a 400 if the authorizer let the request through.
+// {version} path segment with a deliberately invalid variant of that input,
+// covering every stateless check that runs before the authorize: malformed
+// JSON, an unknown member, an oversized body, the Rotate/SetGrace field
+// checks, the key_hex checks, a missing grace key, and a non-numeric version.
 var fckInvalidPayloadRoutes = []struct {
 	name   string
 	method string
@@ -508,23 +507,83 @@ var fckInvalidPayloadRoutes = []struct {
 	body   string
 }{
 	{"rotate-malformed-json", http.MethodPost, "/field-crypto-keys/rotations", `{"compromised":`},
+	{"rotate-unknown-member", http.MethodPost, "/field-crypto-keys/rotations", `{"compromize":true}`},
+	{"rotate-oversized", http.MethodPost, "/field-crypto-keys/rotations", `{"key_hex":"` + strings.Repeat("a", maxFieldCryptoKeyBodyBytes+1) + `"}`},
+	{"rotate-grace-with-compromised", http.MethodPost, "/field-crypto-keys/rotations", `{"compromised":true,"grace_period_days":30}`},
+	{"rotate-grace-too-small", http.MethodPost, "/field-crypto-keys/rotations", `{"grace_period_days":0}`},
+	{"rotate-grace-too-large", http.MethodPost, "/field-crypto-keys/rotations", `{"grace_period_days":40000}`},
+	{"rotate-key-hex-invalid", http.MethodPost, "/field-crypto-keys/rotations", `{"key_hex":"zzzz"}`},
 	{"grace-malformed-json", http.MethodPut, "/field-crypto-keys/1/grace", `{"grace_period_days":`},
+	{"grace-unknown-member", http.MethodPut, "/field-crypto-keys/1/grace", `{"grace_days":5}`},
+	{"grace-empty-object", http.MethodPut, "/field-crypto-keys/1/grace", `{}`},
+	{"grace-out-of-range", http.MethodPut, "/field-crypto-keys/1/grace", `{"grace_period_days":40000}`},
 	{"mark-compromised-non-numeric-version", http.MethodPost, "/field-crypto-keys/abc/mark-compromised", ""},
 	{"grace-non-numeric-version", http.MethodPut, "/field-crypto-keys/abc/grace", `{"grace_period_days":null}`},
 }
 
-// TestFieldCryptoKeyRoutes_403_ForbiddenWithInvalidPayload pins
-// authz-before-parsing (followup vHIc): every route in this handler
-// authorizes before it decodes a body or parses {version}, so a denied
-// request must come back 403 even when the payload that never got parsed
-// would itself have failed as a 400. This matters because the sibling
-// handler a maintainer would naturally copy from, AppsHandler.Create
-// (api/httpapi/apps.go), decodes/validates before authorizing — aligning
-// this handler with that precedent would silently turn a 403 into a 400 on
-// malformed input for an unauthorized caller, with every other test in this
-// file still passing.
-func TestFieldCryptoKeyRoutes_403_ForbiddenWithInvalidPayload(t *testing.T) {
+// TestFieldCryptoKeyRoutes_400_ForbiddenCallerWithInvalidPayload pins
+// shape-before-authz: the nil-target "manage" authorize is not the spec's
+// AuthorizeType exception, so a stateless-invalid payload is a 400 even for a
+// caller who would be denied. The shape is public (it is in the OpenAPI
+// description) and decoding has no side effects, so nothing is disclosed; in
+// particular the authorizer is never consulted and Cipher.Reload (reachable
+// only after the authorize) is untouched. No route in this handler is kept
+// authz-first.
+func TestFieldCryptoKeyRoutes_400_ForbiddenCallerWithInvalidPayload(t *testing.T) {
 	for _, tc := range fckInvalidPayloadRoutes {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newFCKHarness(t)
+			h.az.err = apiresp.ErrForbidden
+
+			rec := h.do(tc.method, tc.path, tc.body)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+			}
+			if h.az.lastAction != "" {
+				t.Errorf("authorizer consulted (%q) before the shape check rejected the request", h.az.lastAction)
+			}
+			if len(h.q.keys) != 1 || h.q.activeKey() == nil {
+				t.Errorf("rejected request mutated the key table: %+v", h.q.keys)
+			}
+			if len(h.obs.calls) != 0 {
+				t.Errorf("observer dispatched %d times on a rejected request", len(h.obs.calls))
+			}
+		})
+	}
+}
+
+// TestFieldCryptoKeyRoutes_401_AnonymousWithInvalidPayload pins 401 before
+// the 400: RequireAuth runs ahead of any decode or version parse.
+func TestFieldCryptoKeyRoutes_401_AnonymousWithInvalidPayload(t *testing.T) {
+	for _, tc := range fckInvalidPayloadRoutes {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newFCKHarness(t)
+			req := httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(tc.body))
+			rec := httptest.NewRecorder()
+
+			h.router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+			}
+			if h.az.lastAction != "" {
+				t.Errorf("authorizer consulted (%q) for an unauthenticated request", h.az.lastAction)
+			}
+		})
+	}
+}
+
+// TestFieldCryptoKeyRoutes_403_ForbiddenWithValidPayload: with a well-formed
+// payload the denied caller gets 403, before any state lookup (an unknown
+// version is 403, not 404).
+func TestFieldCryptoKeyRoutes_403_ForbiddenWithValidPayload(t *testing.T) {
+	for _, tc := range []struct{ name, method, path, body string }{
+		{"rotate-empty-body", http.MethodPost, "/field-crypto-keys/rotations", ""},
+		{"rotate-body", http.MethodPost, "/field-crypto-keys/rotations", `{"grace_period_days":5}`},
+		{"mark-compromised-unknown-version", http.MethodPost, "/field-crypto-keys/99/mark-compromised", ""},
+		{"grace-unknown-version", http.MethodPut, "/field-crypto-keys/99/grace", `{"grace_period_days":null}`},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newFCKHarness(t)
 			h.az.err = apiresp.ErrForbidden
@@ -533,20 +592,6 @@ func TestFieldCryptoKeyRoutes_403_ForbiddenWithInvalidPayload(t *testing.T) {
 
 			if rec.Code != http.StatusForbidden {
 				t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusForbidden, rec.Body.String())
-			}
-			// Admin-only by construction: "manage" with a nil target is
-			// denied for every actor except one holding a wildcard grant.
-			if h.az.lastAction != "manage" {
-				t.Errorf("authz action: got %q, want %q", h.az.lastAction, "manage")
-			}
-			if h.az.lastTarget != nil {
-				t.Errorf("authz target: got %v, want nil", *h.az.lastTarget)
-			}
-			if len(h.q.keys) != 1 || h.q.activeKey() == nil {
-				t.Errorf("denied request mutated the key table: %+v", h.q.keys)
-			}
-			if len(h.obs.calls) != 0 {
-				t.Errorf("observer dispatched %d times on a denied request", len(h.obs.calls))
 			}
 		})
 	}
@@ -874,6 +919,53 @@ func TestFieldCryptoKeyGrace_400_OversizedBody(t *testing.T) {
 	}
 	if h.q.keyByVersion(retired).decryptableUntil != nil {
 		t.Error("oversized request still set decryptable_until")
+	}
+}
+
+// TestFieldCryptoKeyDecode_Codes pins the standard DecodeJSON detail codes,
+// namespaced under field_crypto_keys, for unknown members and oversized bodies.
+func TestFieldCryptoKeyDecode_Codes(t *testing.T) {
+	cases := []struct {
+		name, method, path, body, code string
+	}{
+		{"rotate unknown member", http.MethodPost, "/field-crypto-keys/rotations", `{"compromize":true}`, "field_crypto_keys.invalid_json_body"},
+		{"rotate oversized", http.MethodPost, "/field-crypto-keys/rotations", `{"key_hex":"` + strings.Repeat("a", maxFieldCryptoKeyBodyBytes+1) + `"}`, "field_crypto_keys.body_too_large"},
+		{"rotate trailing data", http.MethodPost, "/field-crypto-keys/rotations", `{} {}`, "field_crypto_keys.invalid_json_body"},
+		{"grace unknown member", http.MethodPut, "/field-crypto-keys/1/grace", `{"grace_days":5}`, "field_crypto_keys.invalid_json_body"},
+		{"grace oversized", http.MethodPut, "/field-crypto-keys/1/grace", `{"grace_period_days":30,"padding":"` + strings.Repeat("a", maxFieldCryptoKeyBodyBytes+1) + `"}`, "field_crypto_keys.body_too_large"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newFCKHarness(t)
+
+			rec := h.do(tc.method, tc.path, tc.body)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+			}
+			if details := errorDetails(t, rec); len(details) != 1 || details[0].Code != tc.code {
+				t.Errorf("details: got %+v, want one field error coded %q", details, tc.code)
+			}
+		})
+	}
+}
+
+// TestFieldCryptoKeyRotate_201_EmptyBodyIsStandardRotation pins the documented
+// default: no body at all is the zero request (server-generated key, no
+// deadline), even though DecodeJSON alone rejects an empty body.
+func TestFieldCryptoKeyRotate_201_EmptyBodyIsStandardRotation(t *testing.T) {
+	h := newFCKHarness(t)
+
+	rec := h.do(http.MethodPost, "/field-crypto-keys/rotations", "")
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if h.q.activeKey() == nil || h.q.activeKey().version != 2 {
+		t.Errorf("active key after rotation: %+v, want version 2", h.q.keys)
+	}
+	if until := h.q.keyByVersion(1).decryptableUntil; until != nil {
+		t.Errorf("decryptable_until: got %v, want nil (no deadline)", until)
 	}
 }
 

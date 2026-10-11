@@ -1,14 +1,12 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
-	"github.com/moduleforge/core-api/opctx"
 	"github.com/moduleforge/core-api/service"
 )
 
@@ -21,14 +19,19 @@ type createCorporationRequest struct {
 
 // createCorporation handles POST /entities/corporations (admin only).
 func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
+	var req createCorporationRequest
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
-	var req createCorporationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	// Stateless blank-name check runs before the service's AuthorizeType so an
+	// unauthorized caller sees the 400, not a 403 (401 -> 400 -> 403 -> 404).
+	if strings.TrimSpace(req.LegalName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		}))
 		return
 	}
 
@@ -61,14 +64,9 @@ func (h *handlers) createCorporation(w http.ResponseWriter, r *http.Request) {
 
 // getCorporation handles GET /entities/corporations/{uuid}.
 func (h *handlers) getCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -92,20 +90,26 @@ type updateCorporationRequest struct {
 
 // updateCorporation handles PUT /entities/corporations/{uuid} (admin only).
 func (h *handlers) updateCorporation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := opctx.ActorEntityID(r.Context()); !ok {
-		apiresp.WriteError(w, r, apiresp.ErrUnauthenticated)
-		return
-	}
-
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
 	var req updateCorporationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// Stateless blank-name check on a present field runs before the service's
+	// AuthorizeResolve so an unauthorized caller sees the 400, not a 403
+	// (401 -> 400 -> 403 -> 404). An absent (null) legal_name stays a no-op.
+	if req.LegalName != nil && strings.TrimSpace(*req.LegalName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "legal_name",
+			Code:    "corporations.legal_name_required",
+			Message: "legal_name is required",
+		}))
 		return
 	}
 
