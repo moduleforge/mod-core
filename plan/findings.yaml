@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: ServiceAccount UpdateByEntityUUID capability
-      id: nK0x
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:authenticate-routes
-        - priority:unspecified
-        - effort:unspecified
-      text: 'ServiceAccount UpdateByEntityUUID capability gap (query not yet generated -> ErrInvalidInput): decide handling in a later phase; no helper maps to not-implemented.'
     - title: Decide whether stateless blank-name checks in
       id: aJ4X
       date: "2026-10-11"
@@ -135,4 +126,9 @@ items:
         - plan/phase:conflicts-and-order-tests
         - effort:unspecified
       text: 'writeAppsMutationError in api/httpapi/apps.go maps any Postgres 23505 to 409 apps.slug_taken without checking ConstraintName, but the Create and Update transactions also run CreateEntity and observers whose unique violations would be misreported as a slug conflict instead of 500. Also require the constraint name apps_slug_key, update appsOrderQuerier in apps_order_test.go to set it, and add negative tests: a 23505 with another constraint stays 500 on Create and on UpdateApp.'
-closed: []
+closed:
+    - id: nK0x
+      title: ServiceAccount UpdateByEntityUUID capability
+      disposition: fixed
+      ref: phase-09-user-decisions-remediation/001-service-account-update-query.md
+      date: "2026-10-11"
