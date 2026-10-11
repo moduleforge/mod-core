@@ -23,3 +23,9 @@ Produce the per-handler audit table for every mod-core HTTP handler so the later
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+- Outcome: succeeded (2026-10-11). No source file modified.
+- Validation: all 21 routes and 4 `Update*/Archive` service methods appear in the audit table appended to `plan/notes/handler-inventory.md`; inline-check list matches `grep -rn ActorEntityID api/httpapi` (20 hits, all listed); `git status` shows only plan files changed.
+- Open facts resolved in the table: 20 inline checks confirmed; apps slug uniqueness surfaces as 500 today; blank-name checks live only in service `Create` (after `AuthorizeType`); only `mod-users` `self.go` calls a core `UpdateByEntityUUID`.
