@@ -136,7 +136,7 @@ phases:
           slug: order-tests-entity-routes
           title: Order Tests for Entity Routes
           path: phase-04-conflicts-and-order-tests/002-order-tests-entity-routes.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: 'entities_order_test.go: ordertest coverage of all 12 entity routes over real router/services, unknown-field test, and recording-authorizer test proving masked miss calls Authorize once with target 0; RED-verified under two mutations; no production changes.'
           git:
