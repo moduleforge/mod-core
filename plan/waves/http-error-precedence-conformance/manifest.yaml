@@ -18,8 +18,8 @@ waves:
           dependencies:
             - error-precedence-foundation
           plans:
-            audit: PLACEHOLDER
-            core: PLACEHOLDER
+            audit: core-handler-conformance
+            core: core-handler-conformance
         - name: mod-authz handler conformance
           slug: authz-conformance
           description: 'Depends on wave 1 helpers. Mount RequireAuth on RegisterRoutes so 401 precedes path/body UUID parse 400s (grants.go:37-47). Fix existence leak in service/actor_group_service.go:193-215 with AuthorizeResolve and delete the masking hack in httpapi/router.go:116-121. Move ~9 decode sites to DecodeJSON (first size cap/unknown-field rejection; wire-visible to authz admin clients incl. app-mfmanager accessapi). Audit 409 vs 422; add order test. Optional: local authorizeType lacks core''s nil-az and typeID<=0 guards.'
