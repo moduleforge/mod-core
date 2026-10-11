@@ -192,9 +192,11 @@ miss. Test fakes that count `Authorize` calls must allow it. This is distinct fr
 detail code `apps.slug_taken` on a duplicate slug (a Postgres unique violation on the
 `apps_slug_key` constraint; a unique violation on any other constraint stays a 500). Only an
 authorized caller can see it. Not every post-authorization 400 has been reclassified: the
-`ErrInvalidInput` that `ServiceAccountService.UpdateByEntityUUID` returns for a capability gap, and
-the blank-name checks in the `Create` methods that run after `AuthorizeType`, are unchanged and
-open.
+`ErrInvalidInput` that `ServiceAccountService.UpdateByEntityUUID` returns for a capability gap is
+unchanged and open. The blank-name checks on the natural person, corporation and service account
+create routes are stateless shape errors: the handlers run them right after decoding the body and
+before the service's `AuthorizeType`, so an unauthorized caller with a blank name gets 400, not 403.
+The services keep their own blank checks (after `AuthorizeType`) for non-HTTP callers.
 
 **Order is tested.** `api/httpapi` carries one `apiresp/ordertest` route per handler for the apps,
 entity, and field-crypto routes (`apps_order_test.go`, `entities_order_test.go`,

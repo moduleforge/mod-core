@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,6 +21,25 @@ type createNaturalPersonRequest struct {
 func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
 	var req createNaturalPersonRequest
 	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// Stateless blank-name checks run before the service's AuthorizeType so an
+	// unauthorized caller sees the 400, not a 403 (401 -> 400 -> 403 -> 404).
+	if strings.TrimSpace(req.GivenName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "given_name",
+			Code:    "natural_persons.given_name_required",
+			Message: "given_name is required",
+		}))
+		return
+	}
+	if strings.TrimSpace(req.FamilyName) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "family_name",
+			Code:    "natural_persons.family_name_required",
+			Message: "family_name is required",
+		}))
 		return
 	}
 

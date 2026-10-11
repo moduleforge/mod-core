@@ -21,4 +21,6 @@ User decision on findings aJ4X / cXx6: the stateless blank-name validation in na
 
 ## Status
 
-pending
+succeeded (2026-10-11). Blank-name checks (given_name, family_name, legal_name, label) now run in the handlers right after DecodeJSON, before the service AuthorizeType; error codes and 400 status unchanged. Service-level checks kept for non-HTTP callers. New test TestEntityCreateRoutes_BlankNameIsStatelessBadRequest covers 401 / 400 / 403 / authorized 400. Docs updated in `docs/architecture/type-level-authorization.md`. gofmt clean; go vet (incl. -tags integration) clean; go test passes in api and model. make test was not run (GUI deps not installed).
+
+Files: `api/httpapi/natural_persons.go`, `corporations.go`, `service_accounts.go`, `entities_order_test.go`.

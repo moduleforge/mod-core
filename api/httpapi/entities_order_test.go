@@ -159,9 +159,9 @@ func newEntityOrderFixture() *entityOrderFixture {
 // and the "authorized missing" assertion reduces to "an authorized good
 // request clears every gate": it reaches the persistence layer, where
 // refusingDB makes it a deterministic 500 (hence AuthorizedMissingStatus
-// 500). Blank-name bodies on create are intentionally NOT modelled: the
-// service checks them after AuthorizeType (an open decision recorded in the
-// conflict audit), so they are 403 for an unauthorized caller.
+// 500). Blank-name bodies on create are stateless shape errors checked by the
+// handler before the service's AuthorizeType; see
+// TestEntityCreateRoutes_BlankNameIsStatelessBadRequest.
 //
 // No Late entries: the state-conflict audit found no 409/422 on these routes
 // (the service-account PUT 400 is a capability gap, not a state conflict).
@@ -278,6 +278,54 @@ func TestEntityRoutes_UnknownFieldIsStatelessBadRequest(t *testing.T) {
 			}
 			if n := len(f.az.snapshot()); n != 0 {
 				t.Errorf("Authorize calls before shape rejection: got %d, want 0", n)
+			}
+		})
+	}
+}
+
+// TestEntityCreateRoutes_BlankNameIsStatelessBadRequest pins that a blank (or
+// whitespace-only) name on the three create routes is a 400 for an
+// unauthorized caller, with no Authorize call, while an unauthorized caller
+// with a valid body still gets 403 and an anonymous caller still gets 401.
+func TestEntityCreateRoutes_BlankNameIsStatelessBadRequest(t *testing.T) {
+	f := newEntityOrderFixture()
+	cases := []struct{ name, path, blank, valid, code string }{
+		{"natural person given_name", "/entities/natural-persons", `{"given_name":"  ","family_name":"Lovelace"}`, `{"given_name":"Ada","family_name":"Lovelace"}`, "natural_persons.given_name_required"},
+		{"natural person family_name", "/entities/natural-persons", `{"given_name":"Ada","family_name":""}`, `{"given_name":"Ada","family_name":"Lovelace"}`, "natural_persons.family_name_required"},
+		{"corporation legal_name", "/entities/corporations", `{"legal_name":" "}`, `{"legal_name":"Acme"}`, "corporations.legal_name_required"},
+		{"service account label", "/entities/service-accounts", `{"label":""}`, `{"label":"bot"}`, "service_accounts.label_required"},
+	}
+	do := func(path, body string, actor int64) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		if actor != 0 {
+			req = withActor(req, actor)
+		}
+		rec := httptest.NewRecorder()
+		f.router.ServeHTTP(rec, req)
+		return rec
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f.az.reset()
+			rec := do(c.path, c.blank, orderStrangerID)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("unauthorized+blank: got %d, want 400 - %s", rec.Code, rec.Body.String())
+			}
+			if !strings.Contains(rec.Body.String(), c.code) {
+				t.Errorf("body missing code %q: %s", c.code, rec.Body.String())
+			}
+			if n := len(f.az.snapshot()); n != 0 {
+				t.Errorf("Authorize calls before blank-name rejection: got %d, want 0", n)
+			}
+			if rec := do(c.path, c.valid, orderStrangerID); rec.Code != http.StatusForbidden {
+				t.Errorf("unauthorized+valid: got %d, want 403 - %s", rec.Code, rec.Body.String())
+			}
+			if rec := do(c.path, c.blank, 0); rec.Code != http.StatusUnauthorized {
+				t.Errorf("anonymous+blank: got %d, want 401 - %s", rec.Code, rec.Body.String())
+			}
+			if rec := do(c.path, c.blank, orderOwnerID); rec.Code != http.StatusBadRequest {
+				t.Errorf("authorized+blank: got %d, want 400 - %s", rec.Code, rec.Body.String())
 			}
 		})
 	}

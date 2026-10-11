@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,6 +19,17 @@ type createServiceAccountRequest struct {
 func (h *handlers) createServiceAccount(w http.ResponseWriter, r *http.Request) {
 	var req createServiceAccountRequest
 	if !apiresp.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	// Stateless blank-label check runs before the service's AuthorizeType so an
+	// unauthorized caller sees the 400, not a 403 (401 -> 400 -> 403 -> 404).
+	if strings.TrimSpace(req.Label) == "" {
+		apiresp.WriteError(w, r, apiresp.InvalidInput(apiresp.FieldError{
+			Field:   "label",
+			Code:    "service_accounts.label_required",
+			Message: "label is required",
+		}))
 		return
 	}
 
