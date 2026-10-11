@@ -239,5 +239,6 @@ phases:
             - 2UGO
           git:
             branch: plan/core-handler-conformance-09-001
-            commit: []
+            commit:
+                - 3fb85c1
             merge: null
