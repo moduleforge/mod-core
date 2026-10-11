@@ -233,6 +233,7 @@ phases:
           path: phase-09-user-decisions-remediation/001-service-account-update-query.md
           done: false
           tier: sonnet-med
+          digest: Added UpdateServiceAccountLabel sqlc query (regenerated with sqlc 1.31.1) and wired ServiceAccountService.UpdateByEntityUUID to it, replacing the 400 stub; Querier fakes updated; 3 new service tests; gofmt/vet/test pass in api and model.
           findings:
             - nK0x
             - 2UGO
