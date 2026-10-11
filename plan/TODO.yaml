@@ -170,7 +170,7 @@ phases:
           tier: sonnet-low
           digest: Documented all wire-visible changes in openapi fragment (Error precedence section, entity/field-crypto operation notes), README and AGENTS.md; fragment has no /apps paths so apps behavior is prose only.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-05-001
             commit: []
             merge: null
         - number: 2
