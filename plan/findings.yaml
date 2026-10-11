@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: docs/mf-standards submodule is uninitialized
-      id: dC0H
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:authenticate-routes
-        - priority:unspecified
-        - effort:unspecified
-      text: docs/mf-standards submodule is uninitialized in task worktrees, so the manifest-spec doc check in task 1.2 requirement 3 was not done; decide whether to defer to docs-mf-standards.
     - title: Sudo-only gate test hides panics
       id: vqPd
       date: "2026-10-11"
@@ -140,4 +131,9 @@ closed:
       title: slug 409 mapping matches any 23505
       disposition: dismissed
       reason: 'Fixed by remediation task 8.1: writeAppsMutationError requires ConstraintName apps_slug_key; negative Create/UpdateApp tests added.'
+      date: "2026-10-11"
+    - id: dC0H
+      title: docs/mf-standards submodule is uninitialized
+      disposition: promoted
+      ref: dC0H
       date: "2026-10-11"
