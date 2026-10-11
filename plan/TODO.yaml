@@ -28,7 +28,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-01-002
             commit: []
-            merge: null
+            merge: baee6fc2ccfe9259bab602cd4e56b1b652ac1774
         - number: 3
           slug: mount-require-auth
           title: Mount RequireAuth on Router and Registrars
