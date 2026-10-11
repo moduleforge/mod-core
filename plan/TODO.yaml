@@ -40,6 +40,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: service-masked-resolve
+          title: Service Layer Masked Resolve for Update and Archive
+          path: phase-02-existence-leaks/002-service-masked-resolve.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
