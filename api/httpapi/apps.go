@@ -271,13 +271,19 @@ type updateAppRequest struct {
 	Name string `json:"name"`
 }
 
+// appsSlugConstraint is the Postgres name of the inline UNIQUE constraint on
+// apps.slug (auto-named by 0015_apps.sql).
+const appsSlugConstraint = "apps_slug_key"
+
 // writeAppsMutationError maps a Create/UpdateApp transaction failure onto its
-// response. apps.slug is UNIQUE, so a Postgres unique violation (23505) is a
-// post-authorization state conflict (409, code apps.slug_taken), not a 500;
-// anything else keeps the wrapped-internal-error path.
+// response. apps.slug is UNIQUE, so a Postgres unique violation (23505) on
+// that constraint is a post-authorization state conflict (409, code
+// apps.slug_taken), not a 500. Any other failure, including a 23505 on a
+// different constraint raised inside the same transaction, keeps the
+// wrapped-internal-error path.
 func writeAppsMutationError(w http.ResponseWriter, r *http.Request, op string, err error) {
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == pgerrcodeUniqueViolation {
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcodeUniqueViolation && pgErr.ConstraintName == appsSlugConstraint {
 		apiresp.WriteError(w, r, apiresp.Conflict(apiresp.FieldError{
 			Field:   "slug",
 			Code:    "apps.slug_taken",

@@ -25,11 +25,6 @@ import (
 	coredb "github.com/moduleforge/core-model/db"
 )
 
-const (
-	orderAdminID    int64 = 1 // allowed to act on apps
-	orderStrangerID int64 = 2 // authenticated, never allowed
-)
-
 // orderAdminOnlyAuthz allows exactly the admin actor and denies everyone
 // else, including the target-0 call AuthorizeResolve makes on a masked miss
 // (the denial is moot there, but a real authorizer must not panic or grant).
@@ -58,7 +53,7 @@ const orderTakenSlug = "taken"
 
 func (q appsOrderQuerier) InsertApp(ctx context.Context, arg coredb.InsertAppParams) (coredb.InsertAppRow, error) {
 	if arg.Slug == orderTakenSlug {
-		return coredb.InsertAppRow{}, &pgconn.PgError{Code: pgerrcodeUniqueViolation}
+		return coredb.InsertAppRow{}, &pgconn.PgError{Code: pgerrcodeUniqueViolation, ConstraintName: appsSlugConstraint}
 	}
 	return q.appsFakeQuerier.InsertApp(ctx, arg)
 }
@@ -66,7 +61,7 @@ func (q appsOrderQuerier) InsertApp(ctx context.Context, arg coredb.InsertAppPar
 func (q appsOrderQuerier) UpdateApp(ctx context.Context, arg coredb.UpdateAppParams) error {
 	for id, a := range q.apps {
 		if id != arg.ID && a.Slug == arg.Slug {
-			return &pgconn.PgError{Code: pgerrcodeUniqueViolation}
+			return &pgconn.PgError{Code: pgerrcodeUniqueViolation, ConstraintName: appsSlugConstraint}
 		}
 	}
 	return q.appsFakeQuerier.UpdateApp(ctx, arg)
