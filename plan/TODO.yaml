@@ -71,7 +71,7 @@ phases:
           slug: service-masked-resolve
           title: Service Layer Masked Resolve for Update and Archive
           path: phase-02-existence-leaks/002-service-masked-resolve.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Three UpdateByEntityUUID methods and EntityService.Archive use AuthorizeResolve; miss and forbidden both ErrForbidden; SA nil-label no-op now runs after authz; mod-users self.go:79 sees ErrForbidden on miss and needs authenticated actor; capability-gap ErrInvalidInput untouched.
           git:
