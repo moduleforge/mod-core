@@ -64,6 +64,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: entity-handlers-decodejson
+          title: Entity Handlers to DecodeJSON and ParseUUIDParam
+          path: phase-03-decode-and-shape/002-entity-handlers-decodejson.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 4
       slug: conflicts-and-order-tests
       title: State Conflicts and Order Tests
