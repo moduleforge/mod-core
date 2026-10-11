@@ -108,6 +108,16 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: order-tests-entity-routes
+          title: Order Tests for Entity Routes
+          path: phase-04-conflicts-and-order-tests/002-order-tests-entity-routes.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 5
       slug: wire-docs-and-validation
       title: Wire Risk Docs and Validation
