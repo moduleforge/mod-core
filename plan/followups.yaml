@@ -214,16 +214,6 @@ items:
         - plan/phase:helper-docs
         - plan/slug:error-precedence-foundation
       text: 'In AGENTS.md at the entity/ row (around line 118), the newly added text is glued to the prior sentence with no space: "...(see the `httpapi/` row below).Also home to `Resolver`...". It reads as a typo in the rendered table cell. Recommendation: insert a space after "below)." in that row. Reviewer-authored finding, high confidence, cosmetic only.'
-    - title: docs/mf-standards submodule is uninitialized
-      id: dC0H
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - priority:unspecified
-        - effort:unspecified
-        - plan/phase:authenticate-routes
-        - plan/slug:core-handler-conformance
-      text: docs/mf-standards submodule is uninitialized in task worktrees, so the manifest-spec doc check in task 1.2 requirement 3 was not done; decide whether to defer to docs-mf-standards.
     - title: manifest-spec Appendix A scope text is stale
       id: UfN7
       date: "2026-10-11"
