@@ -246,7 +246,7 @@ func (q *appsFakeQuerier) GetEntityByID(_ context.Context, _ int64) (coredb.GetE
 }
 
 // GetEntityByUUID backs entity.Resolver.AuthorizeResolve, which AppsHandler now calls
-// (via authorizeAppByUUIDParam) to authorize against the bare entity id before
+// (via authorizeApp) to authorize against the bare entity id before
 // loading the full app row. It must actually resolve — a stub that always
 // succeeds would silently defeat the not-found test cases below.
 func (q *appsFakeQuerier) GetEntityByUUID(_ context.Context, argUuid uuid.UUID) (coredb.GetEntityByUUIDRow, error) {

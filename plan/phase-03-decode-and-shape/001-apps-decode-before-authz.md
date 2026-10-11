@@ -20,3 +20,7 @@ Make `PUT /apps/{uuid}` (and Create) follow 401, 400, 403, 404, 409/422: parse t
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+succeeded, 2026-10-11. UpdateApp now runs ParseUUIDParam, DecodeJSON (trim), AuthorizeResolve, real GetAppByUUID; Get/Delete use ParseUUIDParam; Create uses DecodeJSON. Validation: api and model go vet, go test, gofmt clean; no json.NewDecoder left in `api/httpapi/apps.go`. Files: `api/httpapi/apps.go`, `api/httpapi/apps_decode_order_test.go`, `api/httpapi/apps_test.go` (comment only). GUI/make test and Postgres integration not run.
