@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: NP/corp update accepts blank names
-      id: ferC
-      date: "2026-10-11"
-      tags:
-        - type:bug
-        - priority:medium
-        - plan/phase:blank-name-remediation
-        - effort:unspecified
-      text: NaturalPersonService.UpdateByEntityUUID (natural_person.go ~299-304) and CorporationService.UpdateByEntityUUID (corporation.go ~231-233) trim but do not reject a blank given_name, family_name or legal_name, so an update can store an empty name that Create forbids. Add the same stateless blank checks to the PUT handlers before authorization (consistent with phase 10) and to the services for non-HTTP callers, with order tests.
     - title: OpenAPI omits NP/corp blank-name 400s
       id: C6w8
       date: "2026-10-11"
@@ -120,6 +111,11 @@ closed:
       date: "2026-10-11"
     - id: ovGY
       title: SA label update emits no audit observer event
+      disposition: fixed
+      ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
+      date: "2026-10-11"
+    - id: ferC
+      title: NP/corp update accepts blank names
       disposition: fixed
       ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
       date: "2026-10-11"
