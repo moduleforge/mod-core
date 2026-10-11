@@ -37,7 +37,7 @@ phases:
           tier: sonnet-med
           digest: Mounted authz.RequireAuth on NewRouter and inside r.Group in both registrars; anonymous-401 tests via real routers (pass pre-change too since inline checks remain); sudo-only probe only for POST /apps until task 1.4 removes sudo-unaware inline checks.
           git:
-            branch: null
+            branch: plan/core-handler-conformance-01-003
             commit: []
             merge: null
         - number: 4
