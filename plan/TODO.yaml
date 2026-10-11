@@ -2,7 +2,7 @@ slug: core-handler-conformance
 version: 1
 title: ""
 remediation:
-    rounds: 3
+    rounds: 4
     tasks_added: 3
 phases:
     - number: 1
@@ -263,3 +263,8 @@ phases:
             commit:
                 - 97eab2e
             merge: 76535fc79c1c8ecd997c3c8279e35257f29c5e9d
+    - number: 11
+      slug: remediation-04
+      title: Remediation Round 4
+      kind: remediation
+      tasks: []
