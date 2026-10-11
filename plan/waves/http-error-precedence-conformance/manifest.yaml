@@ -33,7 +33,7 @@ waves:
           dependencies:
             - error-precedence-foundation
           plans:
-            mod-users: PLACEHOLDER
+            mod-users: users-conformance
         - name: mod-workflows handler conformance
           slug: workflows-conformance
           description: 'Depends on wave 1 helpers. Mount RequireAuth on the router: 21 of 26 handlers return 400 before 401 (instance_handlers.go:117-136, version_handlers.go:285-345); remove 5 inline checks in definition_handlers. Move ~10 decode sites to DecodeJSON (version handlers at 295, 332, 381 don''t reject unknown fields today; wire-visible). Optionally move parseUUIDParam to core helper; delete writeServiceError pass-through (response.go:58). Audit 409/422 (instance state transitions likely 409); order test. No app composes this module.'
