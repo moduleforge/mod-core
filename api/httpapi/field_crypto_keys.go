@@ -111,11 +111,18 @@ func NewFieldCryptoKeyHandler(
 // Registered onto the shared /v1 group exactly as RegisterAppRoutes is, so
 // the paths resolve under /v1 without a second Mount — a top-level mount
 // would reintroduce the duplicate-prefix panic the module manifest documents.
+//
+// The routes sit in their own group carrying authz.RequireAuth, so the 401
+// gate covers only these routes and never the peers' routes on the shared
+// router.
 func RegisterFieldCryptoKeyRoutes(r chi.Router, h *FieldCryptoKeyHandler) {
-	r.Get("/field-crypto-keys", h.List)
-	r.Post("/field-crypto-keys/rotations", h.Rotate)
-	r.Post("/field-crypto-keys/{version}/mark-compromised", h.MarkCompromised)
-	r.Put("/field-crypto-keys/{version}/grace", h.SetGrace)
+	r.Group(func(r chi.Router) {
+		r.Use(authz.RequireAuth)
+		r.Get("/field-crypto-keys", h.List)
+		r.Post("/field-crypto-keys/rotations", h.Rotate)
+		r.Post("/field-crypto-keys/{version}/mark-compromised", h.MarkCompromised)
+		r.Put("/field-crypto-keys/{version}/grace", h.SetGrace)
+	})
 }
 
 func (h *FieldCryptoKeyHandler) querier(tx pgx.Tx) coredb.Querier {

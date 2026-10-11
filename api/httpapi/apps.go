@@ -98,12 +98,18 @@ func NewAppsHandler(
 }
 
 // RegisterAppRoutes mounts the top-level /apps CRUD routes on r.
+//
+// The routes sit in their own group carrying authz.RequireAuth, so the 401
+// gate covers only /apps and never the peers' routes on the shared router.
 func RegisterAppRoutes(r chi.Router, h *AppsHandler) {
-	r.Post("/apps", h.Create)
-	r.Get("/apps", h.List)
-	r.Get("/apps/{uuid}", h.GetApp)
-	r.Put("/apps/{uuid}", h.UpdateApp)
-	r.Delete("/apps/{uuid}", h.DeleteApp)
+	r.Group(func(r chi.Router) {
+		r.Use(authz.RequireAuth)
+		r.Post("/apps", h.Create)
+		r.Get("/apps", h.List)
+		r.Get("/apps/{uuid}", h.GetApp)
+		r.Put("/apps/{uuid}", h.UpdateApp)
+		r.Delete("/apps/{uuid}", h.DeleteApp)
+	})
 }
 
 func (h *AppsHandler) querier(tx pgx.Tx) coredb.Querier {
