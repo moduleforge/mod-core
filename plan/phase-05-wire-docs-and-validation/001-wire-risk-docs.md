@@ -19,3 +19,10 @@ Record every wire-visible change in the project docs that describe the HTTP API 
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+- Outcome: succeeded (2026-10-11).
+- `api/openapi.fragment.yaml`: new "Error precedence" section in `info.description` (all seven wire changes, authorizer target-0 note, downstream clients); 403-for-missing notes and 404 narrowed to race-only on entity PUT/DELETE; field-crypto body-validation/4 KiB notes; BadRequest/Unauthorized/Conflict response text updated. YAML parses.
+- `README.md` and `AGENTS.md` (`httpapi/` row): wire changes and authorizer note added.
+- Validation: all changes present; no `plan/` links in the three docs. The fragment has no `/apps` paths, so apps behavior is described in prose only.

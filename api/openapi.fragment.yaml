@@ -24,6 +24,49 @@ info:
     mod-core. Consuming services (e.g. mod-users) compose this fragment
     into their own root spec via $ref rather than duplicating the definitions.
 
+    ## Error precedence
+
+    Every route returns the first rejection that applies, in this order:
+    `401` (no valid credential; sudo-only identities count as authenticated),
+    `400` (stateless request shape), `403` (authorization, including masked
+    entity resolution), `404` (post-authorization lookup). Only after
+    authorization can `409` and `422` occur.
+
+    Wire behavior to be aware of:
+
+    - An anonymous request with a malformed body or path UUID gets `401`, not
+      `400`. An anonymous request to an unknown path under the core `/v1`
+      catch-all gets `401`, not `404`. A sudo-only identity now reaches the
+      authorization step on routes that previously answered it `401`.
+    - A missing target is indistinguishable from an unauthorized one: a
+      nonexistent id answers `403` for every caller, administrators included.
+      This applies to `GET`/`PUT`/`DELETE /apps/{uuid}`, to
+      `PUT /entities/natural-persons/{uuid}`, `PUT /entities/corporations/{uuid}`,
+      `PUT /entities/service-accounts/{uuid}`, and to `DELETE /entities/{uuid}`
+      (previously `404`). In-process callers of the same service methods (for
+      example mod-users `self.go`) see `ErrForbidden` instead of `ErrNotFound`
+      and must supply an authenticated actor in the context.
+    - Request bodies for the apps and natural-person, corporation, and
+      service-account create/update routes are limited to 1 MiB, must be
+      valid JSON with no trailing data, reject unknown members, and must not
+      be empty (an empty body is `400`). Detail codes: `invalid_json_body`,
+      `invalid_uuid`, `body_too_large`.
+    - The field-crypto key routes (rotate, grace, mark-compromised) validate
+      the body before authorization, so a forbidden caller with a bad body
+      gets `400`, not `403`. Bodies are limited to 4 KiB and reject trailing
+      data. Detail codes: `field_crypto_keys.invalid_json_body`,
+      `field_crypto_keys.body_too_large`.
+    - `POST /apps` and `PUT /apps/{uuid}` answer `409` with detail code
+      `apps.slug_taken` when the slug is already in use (previously `500`).
+
+    Authorizer note: `entity.Resolver.AuthorizeResolve` issues an extra
+    `Authorize(ctx, op, &0)` (target id 0) for every masked miss. Authorizer
+    implementations must deny target 0; these calls appear in audit logs.
+
+    Clients that may notice these changes: core-gui `useApiError` (new
+    status/code combinations), mod-users and other in-process callers of the
+    entity services, and composing apps' GUIs that special-case `404`.
+
 # ---------------------------------------------------------------------------
 # Default security — all paths require bearerAuth unless overridden with
 # security: [] at the operation level.
@@ -105,6 +148,9 @@ paths:
         Updates the mutable NaturalPerson fields (given_name, family_name) and
         the LegalEntity display_name. The authenticated caller must be the
         owner of this entity or have admin privileges.
+        A nonexistent id answers 403 (not 404) for every caller, administrators
+        included, so existence is not disclosed. An unknown JSON member, trailing
+        data, or a body over 1 MiB is a 400 (checked before authorization).
       parameters:
         - $ref: "#/components/parameters/EntityUUID"
       requestBody:
@@ -127,7 +173,11 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: The entity was removed between authorization and the write (race only); a missing id is reported as 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # --------------------------------------------------------------------------
   # /entities/corporations — corporation sub-collection
@@ -189,6 +239,9 @@ paths:
       description: |
         Updates the mutable Corporation fields (legal_name, jurisdiction) and
         the LegalEntity display_name. Requires admin privileges.
+        A nonexistent id answers 403 (not 404) for every caller, administrators
+        included, so existence is not disclosed. An unknown JSON member, trailing
+        data, or a body over 1 MiB is a 400 (checked before authorization).
       parameters:
         - $ref: "#/components/parameters/EntityUUID"
       requestBody:
@@ -211,7 +264,11 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: The entity was removed between authorization and the write (race only); a missing id is reported as 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # --------------------------------------------------------------------------
   # /entities/service-accounts — service-account sub-collection
@@ -275,6 +332,9 @@ paths:
       description: |
         Updates the mutable ServiceAccount field (label). Requires admin
         privileges.
+        A nonexistent id answers 403 (not 404) for every caller, administrators
+        included, so existence is not disclosed. An unknown JSON member, trailing
+        data, or a body over 1 MiB is a 400 (checked before authorization).
       parameters:
         - $ref: "#/components/parameters/EntityUUID"
       requestBody:
@@ -297,7 +357,11 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: The entity was removed between authorization and the write (race only); a missing id is reported as 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # --------------------------------------------------------------------------
   # /entities/{uuid} — generic entity lookup and archive
@@ -334,6 +398,8 @@ paths:
       description: |
         Sets `archived_at` on the entity record. The entity remains in the
         database and can be restored. Requires admin privileges.
+        A nonexistent id answers 403 (not 404) for every caller, administrators
+        included, so existence is not disclosed.
       parameters:
         - $ref: "#/components/parameters/EntityUUID"
       responses:
@@ -344,7 +410,11 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: The entity was removed between authorization and the write (race only); a missing id is reported as 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # --------------------------------------------------------------------------
   # /entities/{uuid}/display-name — human-readable name for any entity
@@ -476,6 +546,9 @@ paths:
         compromised key has stopped being used fleet-wide, since other
         processes may keep encrypting new plaintext under the retired key
         for up to the 60-second key-set TTL until they next reload.
+        The body is validated before authorization (a forbidden caller with a
+        bad body gets 400), is capped at 4 KiB, and trailing data after the JSON
+        value is rejected.
         Requires wildcard-grant admin privileges.
       requestBody:
         required: false
@@ -550,6 +623,9 @@ paths:
         deadline on a compromised key — deliberately, and only after the
         fact, never as a silent side effect of a rotation. Requires
         wildcard-grant admin privileges.
+        The body is validated before authorization (a forbidden caller with a
+        bad body gets 400), is capped at 4 KiB, and trailing data after the JSON
+        value is rejected.
       parameters:
         - $ref: "#/components/parameters/FieldCryptoKeyVersion"
       requestBody:
@@ -1101,14 +1177,19 @@ components:
   responses:
 
     BadRequest:
-      description: The request body or parameters are invalid.
+      description: |
+        The request body or parameters are invalid (stateless checks only; checked after
+        authentication and before authorization). Detail codes include
+        `invalid_json_body`, `invalid_uuid`, `body_too_large`, and, on the
+        field-crypto routes, `field_crypto_keys.invalid_json_body` and
+        `field_crypto_keys.body_too_large`.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
 
     Unauthorized:
-      description: Missing or invalid authentication token.
+      description: Missing or invalid authentication token. Takes precedence over 400 and 404, including for anonymous requests with a malformed body or UUID.
       content:
         application/json:
           schema:
@@ -1129,7 +1210,7 @@ components:
             $ref: "#/components/schemas/Error"
 
     Conflict:
-      description: The request conflicts with the current state of the resource.
+      description: The request conflicts with the current state of the resource (for example `apps.slug_taken`). Only returned after authorization.
       content:
         application/json:
           schema:
