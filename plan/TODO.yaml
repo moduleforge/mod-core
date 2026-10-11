@@ -131,7 +131,7 @@ phases:
           git:
             branch: plan/core-handler-conformance-04-001
             commit: []
-            merge: null
+            merge: 97774513b8ccefd5b1364bc5637fd009d0446708
         - number: 2
           slug: order-tests-entity-routes
           title: Order Tests for Entity Routes
