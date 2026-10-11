@@ -27,15 +27,6 @@ items:
         - plan/phase:existence-leaks
         - effort:unspecified
       text: In api/httpapi/apps.go the AuthorizeResolve slug is only an error label and GetEntityByUUID is not type-scoped, so a caller authorized on an existing non-app entity id gets 404 from GetAppByUUID while a nonexistent id gets 403. This leaks existence only to callers already authorized on that id; the same pattern applies to subtype ErrNotFound in the corporation, natural person and service account services. Accept and document, or scope the resolve by entity type.
-    - title: Field-crypto body read lacks MaxBytesReader
-      id: C8JP
-      date: "2026-10-11"
-      tags:
-        - type:security
-        - priority:low
-        - plan/phase:decode-and-shape
-        - effort:unspecified
-      text: readFieldCryptoKeyBody in api/httpapi/field_crypto_keys.go bounds the read with io.LimitReader rather than http.MaxBytesReader, so net/http gets no close-connection signal on an oversized body (it still drains at most 256 KiB then closes). Use http.MaxBytesReader(w, r.Body, max+1) for the read or accept the gap knowingly. Raw request bytes holding operator-supplied key hex are also not zeroed (not a regression).
     - title: Stale capability-gap text in type-level-authz
       id: 2TIM
       date: "2026-10-11"
@@ -154,4 +145,9 @@ closed:
       title: docs/mf-standards submodule is uninitialized
       disposition: promoted
       ref: dC0H
+      date: "2026-10-11"
+    - id: C8JP
+      title: Field-crypto body read lacks MaxBytesReader
+      disposition: fixed
+      ref: phase-11-remediation-04/001-phase9-10-followup-hardening.md
       date: "2026-10-11"
