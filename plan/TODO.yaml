@@ -206,7 +206,7 @@ phases:
           slug: fix-order-test-build-and-slug-constraint
           title: Fix Order Test Build Break and Slug Constraint Match
           path: phase-08-remediation-01/001-fix-order-test-build-and-slug-constraint.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: 'Consolidated duplicated order-test constants into order_helpers_test.go (httpapi now compiles: 615 test runs, 0 failures vs 0 before); slug 409 mapping restricted to constraint apps_slug_key with negative tests for Create and UpdateApp.'
           findings:
