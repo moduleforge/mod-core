@@ -1,0 +1,12 @@
+version: 2
+items:
+    - title: ServiceAccount UpdateByEntityUUID capability
+      id: nK0x
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:authenticate-routes
+        - priority:unspecified
+        - effort:unspecified
+      text: 'ServiceAccount UpdateByEntityUUID capability gap (query not yet generated -> ErrInvalidInput): decide handling in a later phase; no helper maps to not-implemented.'
+closed: []
