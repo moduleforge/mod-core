@@ -34,9 +34,9 @@ type displayNameResponse struct {
 func (h *handlers) getDisplayName(w http.ResponseWriter, r *http.Request) {
 	// The 401 gate is the router-level authz.RequireAuth; the real
 	// authorization gate is the service's az.Authorize call below.
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
