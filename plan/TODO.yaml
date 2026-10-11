@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 4
-    tasks_added: 3
+    tasks_added: 4
 phases:
     - number: 1
       slug: authenticate-routes
@@ -267,4 +267,26 @@ phases:
       slug: remediation-04
       title: Remediation Round 4
       kind: remediation
-      tasks: []
+      security_review: required
+      tasks_added: 1
+      tasks:
+        - number: 1
+          slug: phase9-10-followup-hardening
+          title: Harden Entity Updates, Field-Crypto Read, Tests and Docs
+          path: phase-11-remediation-04/001-phase9-10-followup-hardening.md
+          done: false
+          tier: sonnet-high
+          findings:
+            - C8JP
+            - YvU6
+            - 2TIM
+            - 5BQZ
+            - vqPd
+            - aSRu
+            - F5yI
+            - ovGY
+            - ferC
+          git:
+            branch: null
+            commit: []
+            merge: null
