@@ -90,4 +90,13 @@ items:
         - plan/phase:decode-and-shape
         - effort:unspecified
       text: DecodeJSON in the apps, natural person, corporation and service account handlers now rejects unknown members and caps bodies at 1 MiB; the old code had neither. Clients (GUI, other apps) sending extra members get 400. Confirm GUI/client payloads and record this as an intentional behavior change in the OpenAPI notes and wire-risk docs.
+    - title: 'Open decision: ServiceAccountService.UpdateBy'
+      id: 2UGO
+      date: "2026-10-11"
+      tags:
+        - type:ambiguity
+        - plan/phase:conflicts-and-order-tests
+        - priority:unspecified
+        - effort:unspecified
+      text: 'Open decision: ServiceAccountService.UpdateByEntityUUID returns ErrInvalidInput ''query not yet generated'' (capability gap, currently 400) - choose status or implement the sqlc query.'
 closed: []
