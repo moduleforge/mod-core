@@ -60,7 +60,7 @@ phases:
           slug: apps-masked-resolve
           title: Apps Handler Masked Resolve
           path: phase-02-existence-leaks/001-apps-masked-resolve.md
-          done: false
+          done: true
           tier: sonnet-med
           digest: Apps GET/PUT/DELETE use AuthorizeResolve; missing app is 403 for all callers incl. admins; AllowNotFound("app") removed; tests flipped to masked-equality 403.
           git:
