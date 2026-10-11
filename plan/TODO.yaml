@@ -19,7 +19,17 @@ phases:
     - number: 2
       slug: existence-leaks
       title: Close Existence Leaks
-      tasks: []
+      tasks:
+        - number: 1
+          slug: apps-masked-resolve
+          title: Apps Handler Masked Resolve
+          path: phase-02-existence-leaks/001-apps-masked-resolve.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
