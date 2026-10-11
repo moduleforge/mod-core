@@ -45,15 +45,6 @@ items:
         - plan/phase:decode-and-shape
         - effort:unspecified
       text: readFieldCryptoKeyBody in api/httpapi/field_crypto_keys.go bounds the read with io.LimitReader rather than http.MaxBytesReader, so net/http gets no close-connection signal on an oversized body (it still drains at most 256 KiB then closes). Use http.MaxBytesReader(w, r.Body, max+1) for the read or accept the gap knowingly. Raw request bytes holding operator-supplied key hex are also not zeroed (not a regression).
-    - title: slug 409 mapping matches any 23505
-      id: QUsy
-      date: "2026-10-11"
-      tags:
-        - type:bug
-        - priority:medium
-        - plan/phase:conflicts-and-order-tests
-        - effort:unspecified
-      text: 'writeAppsMutationError in api/httpapi/apps.go maps any Postgres 23505 to 409 apps.slug_taken without checking ConstraintName, but the Create and Update transactions also run CreateEntity and observers whose unique violations would be misreported as a slug conflict instead of 500. Also require the constraint name apps_slug_key, update appsOrderQuerier in apps_order_test.go to set it, and add negative tests: a 23505 with another constraint stays 500 on Create and on UpdateApp.'
     - title: Stale capability-gap text in type-level-authz
       id: 2TIM
       date: "2026-10-11"
@@ -126,4 +117,9 @@ closed:
       title: httpapi tests redeclare orderStrangerID
       disposition: dismissed
       reason: 'Fixed by remediation task 8.1: orderStrangerID declared once in api/httpapi/order_helpers_test.go; go vet ./httpapi clean.'
+      date: "2026-10-11"
+    - id: QUsy
+      title: slug 409 mapping matches any 23505
+      disposition: dismissed
+      reason: 'Fixed by remediation task 8.1: writeAppsMutationError requires ConstraintName apps_slug_key; negative Create/UpdateApp tests added.'
       date: "2026-10-11"
