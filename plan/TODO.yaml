@@ -81,6 +81,7 @@ phases:
     - number: 3
       slug: decode-and-shape
       title: Decode and Shape Before Authorization
+      diff_base: e7ce9ed957d7d1497469a87196581caf6005990d
       tasks:
         - number: 1
           slug: apps-decode-before-authz
