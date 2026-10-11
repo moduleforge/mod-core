@@ -90,6 +90,15 @@ items:
         - plan/phase:remediation-04
         - effort:unspecified
       text: 'api/openapi.fragment.yaml: PUT natural-persons (~157-167) and PUT corporations (~249-258) route descriptions do not mention the new blank-name 400s though the service-account route does; UpdateNaturalPersonRequest and UpdateCorporationRequest schemas (~929-942, ~973-982) do not say blank names are rejected. Add the same sentence and a description or pattern ''\S'' on given_name, family_name, legal_name. Also pre-existing: those two schemas list display_name which handlers reject as unknown, and say at least one field is required while {} is accepted as a no-op. (Phase 11 review; minor doc-drift.)'
+    - title: Absent-field update test is vacuous
+      id: 3T6R
+      date: "2026-10-11"
+      tags:
+        - type:bug
+        - priority:low
+        - plan/phase:remediation-04
+        - effort:unspecified
+      text: 'api/httpapi/entities_order_test.go (~383-389): the absent-field case only checks that {} does not return 400. On the natural-person and corporation routes the fixture database refuses writes so the request returns 500 and the test still passes; the comment saying the update ''succeeds'' holds only for the service-account route. Assert the response body lacks the blank-name code or the exact per-route status, and fix the comment. (Phase 11 review; minor test-assertion.)'
 closed:
     - id: nK0x
       title: ServiceAccount UpdateByEntityUUID capability
