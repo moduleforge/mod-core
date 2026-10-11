@@ -1,14 +1,5 @@
 version: 2
 items:
-    - title: Decide whether stateless blank-name checks in
-      id: aJ4X
-      date: "2026-10-11"
-      tags:
-        - type:ambiguity
-        - plan/phase:authenticate-routes
-        - priority:unspecified
-        - effort:unspecified
-      text: Decide whether stateless blank-name checks in natural person/corporation/service account Create go before the type-level authorize or stay after, consistently.
     - title: docs/mf-standards submodule is uninitialized
       id: dC0H
       date: "2026-10-11"
@@ -127,4 +118,9 @@ closed:
       title: 'Open decision: ServiceAccountService.UpdateBy'
       disposition: fixed
       ref: phase-09-user-decisions-remediation/001-service-account-update-query.md
+      date: "2026-10-11"
+    - id: aJ4X
+      title: Decide whether stateless blank-name checks in
+      disposition: fixed
+      ref: phase-10-blank-name-remediation/001-blank-name-before-authz.md
       date: "2026-10-11"
