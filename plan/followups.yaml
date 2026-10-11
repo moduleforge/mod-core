@@ -224,3 +224,11 @@ items:
         - plan/phase:authenticate-routes
         - plan/slug:core-handler-conformance
       text: docs/mf-standards submodule is uninitialized in task worktrees, so the manifest-spec doc check in task 1.2 requirement 3 was not done; decide whether to defer to docs-mf-standards.
+    - title: manifest-spec Appendix A scope text is stale
+      id: UfN7
+      date: "2026-10-11"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:unspecified
+      text: 'docs-mf-standards manifest-spec.md:1078 (Appendix A) says mod-core declares innerMount: true and no explicit scope:, but moduleforge.module.yaml now sets scope: authenticated (plan core-handler-conformance). Also manifest-spec.md:161 says the default scope is authenticated while mfgen treats an empty scope as public (mfgen followup VFHF). Fix in the docs-mf-standards repo, then bump the docs/mf-standards submodule pin in mod-core (needs user consent). Found by finding dC0H.'
