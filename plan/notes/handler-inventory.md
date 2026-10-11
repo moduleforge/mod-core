@@ -106,3 +106,30 @@ Already conforming service reads (no change): `GetByEntityUUID` x3, `ResolveProf
 - Target-0 authorizer rule (common rule 5): mock authorizers in `api/service/*_test.go` and `api/httpapi/mock_test.go`/`masked_lookup_test.go` must tolerate the extra `Authorize(ctx, op, &0)` call when switching.
 - Tests encoding old behavior: see "Tests that encode the old behavior" above; additionally the `*_AuthorizesBeforeLoad` and 404-on-missing apps tests will flip.
 - Out-of-scope: the display-name nil-Display constant 200 for any authenticated caller is by design (no leak) and left untouched.
+
+---
+
+# State-conflict classification (task 4.1)
+
+Method: `grep -rnE "ErrInvalidInput|InvalidInput\b|StatusBadRequest"` over all non-test Go in the repo, verified against the post-phase-3 source. Sites inside `api/apiresp` itself (the mapper, `DecodeJSON`, `ParseUUIDParam`, `ordertest`) are the helper layer, not handler logic, and are stateless 400s by construction. `model/` has no use. Classification vocabulary per common section 2 axis 5.
+
+| # | Site | When it runs | Classification | Action |
+|---|---|---|---|---|
+| 1 | `httpapi/apps.go` `Create`: decode, `slug_required`, `name_required` | after 401, BEFORE `AuthorizeType` | stateless 400, correct placement | none |
+| 2 | `httpapi/apps.go` `parseAppUUIDParam` / `UpdateApp` decode | before authorize | stateless 400, correct placement | none |
+| 3 | `httpapi/apps.go` `InsertApp` slug UNIQUE violation (Create) | post-authz, was 500 (wrapped pg 23505; `classify()` has no pg mapping) | uniqueness conflict -> 409 | CHANGED: `apiresp.Conflict`, detail code `apps.slug_taken`, field `slug` |
+| 4 | `httpapi/apps.go` `UpdateApp` rename to an existing slug (`q.UpdateApp` 23505) | post-authz, was 500 | uniqueness conflict -> 409 | CHANGED: same as #3 |
+| 5 | `httpapi/field_crypto_keys.go` Rotate: `grace_with_compromised`, `grace_period_days_too_small`, `graceDaysParam`, `resolveKeyMaterial` key-hex validation (259, 281, 291, 297) | before `Authorize` (moved in phase 3) | stateless 400, correct placement | none |
+| 6 | `field_crypto_keys.go` MarkCompromised / SetGrace: `fieldCryptoKeyVersionParam`, `graceDaysParam`, `grace_period_days_required` (459, 514, 536, 546) | before `Authorize` (phase 3) | stateless 400, correct placement | none |
+| 7 | `field_crypto_keys.go` `readFieldCryptoKeyBody` read-error 400 (658) | before `Authorize` | stateless (transport/shape) 400 | none |
+| 8 | `field_crypto_keys.go` `Conflict` sites (`no_active_key`, `key_material_in_use`, `version_active`; 431, 437, 621) | after `Authorize` | state conflicts, already 409 | none (confirmed) |
+| 9 | `service/corporation.go:90` blank `legal_name` in `Create` | AFTER `AuthorizeType` | stateless 400 placed post-authz (unauthorized + blank = 403, malformed JSON = 400 pre-authz) | NOT MOVED, reported: open manager decision |
+| 10 | `service/natural_person.go:196,203` blank given/family name in `Create` | AFTER `AuthorizeType` | same as #9 | NOT MOVED, reported |
+| 11 | `service/natural_person.go:157,164` `CreateInTx` blank names | no authz at all (caller authorizes) | stateless 400, in-process composition helper | none |
+| 12 | `service/service_account.go:83` blank `label` in `Create` | AFTER `AuthorizeType` | same as #9 | NOT MOVED, reported |
+| 13 | `service/service_account.go:199` `UpdateByEntityUUID` "UpdateServiceAccount query not yet generated" (`ErrInvalidInput`) | post-authz, for any non-nil `Label` | capability gap (not shape, not state; neither 409 nor 422) | NOT CHANGED: stays 400; open manager decision, reported |
+| 14 | `service/errors.go` `ErrInvalidInput` alias | definition only | n/a | none |
+
+Referenced-value-not-found (422 candidates): none found; no handler or service in mod-core rejects a body for naming an absent referenced value, so no `apiresp.Unprocessable` use is introduced.
+
+Wire-visible change: POST /apps and PUT /apps/{uuid} duplicate slug: 500 `internal_error` -> 409 `conflict` with detail `apps.slug_taken` (field `slug`), authorized callers only; unauthorized callers still get 403 for the same input. In-process callers: none (the logic is in the HTTP handler). Possible clients that notice: the GUI apps admin screens (409 is a generic conflict code; no GUI change made).

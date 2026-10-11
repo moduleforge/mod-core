@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/moduleforge/core-api/apiresp"
@@ -207,7 +208,7 @@ func (h *AppsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return h.observers.Observe(ctx, tx, "create", "app", &entityID, nil, after)
 	})
 	if txErr != nil {
-		apiresp.WriteError(w, r, fmt.Errorf("apps.create: %w", txErr))
+		writeAppsMutationError(w, r, "apps.create", txErr)
 		return
 	}
 
@@ -268,6 +269,23 @@ func (h *AppsHandler) GetApp(w http.ResponseWriter, r *http.Request) {
 type updateAppRequest struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
+}
+
+// writeAppsMutationError maps a Create/UpdateApp transaction failure onto its
+// response. apps.slug is UNIQUE, so a Postgres unique violation (23505) is a
+// post-authorization state conflict (409, code apps.slug_taken), not a 500;
+// anything else keeps the wrapped-internal-error path.
+func writeAppsMutationError(w http.ResponseWriter, r *http.Request, op string, err error) {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcodeUniqueViolation {
+		apiresp.WriteError(w, r, apiresp.Conflict(apiresp.FieldError{
+			Field:   "slug",
+			Code:    "apps.slug_taken",
+			Message: "an app with that slug already exists",
+		}))
+		return
+	}
+	apiresp.WriteError(w, r, fmt.Errorf("%s: %w", op, err))
 }
 
 // UpdateApp handles PUT /apps/{uuid} (admin).
@@ -345,7 +363,7 @@ func (h *AppsHandler) UpdateApp(w http.ResponseWriter, r *http.Request) {
 		return h.observers.Observe(ctx, tx, "update", "app", &app.ID, before, after)
 	})
 	if txErr != nil {
-		apiresp.WriteError(w, r, fmt.Errorf("apps.update: %w", txErr))
+		writeAppsMutationError(w, r, "apps.update", txErr)
 		return
 	}
 
