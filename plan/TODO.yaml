@@ -2,7 +2,7 @@ slug: core-handler-conformance
 version: 1
 title: ""
 remediation:
-    rounds: 1
+    rounds: 2
     tasks_added: 1
 phases:
     - number: 1
@@ -221,3 +221,8 @@ phases:
             branch: plan/core-handler-conformance-08-001
             commit: []
             merge: 2052288976d1685e49212cbbc00dcc68eebdb4d0
+    - number: 9
+      slug: user-decisions-remediation
+      title: User Decisions Remediation
+      kind: remediation
+      tasks: []
