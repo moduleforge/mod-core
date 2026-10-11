@@ -27,4 +27,13 @@ items:
         - priority:unspecified
         - effort:unspecified
       text: docs/mf-standards submodule is uninitialized in task worktrees, so the manifest-spec doc check in task 1.2 requirement 3 was not done; decide whether to defer to docs-mf-standards.
+    - title: Sudo-only gate test hides panics
+      id: vqPd
+      date: "2026-10-11"
+      tags:
+        - type:bug
+        - priority:low
+        - plan/phase:authenticate-routes
+        - effort:unspecified
+      text: In api/httpapi/require_auth_mount_test.go the sudo-only test builds the core router with nil services and recovers from any panic, so it cannot distinguish passing the gate from an unrelated crash on the /entities routes. Build the router with minimal fake services or assert an explicit "status != 401 or panicked" flag.
 closed: []
