@@ -6,3 +6,7 @@ phases:
       slug: authenticate-routes
       title: Authenticate Routes
       tasks: []
+    - number: 2
+      slug: existence-leaks
+      title: Close Existence Leaks
+      tasks: []
