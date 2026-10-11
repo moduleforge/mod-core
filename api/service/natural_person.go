@@ -268,17 +268,11 @@ func (s *NaturalPersonService) UpdateByEntityUUID(
 	entityUUID uuid.UUID,
 	in UpdateNaturalPersonInput,
 ) error {
-	// 1. Authorize — fetch entity first to build a richer target.
-	ent, err := q.GetEntityByUUID(ctx, entityUUID)
+	// 1. Masked resolve + authorize: a missing id and an existing-but-forbidden
+	// id both yield ErrForbidden (no existence oracle); ErrNotFound below is
+	// only reachable by an authorized caller.
+	eid, err := s.entityResolver.AuthorizeResolve(ctx, q, s.az, "update", entityUUID, "natural_person")
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		return fmt.Errorf("natural_person.UpdateByEntityUUID entity: %w", err)
-	}
-
-	eid := ent.ID
-	if err := s.az.Authorize(ctx, "update", &eid); err != nil {
 		return err
 	}
 
@@ -286,7 +280,7 @@ func (s *NaturalPersonService) UpdateByEntityUUID(
 	err = txhelper.Run(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		txQ := s.querier(tx)
 
-		np, err := txQ.GetNaturalPersonByEntityID(ctx, ent.ID)
+		np, err := txQ.GetNaturalPersonByEntityID(ctx, eid)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
@@ -328,7 +322,7 @@ func (s *NaturalPersonService) UpdateByEntityUUID(
 		}
 
 		if err := txQ.UpdateNaturalPerson(ctx, coredb.UpdateNaturalPersonParams{
-			EntityID:   ent.ID,
+			EntityID:   eid,
 			GivenName:  gn,
 			FamilyName: fn,
 			Ssn:        ssnParam,

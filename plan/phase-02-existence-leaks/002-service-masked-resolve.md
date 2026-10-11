@@ -22,3 +22,13 @@ The fetch-then-authorize pattern in the service layer returns `ErrNotFound` befo
 ## Metadata
 
 architectural_impact: true
+
+## Status
+
+Outcome: succeeded (2026-10-11).
+
+- `CorporationService.UpdateByEntityUUID`, `NaturalPersonService.UpdateByEntityUUID`, `ServiceAccountService.UpdateByEntityUUID` and `EntityService.Archive` (`api/service/corporation.go`, `natural_person.go`, `service_account.go`, `entity.go`) now call `entityResolver.AuthorizeResolve` and carry `eid` into the transaction and observer calls. A missing id and a forbidden id both give `ErrForbidden`; an unauthenticated caller gets `ErrUnauthenticated`; post-authorization `ErrNotFound` (missing subtype row) stays 404.
+- `ServiceAccountService.UpdateByEntityUUID`: the nil-`Label` no-op now runs AFTER the masked resolve and authorization (previously it returned nil for anyone). The "query not yet generated" `ErrInvalidInput` is unchanged (capability gap, open manager decision).
+- Tests: `api/service/masked_resolve_test.go` (new) plus updated expectations in the existing service tests (`authedCtx()` helper in `mock_test.go`).
+- Validation: `go test ./...`, `go vet ./...`, `gofmt -l` clean in `api` and `model` (also `go vet -tags integration ./...`). Postgres integration suite and `make test` (GUI step) not run in this worktree.
+- In-process caller effect: `mod-users` `api/internal/handlers/self.go:79` (`NaturalPerson.UpdateByEntityUUID`) now sees `ErrForbidden` instead of `ErrNotFound` on a miss, and requires an authenticated actor in the context (`ErrUnauthenticated` otherwise).

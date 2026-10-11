@@ -204,7 +204,7 @@ func TestNaturalPersonService_Update_SetSSN(t *testing.T) {
 	entityUUID := q.seedNaturalPerson("Eve", "Foster")
 
 	ssn := "111-22-3333"
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateNaturalPersonInput{SSN: &ssn})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateNaturalPersonInput{SSN: &ssn})
 	if err != nil {
 		t.Fatalf("UpdateByEntityUUID: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestNaturalPersonService_Update_ClearSSN(t *testing.T) {
 	entityUUID := q.seedNaturalPerson("Frank", "Green")
 
 	empty := ""
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateNaturalPersonInput{SSN: &empty})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateNaturalPersonInput{SSN: &empty})
 	if err != nil {
 		t.Fatalf("UpdateByEntityUUID: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestNaturalPersonService_Update_NilSSN(t *testing.T) {
 	}
 	entityUUID := q.seedNaturalPerson("Grace", "Hall")
 	gn := "Grace"
-	err := svc.UpdateByEntityUUID(context.Background(), q, entityUUID, UpdateNaturalPersonInput{GivenName: &gn})
+	err := svc.UpdateByEntityUUID(authedCtx(), q, entityUUID, UpdateNaturalPersonInput{GivenName: &gn})
 	if err != nil {
 		t.Fatalf("UpdateByEntityUUID: %v", err)
 	}
