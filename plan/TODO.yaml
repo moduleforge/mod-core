@@ -3,7 +3,7 @@ version: 1
 title: ""
 remediation:
     rounds: 2
-    tasks_added: 1
+    tasks_added: 2
 phases:
     - number: 1
       slug: authenticate-routes
@@ -225,4 +225,18 @@ phases:
       slug: user-decisions-remediation
       title: User Decisions Remediation
       kind: remediation
-      tasks: []
+      tasks_added: 1
+      tasks:
+        - number: 1
+          slug: service-account-update-query
+          title: Implement ServiceAccount Update Query
+          path: phase-09-user-decisions-remediation/001-service-account-update-query.md
+          done: false
+          tier: sonnet-med
+          findings:
+            - nK0x
+            - 2UGO
+          git:
+            branch: null
+            commit: []
+            merge: null
