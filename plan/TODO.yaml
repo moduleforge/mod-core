@@ -213,6 +213,6 @@ phases:
             - u4LS
             - QUsy
           git:
-            branch: null
+            branch: plan/core-handler-conformance-08-001
             commit: []
             merge: null
