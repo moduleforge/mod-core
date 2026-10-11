@@ -25,13 +25,6 @@ import (
 	coredb "github.com/moduleforge/core-model/db"
 )
 
-// Identities used by the entity-route order tests. The owner may do
-// everything; the stranger is authenticated but is denied everything.
-const (
-	orderOwnerID    int64 = 1
-	orderStrangerID int64 = 2
-)
-
 // authorizeCall is one recorded Authorizer.Authorize invocation.
 type authorizeCall struct {
 	actor     int64

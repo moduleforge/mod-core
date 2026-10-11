@@ -919,3 +919,33 @@ func TestAppsCreate_OtherInsertErrorStays500(t *testing.T) {
 		t.Fatalf("status: got %d, want 500", rec.Code)
 	}
 }
+
+// A unique violation on some other constraint (raised by CreateEntity or an
+// observer in the same transaction) must not be reported as a slug conflict.
+func TestAppsCreate_OtherUniqueViolationIs500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	q.insertAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "entities_uuid_key"}
+	body, _ := json.Marshal(createAppRequest{Slug: "demo", Name: "Demo App"})
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPost, "/apps", bytes.NewBuffer(body)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500 - %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body must not report apps.slug_taken: %s", rec.Body.String())
+	}
+}
+
+func TestAppsUpdateApp_OtherUniqueViolationIs500(t *testing.T) {
+	q := newAppsFakeQuerier()
+	appUUID := q.seedApp("demo", "Demo App")
+	q.updateAppErr = &pgconn.PgError{Code: "23505", ConstraintName: "entities_uuid_key"}
+
+	rec := serveApps(t, q, &appsFakeAuthorizer{}, adminReq(http.MethodPut, "/apps/"+appUUID.String(), bytes.NewBufferString(`{"slug":"taken"}`)))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d, want 500 - %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "apps.slug_taken") {
+		t.Errorf("body must not report apps.slug_taken: %s", rec.Body.String())
+	}
+}

@@ -22,3 +22,7 @@ Scope is limited to those two defects and their tests. No other behavior changes
 - `cd model && go test ./...` passes.
 - GUI dependencies are not installed in task worktrees, so `make test` cannot complete; state this. The Postgres integration suite is deferred to final validation.
 - Report the number of `httpapi` tests that run now versus failed to compile before.
+
+## Status
+
+succeeded, 2026-10-11. Shared order identity constants moved to `api/httpapi/order_helpers_test.go`; duplicates removed from `apps_order_test.go` and `entities_order_test.go`. `writeAppsMutationError` in `api/httpapi/apps.go` now maps only 23505 on `apps_slug_key` to 409; fakes set the constraint name; negative Create/UpdateApp tests added in `api/httpapi/apps_test.go`. Go suites, vet (incl. `-tags integration`) and gofmt are clean; no previously-unexercised test failed. `make test` not run (GUI deps absent).
