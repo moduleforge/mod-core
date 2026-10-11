@@ -21,3 +21,7 @@ Convert the natural-person, corporation, and service-account create/update handl
 ## Metadata
 
 architectural_impact: false
+
+## Status
+
+Outcome: succeeded (2026-10-11). Converted `api/httpapi/natural_persons.go`, `corporations.go`, `service_accounts.go` to `apiresp.DecodeJSON`, and those plus `entities.go` and `display.go` to `apiresp.ParseUUIDParam("uuid", ...)`. Added `api/httpapi/entity_decode_test.go`. Validation: `go test ./...`, `go vet ./...`, `gofmt -l` clean in `api`; remaining `json.NewDecoder` in `httpapi` only in `apps.go` (task 3.1) and `field_crypto_keys.go` (task 3.3). Stateless blank-name checks in the services were left in place (task doc does not call for moving them). No `writeCoreServiceErr` or pass-through writer exists in `api/httpapi`.

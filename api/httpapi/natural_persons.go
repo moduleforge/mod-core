@@ -1,11 +1,9 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/service"
@@ -21,8 +19,7 @@ type createNaturalPersonRequest struct {
 // createNaturalPerson handles POST /entities/natural-persons (admin only).
 func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
 	var req createNaturalPersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
@@ -55,9 +52,9 @@ func (h *handlers) createNaturalPerson(w http.ResponseWriter, r *http.Request) {
 
 // getNaturalPerson handles GET /entities/natural-persons/{uuid}.
 func (h *handlers) getNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -81,15 +78,14 @@ type updateNaturalPersonRequest struct {
 
 // updateNaturalPerson handles PUT /entities/natural-persons/{uuid}.
 func (h *handlers) updateNaturalPerson(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
 	var req updateNaturalPersonRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 

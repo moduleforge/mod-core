@@ -1,11 +1,9 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"github.com/moduleforge/core-api/apiresp"
 	"github.com/moduleforge/core-api/service"
@@ -19,8 +17,7 @@ type createServiceAccountRequest struct {
 // createServiceAccount handles POST /entities/service-accounts (admin only).
 func (h *handlers) createServiceAccount(w http.ResponseWriter, r *http.Request) {
 	var req createServiceAccountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
@@ -41,9 +38,9 @@ func (h *handlers) createServiceAccount(w http.ResponseWriter, r *http.Request) 
 
 // getServiceAccount handles GET /entities/service-accounts/{uuid} (admin only).
 func (h *handlers) getServiceAccount(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
@@ -63,15 +60,14 @@ type updateServiceAccountRequest struct {
 
 // updateServiceAccount handles PUT /entities/service-accounts/{uuid} (admin only).
 func (h *handlers) updateServiceAccount(w http.ResponseWriter, r *http.Request) {
-	entityUUID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	entityUUID, err := apiresp.ParseUUIDParam("uuid", chi.URLParam(r, "uuid"))
 	if err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+		apiresp.WriteError(w, r, err)
 		return
 	}
 
 	var req updateServiceAccountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apiresp.WriteError(w, r, apiresp.ErrInvalidInput)
+	if !apiresp.DecodeJSON(w, r, &req) {
 		return
 	}
 
