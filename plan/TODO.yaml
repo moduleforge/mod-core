@@ -26,7 +26,7 @@ phases:
           tier: haiku-med
           digest: 'Added scope: authenticated to the /v1 NewRouter manifest entry (VFHF) and AGENTS.md snippet; grep/YAML parse and Go suites pass; GUI half of make test unrunnable (deps not installed, config-only change).'
           git:
-            branch: null
+            branch: plan/core-handler-conformance-01-002
             commit: []
             merge: null
         - number: 3
