@@ -7,7 +7,7 @@ import (
 )
 
 // DeprecatedTypeSQLState is the SQLSTATE the entities_check_concrete_type
-// trigger (model/migrations/0008_entities.sql) raises when an entity is
+// trigger (model/migrations/0001_baseline.sql) raises when an entity is
 // created with a deprecated fundamental type. It is a custom code in a
 // non-standard class.
 const DeprecatedTypeSQLState = "MF001"

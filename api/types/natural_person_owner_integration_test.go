@@ -3,7 +3,7 @@
 package types_test
 
 // natural_person_owner_integration_test.go proves the natural_person
-// self-ownership invariant (model/migrations/0100_natural_person_owner_invariant.sql)
+// self-ownership invariant (the entities_owner_self_natural_person trigger in model/migrations/0001_baseline.sql)
 // against the shared shadow database built by TestMain in
 // type_entities_integration_test.go: a natural_person (or descendant) entity
 // can only be owned by itself; every other owner is rejected at INSERT with

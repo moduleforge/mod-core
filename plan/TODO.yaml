@@ -23,19 +23,23 @@ phases:
           slug: update-references-docs-tests
           title: Update References, Docs And Tests For Baseline
           path: phase-01-migrations-baseline/002-update-references-docs-tests.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Replaced every reference to the removed migration files and versions with 0001_baseline.sql or the object it defines. Rewrote the AGENTS.md numbering rules, the model README reset section, and the entity-ownership and type-entities docs. Code changes are comment-only. Build, vet, gofmt and the type-entities and fieldcrypto integration tests are all green.
           git:
-            branch: null
-            commit: []
-            merge: null
+            branch: plan/core-migrations-baseline-01-002
+            commit:
+                - 52c398b
+            merge: c41fe1ba014b228d491bad6d8dc918334f2e811e
         - number: 3
           slug: verify-mod-users-compose
           title: Verify mod-users Compose Has No Version Collision
           path: phase-01-migrations-baseline/003-verify-mod-users-compose.md
-          done: false
+          done: true
           tier: sonnet-low
+          digest: Verification only. The composed core, mod-authz and mod-users migrations have unique versions and pass goose validate. They apply on a throwaway postgres:16 container up to version 506.
           git:
-            branch: null
-            commit: []
+            branch: plan/core-migrations-baseline-01-003
+            commit:
+                - 1fce54c
             merge: null

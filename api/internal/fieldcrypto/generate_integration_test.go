@@ -4,7 +4,7 @@ package fieldcrypto_test
 
 // generate_integration_test.go exercises the multi-key cipher against a real,
 // ephemeral Postgres database carrying the replacement field_crypto_keys
-// schema (model/migrations/0017_field_crypto_keys.sql), proving the properties
+// schema (model/migrations/0001_baseline.sql), proving the properties
 // only a real database can demonstrate:
 //
 //   - concurrent first-boot callers converge on exactly one persisted key, now

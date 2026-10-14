@@ -3,7 +3,7 @@
 package types_test
 
 // type_entities_integration_test.go proves the schema invariants of type
-// entities (model/migrations/0002_types.sql and 0008_entities.sql) against a
+// entities (model/migrations/0001_baseline.sql) against a
 // live, ephemeral Postgres built from mod-core's own migrations: every types
 // row is represented by exactly one entity of the sentinel type 'type', that
 // entity is created by the type's own insert, and the pairing is guarded at

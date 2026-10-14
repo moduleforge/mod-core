@@ -39,7 +39,7 @@ provides:
       args: []
 
     # cipher loads the usable AES-256-GCM key set from the field_crypto_keys
-    # table (added in migration 0017; see api/internal/fieldcrypto.NewFromEnvOrGenerate).
+    # table (defined in 0001_baseline.sql; see api/internal/fieldcrypto.NewFromEnvOrGenerate).
     # On an empty table it bootstraps the first key from CORE_FIELD_KEY_HEX
     # when set, otherwise from freshly generated random bytes.
     # CORE_FIELD_KEY_HEX is a first-boot-only bootstrap seed, not an ongoing

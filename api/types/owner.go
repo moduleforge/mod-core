@@ -8,7 +8,7 @@ import (
 
 // NaturalPersonOwnerSQLState is the SQLSTATE the
 // entities_owner_self_natural_person trigger
-// (model/migrations/0100_natural_person_owner_invariant.sql) raises when a
+// (the entities_owner_self_natural_person trigger in model/migrations/0001_baseline.sql) raises when a
 // natural_person entity would be owned by anything other than itself. It is a
 // custom code in the same non-standard class as DeprecatedTypeSQLState.
 const NaturalPersonOwnerSQLState = "MF002"
