@@ -63,37 +63,16 @@ $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 ```
 
-Most migrations are forward-only, but a `-- +goose Down` section is provided where a clean rollback
-is safe and cheap (e.g. dropping a table or trigger the same migration created).
+Migrations are forward-only: the baseline has no `-- +goose Down` section, and new migrations should not add one.
 
-## Resetting after an in-place migration edit
+## Resetting after the baseline collapse
 
-goose stores no per-migration checksum, so it detects a migration file's identity purely by version
-number and filename — editing an already-applied migration's *body* in place (rather than adding a
-new migration) is invisible to `goose status`: a database that already applied the old version of the
-file will report "no pending migrations" and silently keep running against the old schema shape.
+The pre-release migration history (versions 1-17, 99 and 100) was collapsed into the single
+`0001_baseline.sql`. goose identifies a migration purely by version number and filename, so a database
+that recorded the old versions in `goose_db_version_core` cannot be upgraded in place: it would report the
+old versions as applied and skip the new baseline. Drop and recreate any developer or CI database that
+applied the old chain, then let the migrations run again from empty. Do not try to roll it back with
+`goose down-to`; the old files and their Down sections no longer exist.
 
-When a migration is edited in place (as `0017_field_crypto_keys.sql` was, replacing the single-row
-`field_crypto_keys` table with the versioned multi-key design), any developer or CI database that
-already applied the prior `0017` must be reset before picking up the new shape. Two options:
-
-```sh
-cd model
-# Down section is 'DROP TABLE IF EXISTS field_crypto_keys' in both the old
-# and new file, so rolling back past 17 with the edited file already in
-# place is correct.
-goose -dir migrations postgres "$DATABASE_URL" down-to 16
-goose -dir migrations postgres "$DATABASE_URL" up
-```
-
-or recreate the database wholesale — the more likely choice here, since the encrypted-blob wire
-format change (`nonce || ciphertext || tag` → `version || nonce || ciphertext || tag`) requires
-regenerating existing data anyway.
-
-`0002_types.sql` and `0008_entities.sql` were also edited in place, to add the `types.entity_id` column,
-the sentinel root type `type`, and the trigger and constraints that give every type an entity. A
-database that applied the earlier versions of these files must be reset by recreating it wholesale.
-The `down-to` route above does not apply: the two files have no `Down` section, and the change
-renumbers data. The sentinel is inserted after the earlier seeds, so `app` moves from `types.id` 6 to
-7, and the lowest entity ids now belong to type entities, so rows and foreign keys that refer to the
-old values cannot be migrated forward in place.
+The collapse also fixed the seeded `types.id` values (seeds 1-5, sentinel 6, `app` 7), so rows and foreign
+keys that refer to ids from an older database cannot be migrated forward either.

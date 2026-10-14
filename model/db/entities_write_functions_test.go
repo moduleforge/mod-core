@@ -78,7 +78,7 @@ func TestEntityWriteFunctions_StandaloneBehavior(t *testing.T) {
 	t.Run("CreateEntityWithOwner accepts NULL owner and self-owner trigger fills it in", func(t *testing.T) {
 		// OwnerID left at its zero value (Valid: false) -- core_create_entity_with_owner
 		// is deliberately not STRICT, so this NULL argument reaches the INSERT,
-		// where entities_owner_self_default (migration 0013_entity_ownership.sql)
+		// where entities_owner_self_default (model/migrations/0001_baseline.sql)
 		// fills it in for a natural_person.
 		got, err := q.CreateEntityWithOwner(ctx, db.CreateEntityWithOwnerParams{
 			FundamentalTypeID: personType.ID,

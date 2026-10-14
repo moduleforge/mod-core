@@ -272,7 +272,7 @@ type updateAppRequest struct {
 }
 
 // appsSlugConstraint is the Postgres name of the inline UNIQUE constraint on
-// apps.slug (auto-named by 0015_apps.sql).
+// apps.slug (auto-named by the apps table in 0001_baseline.sql).
 const appsSlugConstraint = "apps_slug_key"
 
 // writeAppsMutationError maps a Create/UpdateApp transaction failure onto its

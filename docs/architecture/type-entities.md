@@ -25,18 +25,18 @@ like any other entity.
 | Type entity | An `entities` row whose `fundamental_type_id` is the sentinel's id. The sentinel's own entity is of type `type` as well (self-referential). |
 | Ownership | A type entity's `owner_id` stays NULL. The ownership default only fills natural persons and service accounts, so an ownership arm never matches a type entity. |
 
-The column and the relaxed append-only function are defined in `0002_types.sql`. Everything that
-needs the `entities` table lives in `0008_entities.sql`: the foreign key, the sentinel insert, the
-creation routine and trigger, and the commit-time checks. The sentinel is inserted in `0008`
-and takes id 6, so seeded ids 1 to 5 are unchanged and `app` (seeded later, in `0014`) moves from 6
-to 7.
+The column and the relaxed append-only function are defined in `0001_baseline.sql`, in the `types`
+section. Everything that needs the `entities` table is defined later in the same file, once `entities`
+exists: the foreign key, the sentinel insert, the creation routine and trigger, and the commit-time
+checks. The sentinel is inserted after the five seeded types and takes id 6, so seeded ids 1 to 5 are
+unchanged and `app` (seeded after the sentinel) takes id 7.
 
 ## How a type entity is created
 
 An `AFTER INSERT ... FOR EACH ROW` trigger on `types` inserts the type's entity and then sets
 `types.entity_id` on the new row. The same routine, `types_create_entity_for`, also creates the
-entities for the types that predate the trigger (the seeded types and the sentinel) while `0008`
-runs. Every type registered later, including a downstream module's, gets its entity from its own
+entities for the types that predate the trigger (the seeded types and the sentinel) while the
+baseline runs. Every type registered later, including a downstream module's, gets its entity from its own
 `INSERT INTO types`. There is no registration hook and no runtime backfill.
 
 Two choices in this design are easy to undo by accident:

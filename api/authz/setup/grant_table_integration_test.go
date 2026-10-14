@@ -111,7 +111,7 @@ var pool *pgxpool.Pool
 // CreateServiceAccount, GetTypeBySlug) — the same queries mod-core's own
 // service layer uses, so seed data is created exactly the way production
 // code creates it. In particular, every CreateEntity call here exercises the
-// real entities_owner_self_default trigger from migration 0013.
+// real entities_owner_self_default trigger from 0001_baseline.sql.
 var coreQ *coredb.Queries
 
 // coreGrantVerifyDB is the dedicated shadow database for this suite, distinct
@@ -375,7 +375,7 @@ ON CONFLICT (slug) DO NOTHING`
 
 // seedNaturalPerson inserts entity -> legal_entity -> natural_person and
 // returns the entity's internal ID. The owns-itself trigger
-// (entities_owner_self_default, migration 0013) sets owner_id = id
+// (entities_owner_self_default, from 0001_baseline.sql) sets owner_id = id
 // automatically on the entities INSERT.
 func seedNaturalPerson(t *testing.T, ctx context.Context) int64 {
 	t.Helper()
