@@ -27,7 +27,7 @@ phases:
           tier: sonnet-med
           digest: Replaced every reference to the removed migration files and versions with 0001_baseline.sql or the object it defines. Rewrote the AGENTS.md numbering rules, the model README reset section, and the entity-ownership and type-entities docs. Code changes are comment-only. Build, vet, gofmt and the type-entities and fieldcrypto integration tests are all green.
           git:
-            branch: null
+            branch: plan/core-migrations-baseline-01-002
             commit: []
             merge: null
         - number: 3
