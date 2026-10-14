@@ -1,14 +1,5 @@
 version: 2
-items:
-    - title: AGENTS.md links gitignored settings file
-      id: S7UZ
-      date: "2026-10-14"
-      tags:
-        - type:documentation
-        - priority:low
-        - plan/phase:migrations-baseline
-        - effort:small
-      text: Agent-authored report data (readme-reachability, severity suggestion, confidence medium). AGENTS.md links ./.claude/settings.local.json, a local gitignored file that does not exist in a checkout. Reference it as inline code instead of a Markdown link.
+items: []
 closed:
     - id: ZK9G
       title: Docs link into uninitialized mf-standards
@@ -20,4 +11,9 @@ closed:
         checkout; the item itself says it is a checkout artifact not caused by
         this change and could not be confirmed as a real absence. No link edit
         is warranted.
+      date: "2026-10-14"
+    - id: S7UZ
+      title: AGENTS.md links gitignored settings file
+      disposition: promoted
+      ref: S7UZ
       date: "2026-10-14"
