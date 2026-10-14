@@ -9,4 +9,13 @@ items:
         - plan/phase:migrations-baseline
         - effort:unspecified
       text: 'Agent-authored report data (readme-reachability, severity minor, confidence medium). README.md and several other docs link into docs/mf-standards/, which is an uninitialized git submodule in the plan worktree, so the targets do not resolve. Likely a checkout artifact: confirm after git submodule update --init and fix links only if targets are really absent. Not caused by the migrations baseline change.'
+    - title: AGENTS.md links gitignored settings file
+      id: S7UZ
+      date: "2026-10-14"
+      tags:
+        - type:documentation
+        - priority:low
+        - plan/phase:migrations-baseline
+        - effort:unspecified
+      text: Agent-authored report data (readme-reachability, severity suggestion, confidence medium). AGENTS.md links ./.claude/settings.local.json, a local gitignored file that does not exist in a checkout. Reference it as inline code instead of a Markdown link.
 closed: []
