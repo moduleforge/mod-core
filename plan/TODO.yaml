@@ -5,4 +5,14 @@ phases:
     - number: 1
       slug: migrations-baseline
       title: Collapse Migrations Into Baseline
-      tasks: []
+      tasks:
+        - number: 1
+          slug: create-baseline-and-verify-equivalence
+          title: Create Baseline Migration And Verify Schema Equivalence
+          path: phase-01-migrations-baseline/001-create-baseline-and-verify-equivalence.md
+          done: false
+          tier: sonnet-high
+          git:
+            branch: null
+            commit: []
+            merge: null
