@@ -250,3 +250,13 @@ items:
         - priority:medium
         - effort:medium
       text: 'Owner flagged (2026-10-14) that a service account being handled alongside natural_person is surprising — a service account is not a natural person. Examine separately. Facts: mod-core model/migrations/0013_entity_ownership.sql defaults owner_id to self for natural_person OR service_account (entities_owner_default_self(), the backfill UPDATE, and the core_create_entity_with_owner comment); docs/architecture/type-entities.md ~line 26 says the same. No recorded rationale found. The new 0100 natural_person self-owner invariant (e7d6ae6) deliberately does NOT cover service_account; an explicit non-self owner on service_account is still accepted. Downstream: mod-workflows api/integration/authz_standin_test.go (~228-290) inserts service_account entities with an explicit owner; app-mfmanager svcidentity.go:366 creates app_service_identity entities (a legal_entity child) owned by an operator and gives them user_accounts rows, so the operator can register SSH keys on the service identity via the ownership arm (mod-users Authorizer.checkGrantOrOwn is op-agnostic). Decide: what type hierarchy/ownership rules service accounts and service identities should have, whether owners should be able to install SSH keys on them, and whether user_accounts rows for non-natural persons are intended.'
+    - title: AGENTS.md links gitignored settings file
+      id: S7UZ
+      date: "2026-10-14"
+      tags:
+        - type:documentation
+        - priority:low
+        - effort:small
+        - plan/phase:migrations-baseline
+        - plan/slug:core-migrations-baseline
+      text: Agent-authored report data (readme-reachability, severity suggestion, confidence medium). AGENTS.md links ./.claude/settings.local.json, a local gitignored file that does not exist in a checkout. Reference it as inline code instead of a Markdown link.
