@@ -2,3 +2,5 @@ version: 1
 plans:
     - slug: service-account-ownership
       status: working
+    - slug: qualify-invoker-relations
+      status: working
