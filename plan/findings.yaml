@@ -7,7 +7,7 @@ items:
         - type:documentation
         - priority:low
         - plan/phase:migrations-baseline
-        - effort:unspecified
+        - effort:small
       text: Agent-authored report data (readme-reachability, severity suggestion, confidence medium). AGENTS.md links ./.claude/settings.local.json, a local gitignored file that does not exist in a checkout. Reference it as inline code instead of a Markdown link.
 closed:
     - id: ZK9G
