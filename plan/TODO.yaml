@@ -30,7 +30,7 @@ phases:
             branch: plan/core-migrations-baseline-01-002
             commit:
                 - 52c398b
-            merge: null
+            merge: c41fe1ba014b228d491bad6d8dc918334f2e811e
         - number: 3
           slug: verify-mod-users-compose
           title: Verify mod-users Compose Has No Version Collision
