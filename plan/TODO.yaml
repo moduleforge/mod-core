@@ -1,0 +1,8 @@
+slug: core-migrations-baseline
+version: 1
+title: ""
+phases:
+    - number: 1
+      slug: migrations-baseline
+      title: Collapse Migrations Into Baseline
+      tasks: []
