@@ -260,14 +260,6 @@ items:
         - plan/phase:migrations-baseline
         - plan/slug:core-migrations-baseline
       text: Agent-authored report data (readme-reachability, severity suggestion, confidence medium). AGENTS.md links ./.claude/settings.local.json, a local gitignored file that does not exist in a checkout. Reference it as inline code instead of a Markdown link.
-    - title: Fail closed on un-reset pre-baseline DBs
-      id: LPd3
-      date: "2026-10-14"
-      tags:
-        - type:security
-        - priority:low
-        - effort:small
-      text: 'Automated push review (medium, fail-open-state-drift) on model/migrations/0001_baseline.sql: a database whose goose_db_version_core still records pre-collapse versions (2-17, 99, 100) is treated by goose as already at version 1, so it silently skips the baseline. A DB stopped at version 99 would lack the 0100 natural-person owner trigger (MF002). Today the reset rule is documentation only. Suggested fix: in model.Migrate, before goose Up, read goose_db_version_core and fail if it holds any version_id other than 0 or 1; or rename the tracking table for the baseline. Low priority because the user decided pre-release DBs are reset, but a cheap guard keeps un-reset databases from running without the trigger.'
     - title: Per-op ownership arm in checkGrantOrOwn
       id: rHzV
       date: "2026-10-14"
