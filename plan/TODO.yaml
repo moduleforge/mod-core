@@ -13,6 +13,7 @@ phases:
           path: phase-01-migrations-baseline/001-create-baseline-and-verify-equivalence.md
           done: false
           tier: sonnet-high
+          digest: Collapsed 19 mod-core migrations into model/migrations/0001_baseline.sql (0016 merged into apps) with an empty schema, data and function diff against the ee7e61e chain. sqlc output unchanged, shadow-db lint passes without a Down section, and Go unit and integration tests are green.
           git:
             branch: null
             commit: []
