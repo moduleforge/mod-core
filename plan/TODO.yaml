@@ -16,3 +16,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 2
+          slug: update-references-docs-tests
+          title: Update References, Docs And Tests For Baseline
+          path: phase-01-migrations-baseline/002-update-references-docs-tests.md
+          done: false
+          tier: sonnet-med
+          git:
+            branch: null
+            commit: []
+            merge: null
