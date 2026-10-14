@@ -45,3 +45,13 @@ architectural_impact: false
 - After writing the baseline file and before deleting the old files.
 - After the equivalence diff is empty.
 - After sqlc regeneration and test run.
+
+## Status
+
+Outcome: succeeded (2026-10-14).
+
+- `model/migrations/0001_baseline.sql` created (merged 0001-0017, 0099, 0100); the 19 old files removed with `git rm`; `model/migrations/` holds only the baseline. 0016 was merged into the `apps` CREATE TABLE (end-state column order identical: id, slug, name, updated_at). Dropped: Down sections, 0013 backfill, 0099 one-arg `DROP FUNCTION`s, 0100 pre-scan. Comments referring to other migration numbers were rewritten; function bodies are byte-identical.
+- Equivalence (container `mfcore-baseline-eq-*`, postgres:16, old chain from `ee7e61e` vs baseline): `pg_dump --schema-only --no-owner -T goose_db_version -T goose_db_version_id_seq` and `pg_dump --data-only --inserts --column-inserts` diffs are empty after normalising only per-run noise (`\restrict` tokens, `now()` timestamps, random UUIDs); `\df+`, `\dT`, `pg_trigger` listing and per-function `pg_get_functiondef` md5 are identical.
+- `goose -dir model/migrations validate` passes; `goose up` records version 1 (plus goose's own version 0 bookkeeping row). `make -C model lint` passes with a Down-less baseline (goose reports the down step EMPTY, current version 0), so no Down section was added. `make -C model gen` leaves `model/db/` unchanged. `make -C model verify` passes.
+- `go build`, `go vet`, `go test ./...` green in `api` and `model` (the repo root has no go.mod); integration tests (`-tags=integration -p 1`) green against a throwaway container, removed afterwards.
+- `model/migrate.go`, `model/sqlc.yaml`, `model/Makefile` and `shadow-db-lint.sh` were not edited.
