@@ -10,7 +10,7 @@ import (
 
 // CreateEntityWithOwner creates an entity with an explicit owner via q,
 // translating the database's natural-person ownership invariant
-// (SQLSTATE MF002, model/migrations/0100_natural_person_owner_invariant.sql)
+// (SQLSTATE MF002, the entities_owner_self_natural_person trigger in model/migrations/0001_baseline.sql)
 // into a caller-safe error. A natural_person entity must own itself, so asking
 // for any other owner fails with an error wrapping ErrInvalidInput whose
 // message is fixed text: the raw Postgres error is not propagated. Every other
