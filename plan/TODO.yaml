@@ -18,7 +18,7 @@ phases:
             branch: plan/core-migrations-baseline-01-001
             commit:
                 - d28ea11
-            merge: null
+            merge: 7a96157527738548f855cd8574611f30f59acadc
         - number: 2
           slug: update-references-docs-tests
           title: Update References, Docs And Tests For Baseline
