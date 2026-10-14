@@ -26,3 +26,13 @@ phases:
             branch: null
             commit: []
             merge: null
+        - number: 3
+          slug: verify-mod-users-compose
+          title: Verify mod-users Compose Has No Version Collision
+          path: phase-01-migrations-baseline/003-verify-mod-users-compose.md
+          done: false
+          tier: sonnet-low
+          git:
+            branch: null
+            commit: []
+            merge: null
