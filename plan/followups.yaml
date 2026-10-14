@@ -276,3 +276,12 @@ items:
         - priority:medium
         - effort:medium
       text: 'Follows from ygkL. Decision: owners SHOULD be able to install SSH keys on service accounts / service identities (e.g. app_service_identity). But mod-users Authorizer.checkGrantOrOwn is op-agnostic: the ownership arm grants every op on an owned target. Harden it to be explicit: add a per-target-type (or per-op) allowlist of ops the ownership arm covers, so owning an entity does not implicitly authorize every current and future op. Include the SSH-key registration op for service_account descendants as an explicitly allowed case, with tests for allowed and denied ops. Also confirm user_accounts is documented as ''a user of the system'' (may be a service account, not necessarily a natural person).'
+    - title: mod-repos visibility arms name relations bare
+      id: KN24
+      date: "2026-10-14"
+      tags:
+        - type:security
+        - priority:medium
+        - effort:small
+        - plan/slug:qualify-invoker-relations
+      text: mod-repos' CompositeAccessFuncGenerator (mod-repos/api/authz/generator.go:112-129, appended in GenerateForResource at :183-200) adds visibility UNION arms to the generated accessible_namespace_ids_for_actor / accessible_repository_ids_for_actor bodies that name its own relations namespaces and repositories unqualified. mod-core's setup.ApplyFuncs (api/authz/setup/setup.go) is being changed to schema-qualify only the canonical core/authz names (entities, types, grants, authz_actor_group_members, authz_target_group_members, type_is_or_descends_from), so those two mod-repos relations remain resolvable through a session-local temp table (TEMP privilege) on the standalone path, letting a session forge public visibility for its own list queries. Fix belongs in mod-repos (qualify its arm relations, or extend the qualification set it passes through); app-mfmanager's managed-mode rewriter (app-mfmanager/api/pgownership/accessfuncs.go) likewise does not cover them.
