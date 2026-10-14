@@ -45,3 +45,10 @@ architectural_impact: false
 - After AGENTS.md.
 - After README and architecture docs.
 - After code comments, next-steps and module yaml comment.
+
+## Status
+
+- Outcome: succeeded (2026-10-14).
+- Validation: stale-reference re-grep clean outside `docs/mf-standards/` and `plan/`; AGENTS.md no longer says new migrations must be `0100` or higher; `gofmt -l`, `go build ./...`, `go vet ./...` clean in `api` and `model`; integration tests for `./types/...` and `./internal/fieldcrypto/...` pass against a throwaway `postgres:16` container (removed afterward).
+- Changed: `AGENTS.md`, `model/README.md`, `docs/architecture/entity-ownership.md`, `docs/architecture/type-entities.md`, `next-steps.md`, `moduleforge.module.yaml` (comment only), and comments in the Go files named in the inventory.
+- `next-steps.md` line 8 verified against sibling repos: mod-users 0100-0104, mod-audit 0400, mod-tags 0200-0205/0299, mod-contacts 0300-0304, mod-authz 0500-0506.

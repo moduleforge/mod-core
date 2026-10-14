@@ -2,7 +2,7 @@ package db_test
 
 // entities_owner_test.go is a live-Postgres integration test proving that
 // CreateEntityWithOwner sets owner_id at INSERT time without tripping the
-// entities_owner_immutable trigger (migration 0013_entity_ownership.sql),
+// entities_owner_immutable trigger (model/migrations/0001_baseline.sql),
 // which only fires BEFORE UPDATE OF owner_id — never on INSERT.
 //
 // This is the regression this query exists to fix: the previous
