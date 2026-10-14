@@ -5,6 +5,7 @@ phases:
     - number: 1
       slug: migrations-baseline
       title: Collapse Migrations Into Baseline
+      diff_base: c1d2a41879b291451091a7f1e5eb6c55a5b1f987
       tasks:
         - number: 1
           slug: create-baseline-and-verify-equivalence
