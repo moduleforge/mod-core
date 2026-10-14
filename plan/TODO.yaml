@@ -16,7 +16,8 @@ phases:
           digest: Collapsed 19 mod-core migrations into model/migrations/0001_baseline.sql (0016 merged into apps) with an empty schema, data and function diff against the ee7e61e chain. sqlc output unchanged, shadow-db lint passes without a Down section, and Go unit and integration tests are green.
           git:
             branch: plan/core-migrations-baseline-01-001
-            commit: []
+            commit:
+                - d28ea11
             merge: null
         - number: 2
           slug: update-references-docs-tests
