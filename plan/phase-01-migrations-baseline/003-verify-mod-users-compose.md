@@ -33,3 +33,7 @@ architectural_impact: false
 
 - `/Users/zane/playground/moduleforge/mod-users/model/Makefile` (compose target).
 - [Plan overview](../overview.md).
+
+## Status
+
+succeeded, 2026-10-14. Composed (scratch copy of core + mod-authz + mod-users, no repo edits) 14 files: 0001_baseline, 0100-0104 (mod-users), 0500-0506 (mod-authz). No duplicate version prefixes; `goose validate` OK; `goose up` on a throwaway postgres:16 container reached version 506; container removed. Old collision: previously core 0100_natural_person_owner_invariant.sql vs mod-users 0100_baseline.sql. mod-users `git status --short` clean. No cross-module overlap. Note: mod-users 0100_baseline.sql applied cleanly after core 0001 (no references to removed core files caused errors).
