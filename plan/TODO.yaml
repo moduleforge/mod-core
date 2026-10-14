@@ -23,11 +23,13 @@ phases:
           slug: update-references-docs-tests
           title: Update References, Docs And Tests For Baseline
           path: phase-01-migrations-baseline/002-update-references-docs-tests.md
-          done: false
+          done: true
           tier: sonnet-med
+          digest: Replaced every reference to the removed migration files and versions with 0001_baseline.sql or the object it defines. Rewrote the AGENTS.md numbering rules, the model README reset section, and the entity-ownership and type-entities docs. Code changes are comment-only. Build, vet, gofmt and the type-entities and fieldcrypto integration tests are all green.
           git:
-            branch: null
-            commit: []
+            branch: plan/core-migrations-baseline-01-002
+            commit:
+                - 52c398b
             merge: null
         - number: 3
           slug: verify-mod-users-compose
