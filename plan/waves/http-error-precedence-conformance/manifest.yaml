@@ -80,14 +80,14 @@ waves:
             mod-notifications: contacts-notifications-conformance
         - name: app-mfmanager handler conformance and module adoption
           slug: mfmanager-conformance
-          description: 'Review the app''s own api/ (17 handler files, 15 json.NewDecoder sites, zero apiresp usage so possibly its own envelope) and adopt the helpers. Check accessapi (actor groups, target groups, grants) against stricter mod-authz behavior. After dependencies are merged and pushed: bump versions.lock.yaml pins for mod-core, mod-authz, mod-audit, mod-users; regenerate cmd/server with mfgen (picks up mod-core scope fix; mfgen followup VFHF). Audit GUI payloads against unknown-field rejection and 401/403/422 changes; end-to-end checks.'
+          description: app-mfmanager handler conformance and module adoption
           dependencies:
             - error-precedence-foundation
             - core-handler-conformance
             - authz-conformance
             - users-conformance
           plans:
-            app-mfmanager-workspace: PLACEHOLDER
+            app-mfmanager-workspace: mfmanager-conformance
         - name: app-mftodo and app-mfgit conformance and module adoption
           slug: mftodo-mfgit-conformance
           description: Review app-owned handlers (mftodo appsetup callback, managed-auth gate, runtime-config handlers; mfgit static.go). Regenerate cmd/server with mfgen after mod-core scope fix (followup VFHF), then make localize. Bump versions.lock.yaml pins for core, audit, authz, users, tasks, tags, plus repos for mfgit. Audit GUI payloads under strict decoding and 401/403/422 changes; run mftodo Playwright e2e and mfgit /v1 smoke tests.
