@@ -268,3 +268,11 @@ items:
         - priority:low
         - effort:small
       text: 'Automated push review (medium, fail-open-state-drift) on model/migrations/0001_baseline.sql: a database whose goose_db_version_core still records pre-collapse versions (2-17, 99, 100) is treated by goose as already at version 1, so it silently skips the baseline. A DB stopped at version 99 would lack the 0100 natural-person owner trigger (MF002). Today the reset rule is documentation only. Suggested fix: in model.Migrate, before goose Up, read goose_db_version_core and fail if it holds any version_id other than 0 or 1; or rename the tracking table for the baseline. Low priority because the user decided pre-release DBs are reset, but a cheap guard keeps un-reset databases from running without the trigger.'
+    - title: Per-op ownership arm in checkGrantOrOwn
+      id: rHzV
+      date: "2026-10-14"
+      tags:
+        - type:enhancement
+        - priority:medium
+        - effort:medium
+      text: 'Follows from ygkL. Decision: owners SHOULD be able to install SSH keys on service accounts / service identities (e.g. app_service_identity). But mod-users Authorizer.checkGrantOrOwn is op-agnostic: the ownership arm grants every op on an owned target. Harden it to be explicit: add a per-target-type (or per-op) allowlist of ops the ownership arm covers, so owning an entity does not implicitly authorize every current and future op. Include the SSH-key registration op for service_account descendants as an explicitly allowed case, with tests for allowed and denied ops. Also confirm user_accounts is documented as ''a user of the system'' (may be a service account, not necessarily a natural person).'
