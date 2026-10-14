@@ -39,6 +39,6 @@ phases:
           tier: sonnet-low
           digest: Verification only. The composed core, mod-authz and mod-users migrations have unique versions and pass goose validate. They apply on a throwaway postgres:16 container up to version 506.
           git:
-            branch: null
+            branch: plan/core-migrations-baseline-01-003
             commit: []
             merge: null
